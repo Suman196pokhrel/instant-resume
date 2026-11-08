@@ -1,0 +1,28 @@
+# Local credentials and agent configuration
+.aws/
+.codex/
+.agents/
+.env
+.env.*
+!.env.example
+
+# Dependencies and generated output
+node_modules/
+.next/
+out/
+dist/
+coverage/
+playwright-report/
+test-results/
+*.log
+
+# Personal runtime data and backups
+data/
+*.db
+*.db-shm
+*.db-wal
+resume-tailor-backup-*.json
+
+# Operating system files
+.DS_Store
+Thumbs.db

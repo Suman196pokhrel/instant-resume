@@ -1,0 +1,777 @@
+/* Workspace: job panel + checks, live preview, inspector (Content / Structure / Design), history, export. */
+
+Views.project = function (root, params) {
+  const st = Store.state;
+  const p = Store.project(params[0]);
+  if (!p) { location.hash = '#/dashboard'; return; }
+
+  const ui = {
+    kind: 'resume',
+    selected: null,          // section id
+    tab: 'content',          // inspector tab
+    left: 'job',             // job | checks
+    zoom: null,              // null = fit
+    viewing: null,           // revision being previewed
+    pending: null,           // { sectionId, before, after, instruction, warnings, ops }
+    busy: false,             // rewrite in progress
+    lastRenderMs: 0,
+    leftOpen: window.innerWidth > 1100,
+    instructionDraft: '',
+    pane: params[1] === 'overview' ? 'overview' : 'docs', // docs = Studio, overview = the application around it
+  };
+  const undo = { resume: [], coverLetter: [] };
+  let alive = true;
+  let burst = null; // coalesce rapid edits/adjustments into one undo step
+
+  const doc = () => p.docs[ui.kind];
+  const section = (id) => doc().sections.find((s) => s.id === id);
+  const kindLabel = (k) => (k === 'resume' ? 'Resume' : 'Cover letter');
+
+  /* ---------- Persistence helpers ---------- */
+  function setSaveState(state) {
+    const el = $('[data-save]', root);
+    if (!el) return;
+    el.className = 'save-pill ' + state;
+    el.innerHTML = state === 'saving' ? '<span class="spinner spinner-xs"></span> Saving' : `${icon('check', 13)} Saved`;
+  }
+  const settle = debounce(() => { Store.saveNow(); setSaveState('saved'); }, 600);
+
+  function commit(revKind, label, coalesceKey) {
+    const revs = p.revisions[ui.kind];
+    const last = revs[revs.length - 1];
+    const now = Date.now();
+    if (coalesceKey && last && last.coalesceKey === coalesceKey && now - last.ts < 60000) {
+      last.snapshot = clone(doc()); last.ts = now;
+    } else {
+      revs.push({ id: uid('r'), ts: now, kind: revKind, label, coalesceKey, snapshot: clone(doc()) });
+    }
+    p.updatedAt = now;
+    setSaveState('saving');
+    settle();
+    if ($('.drawer.open', root)) renderHistory();
+  }
+
+  function pushUndo(label, burstKey) {
+    if (burstKey && burst && burst.key === burstKey) { clearTimeout(burst.t); burst.t = setTimeout(() => (burst = null), 1500); return; }
+    undo[ui.kind].push({ label, snapshot: clone(doc()) });
+    if (undo[ui.kind].length > 50) undo[ui.kind].shift();
+    if (burstKey) burst = { key: burstKey, t: setTimeout(() => (burst = null), 1500) };
+    updateUndoBtn();
+  }
+
+  function doUndo() {
+    const u = undo[ui.kind].pop();
+    if (!u) return;
+    p.docs[ui.kind] = u.snapshot;
+    if (ui.selected && !section(ui.selected)) ui.selected = null;
+    ui.pending = null;
+    commit('restore', 'Undid: ' + u.label);
+    renderPreview(); renderInspector(); renderLeft(); updateUndoBtn();
+    toast('Undid: ' + u.label);
+  }
+  function updateUndoBtn() {
+    const b = $('[data-undo]', root);
+    if (!b) return;
+    const u = undo[ui.kind][undo[ui.kind].length - 1];
+    b.disabled = !u;
+    b.title = u ? 'Undo: ' + u.label : 'Nothing to undo';
+  }
+
+  /* ---------- Layout ---------- */
+  function renderAll() {
+    root.innerHTML = shell(`
+      <div class="ws ${ui.leftOpen ? '' : 'left-closed'} ${ui.pane === 'overview' ? 'ws-ov' : ''}">
+        <div class="ws-bar">
+          <div class="ws-bar-left">
+            <a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a>
+            <span class="crumb-sep">/</span>
+            <span class="ws-title" title="${esc(p.role)} at ${esc(p.company)}">${esc(p.role)} <span class="muted">at ${esc(p.company)}</span></span>
+          </div>
+          <div class="doc-tabs" role="tablist" aria-label="Document">
+            ${['resume', 'coverLetter'].map((k) => `<button role="tab" aria-selected="${ui.pane === 'docs' && ui.kind === k}" class="${ui.pane === 'docs' && ui.kind === k ? 'on' : ''}" data-kind="${k}">${kindLabel(k)}</button>`).join('')}
+            <button role="tab" aria-selected="${ui.pane === 'overview'}" class="${ui.pane === 'overview' ? 'on' : ''}" data-pane="overview" data-tip="Stage, the saved job ad, people to contact and the listing check">Overview</button>
+          </div>
+          <div class="ws-bar-right">
+            <span data-stage-host>${stageSelect(p, 'data-ws-stage')}</span>
+            <span class="save-pill saved ws-doc-only" data-save>${icon('check', 13)} Saved</span>
+            <button class="icon-btn ws-doc-only" data-undo aria-label="Undo">${icon('undo', 16)}</button>
+            <button class="btn btn-ghost btn-sm ws-doc-only" data-history>${icon('history', 15)} History</button>
+            <button class="btn btn-primary btn-sm ws-doc-only" data-export>${icon('download', 15)} Export PDF</button>
+            ${modelPickerHtml()}
+          </div>
+        </div>
+        <div class="ws-body">
+          <aside class="ws-left" aria-label="Job and checks">
+            <div class="seg seg-full" role="tablist">
+              <button data-left="job">Job</button>
+              <button data-left="checks">Checks <span class="count" data-check-count></span></button>
+            </div>
+            <div class="ws-left-body" data-left-body></div>
+          </aside>
+          <section class="ws-preview" aria-label="Preview">
+            <div class="preview-bar">
+              <button class="icon-btn" data-toggle-left aria-label="Toggle job panel" title="Toggle job panel">${icon('panel', 16)}</button>
+              <div class="zoom">
+                <button class="icon-btn" data-zoom="-" aria-label="Zoom out">−</button>
+                <button class="zoom-val" data-zoom="fit" title="Fit to width"></button>
+                <button class="icon-btn" data-zoom="+" aria-label="Zoom in">+</button>
+              </div>
+              <span class="render-status muted small" data-render-status></span>
+              <button class="btn btn-ghost btn-sm as-sent" data-as-sent ${p.sent ? '' : 'hidden'} data-tip="See exactly what the employer received">${icon('eye', 14)} View as sent</button>
+            </div>
+            <div class="preview-scroll" data-scroll>
+              <div class="revision-banner" data-rev-banner hidden></div>
+              <div class="sheet-wrap" data-sheet-wrap><div class="sheet" data-sheet></div></div>
+              <div class="typst-loader" data-loader hidden>
+                <div class="tl-card"><strong>Loading the Typst renderer</strong><span class="muted small">6.4 MB, loaded once per session</span><div class="bar"><div class="bar-fill" data-loader-fill></div></div></div>
+              </div>
+            </div>
+          </section>
+          <aside class="ws-inspector" aria-label="Inspector">
+            <div class="insp-tabs" role="tablist">
+              ${[['content', 'Content', 'text'], ['structure', 'Structure', 'layers'], ['design', 'Design', 'palette']].map(([k, l, ic]) => `<button role="tab" data-tab="${k}">${icon(ic, 15)} ${l}</button>`).join('')}
+            </div>
+            <div class="insp-body" data-insp></div>
+            <div class="insp-lock" data-insp-lock hidden><p>You're viewing an older revision. Restore it or go back to the current version to edit.</p></div>
+          </aside>
+        </div>
+        <div class="ws-overview" data-ov></div>
+        <div class="drawer" data-drawer aria-hidden="true">
+          <div class="drawer-head"><h2>History</h2><button class="icon-btn" data-close-drawer aria-label="Close history">${icon('x')}</button></div>
+          <p class="muted small drawer-sub">Every change to the ${kindLabel(ui.kind).toLowerCase()} is saved here automatically.</p>
+          <ol class="rev-list" data-revs></ol>
+        </div>
+      </div>`, { route: 'dashboard', title: null, compact: true, flush: true });
+    bindShell(root);
+    bindChrome();
+    renderLeft(); renderInspector(); updateUndoBtn();
+    bootRenderer();
+    if (ui.pane === 'overview') renderOverview();
+  }
+
+  /* ---------- Overview pane: the application around the documents ---------- */
+  function setPane(pane) {
+    ui.pane = pane;
+    $('.ws', root).classList.toggle('ws-ov', pane === 'overview');
+    $$('[data-kind]', root).forEach((x) => { const on = pane === 'docs' && x.dataset.kind === ui.kind; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
+    const ov = $('[data-pane]', root); ov.classList.toggle('on', pane === 'overview'); ov.setAttribute('aria-selected', pane === 'overview');
+    history.replaceState(null, '', `#/project/${p.id}${pane === 'overview' ? '/overview' : ''}`);
+    if (pane === 'overview') renderOverview(); else { $('[data-ov]', root).innerHTML = ''; fitZoom(); }
+  }
+  function renderOverview() {
+    const host = $('[data-ov]', root);
+    host.innerHTML = overviewHtml(p);
+    bindOverview(host, p, {
+      rerender: () => { renderOverview(); refreshStage(); },
+      gotoKind: (k) => { ui.kind = k; ui.viewing = null; setPane('docs'); renderPreview(); renderInspector(); renderLeft(); updateUndoBtn(); },
+      viewSent: (k) => { ui.kind = k; setPane('docs'); viewAsSent(); renderInspector(); renderLeft(); },
+    });
+  }
+  function refreshStage() {
+    $('[data-stage-host]', root).innerHTML = stageSelect(p, 'data-ws-stage');
+    bindStage();
+    const b = $('[data-as-sent]', root);
+    if (b) b.hidden = !p.sent;
+  }
+  function bindStage() {
+    $('[data-ws-stage]', root).onchange = (e) => { setAppStage(p, e.target.value); Store.saveNow(); refreshStage(); if (ui.pane === 'overview') renderOverview(); };
+  }
+  function viewAsSent() {
+    const snap = p.sent && p.sent[ui.kind];
+    if (!snap) { toast('No cover letter was sent with this application'); return; }
+    ui.viewing = { snapshot: snap, ts: p.sent.at, label: `sent to ${p.company}` };
+    ui.pending = null;
+    renderPreview(); lockInspector(true);
+  }
+
+  function bindChrome() {
+    $('[data-pane]', root).onclick = () => setPane('overview');
+    bindStage();
+    $('[data-as-sent]', root).onclick = viewAsSent;
+    $$('[data-kind]', root).forEach((b) => (b.onclick = () => {
+      if (ui.pane === 'overview') { ui.kind = b.dataset.kind; ui.viewing = null; setPane('docs'); renderPreview(); renderInspector(); renderLeft(); updateUndoBtn(); return; }
+      if (ui.kind === b.dataset.kind) return;
+      ui.kind = b.dataset.kind; ui.selected = null; ui.pending = null; ui.viewing = null;
+      $$('[data-kind]', root).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
+      renderPreview(); renderInspector(); renderLeft(); updateUndoBtn();
+      if ($('.drawer.open', root)) renderHistory();
+    }));
+    $$('[data-left]', root).forEach((b) => (b.onclick = () => { ui.left = b.dataset.left; renderLeft(); }));
+    $$('[data-tab]', root).forEach((b) => (b.onclick = () => { ui.tab = b.dataset.tab; renderInspector(); }));
+    $('[data-undo]', root).onclick = doUndo;
+    $('[data-history]', root).onclick = openHistory;
+    $('[data-close-drawer]', root).onclick = closeHistory;
+    $('[data-export]', root).onclick = openExport;
+    $('[data-toggle-left]', root).onclick = () => { ui.leftOpen = !ui.leftOpen; $('.ws', root).classList.toggle('left-closed', !ui.leftOpen); fitZoom(); };
+    $$('[data-zoom]', root).forEach((b) => (b.onclick = () => {
+      const z = b.dataset.zoom;
+      const cur = ui.zoom || currentFit();
+      ui.zoom = z === 'fit' ? null : Math.min(1.6, Math.max(0.4, +(cur + (z === '+' ? 0.1 : -0.1)).toFixed(2)));
+      applyZoom();
+    }));
+    $('[data-sheet]', root).addEventListener('click', (e) => {
+      if (ui.viewing) return;
+      const s = e.target.closest('[data-section-id]');
+      if (!s) return;
+      selectSection(s.dataset.sectionId, { scroll: false });
+    });
+    window.addEventListener('resize', onResize);
+    document.addEventListener('keydown', onKey);
+  }
+
+  const onResize = debounce(() => fitZoom(), 100);
+  function onKey(e) {
+    const inField = /INPUT|TEXTAREA|SELECT/.test(document.activeElement.tagName);
+    if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 'z' && !inField && !e.shiftKey) { e.preventDefault(); doUndo(); }
+    if (e.key === 'Escape' && $('.drawer.open', root)) closeHistory();
+  }
+
+  /* ---------- Preview / renderer ---------- */
+  async function bootRenderer() {
+    if (sessionStorage.getItem('rt-typst') || reducedMotion()) { sessionStorage.setItem('rt-typst', '1'); renderPreview(); afterBoot(); return; }
+    const loader = $('[data-loader]', root);
+    loader.hidden = false;
+    const fill = $('[data-loader-fill]', root);
+    for (let i = 1; i <= 10; i++) { await sleep(110); if (!alive) return; fill.style.width = i * 10 + '%'; }
+    sessionStorage.setItem('rt-typst', '1');
+    loader.classList.add('out');
+    renderPreview();
+    setTimeout(() => (loader.hidden = true), 300);
+    afterBoot();
+  }
+
+  function afterBoot() {
+    const fresh = sessionStorage.getItem('rt-fresh');
+    if (fresh) {
+      sessionStorage.removeItem('rt-fresh');
+      const ch = Docs.runChecks(p, 'resume', st.kb);
+      toast(`Generated in ${fresh}s. ${ch.findings.length ? 'Review the checks before you export.' : 'No issues found.'}`);
+      $('[data-sheet]', root).classList.add('reveal');
+    }
+  }
+
+  function currentFit() {
+    const scroll = $('[data-scroll]', root);
+    if (!scroll) return 1;
+    const avail = scroll.clientWidth - 48;
+    return Math.max(0.4, Math.min(1.25, avail / 794));
+  }
+  function fitZoom() { if (ui.zoom == null) applyZoom(); }
+  function applyZoom() {
+    const z = ui.zoom || currentFit();
+    const wrap = $('[data-sheet-wrap]', root);
+    if (!wrap) return;
+    wrap.style.setProperty('--zoom', z);
+    $('.zoom-val', root).textContent = Math.round(z * 100) + '%' + (ui.zoom == null ? ' fit' : '');
+  }
+
+  function renderPreview(opts = {}) {
+    const sheet = $('[data-sheet]', root);
+    if (!sheet) return;
+    const t0 = performance.now();
+    const source = ui.viewing ? ui.viewing.snapshot : doc();
+    let shown = source;
+    if (ui.pending && !ui.viewing) {
+      shown = clone(source);
+      const i = shown.sections.findIndex((s) => s.id === ui.pending.sectionId);
+      if (i >= 0) shown.sections[i] = ui.pending.after;
+    }
+    sheet.className = 'sheet paper-' + st.prefs.paper.toLowerCase() + (sheet.classList.contains('reveal') ? ' reveal' : '');
+    sheet.innerHTML = ui.kind === 'resume' ? Docs.renderResume(shown, st.kb) : Docs.renderCoverLetter(shown, st.kb, p.brief);
+    if (ui.selected && !ui.viewing) {
+      const el = $(`[data-section-id="${ui.selected}"]`, sheet);
+      if (el) el.classList.add('is-selected');
+    }
+    if (ui.pending && !ui.viewing) { const el = $(`[data-section-id="${ui.pending.sectionId}"]`, sheet); if (el) el.classList.add('is-proposed'); }
+    if (ui.busy) { const el = $(`[data-section-id="${ui.selected}"]`, sheet); if (el) el.classList.add('is-rewriting'); }
+    applyZoom();
+    // Pretend compile time: real DOM time plus a little, as Typst WASM would add
+    const ms = Math.max(4, Math.round(performance.now() - t0 + 6 + Math.random() * 8));
+    ui.lastRenderMs = ms;
+    const pages = Math.max(1, Math.ceil((sheet.scrollHeight - 2) / (st.prefs.paper === 'A4' ? 1123 : 1056)));
+    const status = $('[data-render-status]', root);
+    status.innerHTML = `${opts.design ? icon('zap', 12) + ' ' : ''}Rendered in ${ms} ms<span class="dotsep"></span>${pages} ${pages === 1 ? 'page' : 'pages'}<span class="dotsep"></span>${st.prefs.paper}`;
+    status.classList.remove('pulse'); void status.offsetWidth; status.classList.add('pulse');
+    const banner = $('[data-rev-banner]', root);
+    if (ui.viewing) {
+      banner.hidden = false;
+      banner.innerHTML = `${icon('history', 15)}<span>Viewing the revision from ${esc(clockTime(ui.viewing.ts))}: ${esc(ui.viewing.label)}</span><button class="btn btn-primary btn-sm" data-restore>Restore this version</button><button class="btn btn-ghost btn-sm" data-current>Back to current</button>`;
+      $('[data-restore]', banner).onclick = () => restoreRevision(ui.viewing);
+      $('[data-current]', banner).onclick = () => { ui.viewing = null; renderPreview(); lockInspector(false); renderHistory(); };
+    } else banner.hidden = true;
+  }
+
+  function flashSection(id) {
+    const el = $(`[data-section-id="${id}"]`, root);
+    if (!el) return;
+    el.scrollIntoView({ behavior: reducedMotion() ? 'auto' : 'smooth', block: 'center' });
+    el.classList.remove('flash'); void el.offsetWidth; el.classList.add('flash');
+  }
+
+  function selectSection(id, { scroll = true, tab = 'content' } = {}) {
+    if (ui.pending && ui.pending.sectionId !== id) { ui.pending = null; }
+    ui.selected = id; ui.tab = tab;
+    renderPreview(); renderInspector();
+    if (scroll) flashSection(id);
+  }
+
+  /* ---------- Left panel: job + checks ---------- */
+  function renderLeft() {
+    const body = $('[data-left-body]', root);
+    if (!body) return;
+    $$('[data-left]', root).forEach((b) => b.classList.toggle('on', b.dataset.left === ui.left));
+    const ch = Docs.runChecks(p, ui.kind, st.kb);
+    const cc = $('[data-check-count]', root);
+    cc.textContent = ch.findings.length || '';
+    cc.classList.toggle('count-warn', ch.findings.length > 0);
+
+    if (ui.left === 'job') {
+      const b = p.brief;
+      body.innerHTML = `
+        <div class="job-head"><h3>${esc(b.title)}</h3><div>${esc(b.company)}</div><div class="muted small">${esc(b.location)}</div></div>
+        <div class="lp-block"><div class="lp-label">Keywords in this ${kindLabel(ui.kind).toLowerCase()}</div>
+          <div class="chips">${b.keywords.map((k) => `<span class="chip ${ch.matched.includes(k) ? 'chip-ok' : 'chip-missing'}">${ch.matched.includes(k) ? icon('check', 12) : ''}${esc(k)}</span>`).join('')}</div></div>
+        <div class="lp-block"><div class="lp-label">Requirements</div><ul class="req-list">${b.requirements.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>
+        <details class="lp-block jd-details"><summary>Job description</summary><pre class="jd-text">${esc(p.jdText)}</pre></details>
+        <div class="lp-block"><button class="btn btn-ghost btn-sm btn-block" data-regen>${icon('spark', 14)} Regenerate both documents</button></div>`;
+      $('[data-regen]', body).onclick = regenerate;
+      return;
+    }
+
+    const groups = [['grounding', 'Claims not found in your knowledge base'], ['banned', 'Banned phrases']];
+    const pct = Math.round((ch.matched.length / Math.max(1, p.brief.keywords.length)) * 100);
+    body.innerHTML = `
+      <p class="muted small checks-note">${icon('zap', 12)} Checks run on this device after every change. No LLM call.</p>
+      <div class="lp-block">
+        <div class="lp-label">Job keyword match</div>
+        <div class="kw-meter"><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span><strong>${ch.matched.length}</strong> of ${p.brief.keywords.length}</span></div>
+        ${ch.missing.length ? `<ul class="missing-list">${ch.missing.map((m) => `<li><span class="chip chip-missing">${esc(m.keyword)}</span>
+          ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}">In your knowledge base. Emphasise it</button>` : '<span class="muted small">Not in your knowledge base</span>'}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
+      </div>
+      ${groups.map(([t, label]) => {
+        const fs = ch.findings.filter((f) => f.type === t);
+        return `<div class="lp-block"><div class="lp-label">${label} <span class="count ${fs.length ? 'count-warn' : ''}">${fs.length}</span></div>
+          ${fs.length ? fs.map((f) => `<button class="finding finding-${t}" data-goto-section="${f.sectionId}">
+            <span class="finding-title">${icon('alert', 13)} ${esc(f.title)}</span><span class="finding-detail">${esc(f.detail)}</span><span class="finding-go">Go to ${esc((section(f.sectionId) || {}).title || 'section')}</span></button>`).join('') : '<p class="small ok-text">None found.</p>'}
+        </div>`;
+      }).join('')}
+      <div class="lp-block"><div class="lp-label">Parse safety</div>
+        <ul class="parse-list">${ch.parse.map((x) => `<li class="${x.ok ? 'ok' : 'bad'}">${icon(x.ok ? 'check' : 'alert', 13)} ${esc(x.label)}${!x.ok && x.hint ? `<div class="muted small">${esc(x.hint)}</div>` : ''}</li>`).join('')}</ul>
+        <p class="muted small">There's no universal "ATS score". These checks cover whether job sites can read the file; keyword match is shown above, separately.</p>
+      </div>`;
+    $$('[data-goto-section]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.gotoSection)));
+    $$('[data-emph]', body).forEach((b) => (b.onclick = () => {
+      const target = doc().sections.find((s) => s.kind === 'experience') || doc().sections[0];
+      ui.instructionDraft = 'Emphasise ' + b.dataset.emph;
+      selectSection(target.id);
+      const box = $('[data-instruction]', root); if (box) box.focus();
+    }));
+  }
+
+  /* ---------- Inspector ---------- */
+  function lockInspector(on) { $('[data-insp-lock]', root).hidden = !on; }
+
+  function renderInspector() {
+    $$('[data-tab]', root).forEach((b) => { b.classList.toggle('on', b.dataset.tab === ui.tab); b.setAttribute('aria-selected', b.dataset.tab === ui.tab); });
+    const body = $('[data-insp]', root);
+    if (ui.tab === 'content') renderContent(body);
+    else if (ui.tab === 'structure') renderStructure(body);
+    else renderDesign(body);
+    lockInspector(!!ui.viewing);
+  }
+
+  function suggestionsFor(s) {
+    const missingInKb = Docs.runChecks(p, ui.kind, st.kb).missing.filter((m) => m.inKb).map((m) => m.keyword);
+    const kw = missingInKb[0] || p.brief.keywords[0];
+    if (s.kind === 'paragraph') return ['More concise', 'More formal', 'Warmer tone', 'Emphasise ' + kw];
+    if (s.kind === 'skills') return ['Emphasise ' + kw, 'Emphasise ' + (p.brief.keywords[1] || 'TypeScript')];
+    if (s.kind === 'summary') return ['More concise', 'Emphasise ' + kw, 'Stronger verbs'];
+    return ['More concise', 'Emphasise ' + kw, 'Lead with metrics', 'Stronger verbs'];
+  }
+
+  function renderContent(body) {
+    const s = ui.selected && section(ui.selected);
+    if (!s) {
+      body.innerHTML = `
+        <p class="muted small insp-hint">Choose a section, or click it in the preview. You can edit text yourself or give an instruction to rewrite just that section.</p>
+        <div class="section-list">${doc().sections.map((x) => `<button class="section-row ${x.hidden ? 'is-hidden' : ''}" data-pick="${x.id}">
+          <span class="sr-title">${esc(x.title)}</span><span class="muted small">${x.hidden ? 'Hidden' : esc(Docs.sectionPlainText(x).slice(0, 60))}…</span>${icon('chevRight', 15)}</button>`).join('')}</div>`;
+      $$('[data-pick]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.pick)));
+      return;
+    }
+    const isLetter = s.kind === 'paragraph';
+    body.innerHTML = `
+      <button class="link-btn back-link" data-all>${icon('chevLeft', 14)} All ${isLetter ? 'paragraphs' : 'sections'}</button>
+      <div class="field"><label for="sec-title">${isLetter ? 'Paragraph' : 'Section heading'}</label><input id="sec-title" data-sec-title value="${esc(s.title)}" ${isLetter ? 'readonly' : ''}></div>
+      <div class="instruction" data-instr-area></div>
+      <div class="manual">
+        <div class="manual-head"><strong>Edit by hand</strong><span class="muted small">Updates the preview as you type</span></div>
+        <div data-manual></div>
+      </div>`;
+    $('[data-all]', body).onclick = () => { ui.selected = null; ui.pending = null; renderPreview(); renderInspector(); };
+    const ti = $('[data-sec-title]', body);
+    ti.oninput = () => { pushUndo('Edited heading', 'title-' + s.id); s.title = ti.value; renderPreview(); commit('edit', `Edited ${s.title} heading`, 'title-' + s.id); renderLeft(); };
+    renderInstruction(s);
+    renderManual(s);
+  }
+
+  function renderInstruction(s) {
+    const area = $('[data-instr-area]', root);
+    if (!area) return;
+    if (ui.pending && ui.pending.sectionId === s.id) {
+      const pd = ui.pending;
+      area.innerHTML = `
+        <div class="proposal">
+          <div class="proposal-head"><strong>Proposed change</strong><span class="muted small">"${esc(pd.instruction)}"</span></div>
+          <div class="diff">${Docs.sectionDiffHtml(pd.before, pd.after)}</div>
+          ${pd.warnings.map((w) => `<div class="callout callout-warn small">${icon('alert', 14)}<div>${esc(w)}</div></div>`).join('')}
+          <details class="patch"><summary>${pd.ops.length} patch ${pd.ops.length === 1 ? 'operation' : 'operations'}, validated</summary><pre>${esc(JSON.stringify(pd.ops, null, 2))}</pre></details>
+          <div class="row-gap"><button class="btn btn-primary btn-sm" data-accept>${icon('check', 14)} Accept</button><button class="btn btn-ghost btn-sm" data-reject>Reject</button></div>
+        </div>`;
+      $('[data-accept]', area).onclick = acceptPending;
+      $('[data-reject]', area).onclick = () => { ui.pending = null; renderPreview(); renderInspector(); toast('Change rejected. Nothing was applied.'); };
+      return;
+    }
+    const tokens = Docs.estimateTokens(s);
+    area.innerHTML = `
+      <label for="instr" class="instr-label">${icon('spark', 14)} Rewrite this ${s.kind === 'paragraph' ? 'paragraph' : 'section'}</label>
+      <textarea id="instr" rows="2" data-instruction placeholder="e.g. more concise, emphasise GraphQL" ${ui.busy ? 'disabled' : ''}>${esc(ui.instructionDraft)}</textarea>
+      <div class="chips instr-chips">${suggestionsFor(s).map((c) => `<button class="chip chip-btn" data-suggest="${esc(c)}" ${ui.busy ? 'disabled' : ''}>${esc(c)}</button>`).join('')}</div>
+      <div class="instr-foot">
+        <span class="muted small">Sends only this ${s.kind === 'paragraph' ? 'paragraph' : 'section'}, about ${tokens.toLocaleString()} tokens</span>
+        <button class="btn btn-primary btn-sm" data-rewrite ${ui.busy ? 'disabled' : ''}>${ui.busy ? '<span class="spinner spinner-light"></span> Rewriting' : 'Rewrite'}</button>
+      </div>
+      ${ui.busy ? `<div class="working-strip"><span>Rewriting with ${esc(st.activeModel.model)}</span><div class="shimmer"></div></div>` : ''}
+      <div class="field-error" data-instr-err hidden></div>`;
+    const ta = $('[data-instruction]', area);
+    ta.oninput = () => (ui.instructionDraft = ta.value);
+    ta.onkeydown = (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) runRewrite(s.id); };
+    $$('[data-suggest]', area).forEach((c) => (c.onclick = () => { ui.instructionDraft = c.dataset.suggest; ta.value = c.dataset.suggest; runRewrite(s.id); }));
+    $('[data-rewrite]', area).onclick = () => runRewrite(s.id);
+  }
+
+  async function runRewrite(sectionId) {
+    const s = section(sectionId);
+    const instruction = ui.instructionDraft.trim();
+    if (!instruction) {
+      const e = $('[data-instr-err]', root); e.hidden = false; e.textContent = 'Type an instruction first, or pick one of the suggestions.';
+      return;
+    }
+    if (!st.connections[st.activeModel.provider]) { toast('Add an API key in Settings to use rewrites', { kind: 'error' }); return; }
+    ui.busy = true;
+    renderInstruction(s); renderPreview();
+    await sleep(1600 + Math.random() * 1000);
+    if (!alive) return;
+    ui.busy = false;
+    const res = Docs.rewriteSection(s, instruction, st.kb);
+    if (!res.changed) {
+      renderInstruction(s); renderPreview();
+      const e = $('[data-instr-err]', root); e.hidden = false;
+      e.textContent = `No change suggested for "${instruction}". Try something more specific, like "more concise" or "emphasise ${p.brief.keywords[0]}".`;
+      return;
+    }
+    const idx = doc().sections.indexOf(s);
+    ui.pending = { sectionId, before: clone(s), after: res.section, instruction, warnings: res.warnings, ops: patchOps(idx, s, res.section) };
+    renderPreview(); renderInspector();
+  }
+
+  function patchOps(idx, before, after) {
+    const base = `/sections/${idx}`;
+    const ops = [];
+    if (before.text !== after.text) ops.push({ op: 'replace', path: base + '/text', value: after.text });
+    (after.items || []).forEach((it, k) => {
+      const old = before.items[k];
+      if (old.id !== it.id) { ops.push({ op: 'replace', path: `${base}/items/${k}`, value: { id: it.id, '…': '' } }); return; }
+      if (it.line !== old.line) ops.push({ op: 'replace', path: `${base}/items/${k}/line`, value: it.line });
+      (it.bullets || []).forEach((b, j) => {
+        const ob = old.bullets[j];
+        if (!ob || ob.id !== b.id || ob.text !== b.text) ops.push({ op: 'replace', path: `${base}/items/${k}/bullets/${j}`, value: { id: b.id, text: b.text, source: b.source } });
+      });
+    });
+    return ops;
+  }
+
+  function acceptPending() {
+    const pd = ui.pending;
+    const i = doc().sections.findIndex((x) => x.id === pd.sectionId);
+    pushUndo(`Rewrite of ${pd.before.title}`);
+    doc().sections[i] = pd.after;
+    ui.pending = null; ui.instructionDraft = '';
+    commit('rewrite', `Rewrote ${pd.before.title}: "${pd.instruction}"`);
+    renderPreview(); renderInspector(); renderLeft();
+    flashSection(pd.sectionId);
+    toast('Change applied to ' + pd.before.title, { action: { label: 'Undo', fn: doUndo } });
+  }
+
+  function renderManual(s) {
+    const wrap = $('[data-manual]', root);
+    const area = (val, attrs) => `<textarea class="autogrow" rows="2" ${attrs}>${esc(val)}</textarea>`;
+    if (s.text != null) wrap.innerHTML = area(s.text, 'data-path="text"');
+    else wrap.innerHTML = s.items.map((it, k) => `
+      <div class="item-edit">
+        <div class="item-edit-head">
+          <input data-path="items.${k}.heading" value="${esc(it.heading)}" aria-label="Heading">
+          ${it.sub != null ? `<input data-path="items.${k}.sub" value="${esc(it.sub)}" aria-label="Subheading">` : ''}
+          ${it.meta != null ? `<input class="small-input" data-path="items.${k}.meta" value="${esc(it.meta)}" aria-label="Details">` : ''}
+        </div>
+        ${it.line != null ? area(it.line, `data-path="items.${k}.line"`) : ''}
+        ${it.bullets ? `<div class="bullets-edit">${it.bullets.map((b, j) => `<div class="bullet-edit"><span class="bdot"></span>${area(b.text, `data-path="items.${k}.bullets.${j}.text"`)}<button class="icon-btn" data-rm-bullet="${k}.${j}" aria-label="Remove bullet">${icon('x', 13)}</button></div>`).join('')}</div>` : ''}
+      </div>`).join('');
+    const grow = (t) => { t.style.height = 'auto'; t.style.height = t.scrollHeight + 2 + 'px'; };
+    $$('textarea.autogrow', wrap).forEach((t) => requestAnimationFrame(() => grow(t)));
+    $$('[data-path]', wrap).forEach((el) => (el.oninput = () => {
+      if (el.tagName === 'TEXTAREA') grow(el);
+      pushUndo(`Edit to ${s.title}`, 'edit-' + s.id);
+      const parts = el.dataset.path.split('.');
+      let obj = s;
+      parts.slice(0, -1).forEach((k) => (obj = obj[isNaN(k) ? k : +k]));
+      obj[parts[parts.length - 1]] = el.value;
+      renderPreview();
+      commit('edit', `Edited ${s.title}`, 'edit-' + s.id);
+      renderLeftDebounced();
+    }));
+    $$('[data-rm-bullet]', wrap).forEach((b) => (b.onclick = () => {
+      const [k, j] = b.dataset.rmBullet.split('.').map(Number);
+      pushUndo(`Removed a bullet from ${s.title}`);
+      s.items[k].bullets.splice(j, 1);
+      commit('edit', `Removed a bullet from ${s.title}`);
+      renderPreview(); renderManual(s); renderLeft();
+    }));
+  }
+  const renderLeftDebounced = debounce(() => renderLeft(), 250);
+
+  function renderStructure(body) {
+    const secs = doc().sections;
+    body.innerHTML = `
+      <p class="muted small insp-hint">Drag to reorder, or focus a row and press Alt with the up or down arrow. Hidden sections stay in the document.</p>
+      <ol class="struct-list" data-struct>${secs.map((s, i) => `
+        <li class="struct-row ${s.hidden ? 'is-hidden' : ''}" draggable="true" data-id="${s.id}" tabindex="0" aria-label="${esc(s.title)}, position ${i + 1} of ${secs.length}${s.hidden ? ', hidden' : ''}">
+          <span class="grip">${icon('grip', 15)}</span>
+          <span class="struct-title">${esc(s.title)}${s.hidden ? '<span class="pill">Hidden</span>' : ''}</span>
+          <button class="icon-btn" data-move="-1" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${icon('up', 15)}</button>
+          <button class="icon-btn" data-move="1" aria-label="Move down" ${i === secs.length - 1 ? 'disabled' : ''}>${icon('down', 15)}</button>
+          <button class="icon-btn" data-vis aria-label="${s.hidden ? 'Show' : 'Hide'} ${esc(s.title)}">${icon(s.hidden ? 'eyeOff' : 'eye', 15)}</button>
+        </li>`).join('')}</ol>
+      <div class="sr-only" aria-live="polite" data-live></div>`;
+    const list = $('[data-struct]', body);
+    const move = (id, delta, focus) => {
+      const i = secs.findIndex((s) => s.id === id);
+      const j = i + delta;
+      if (j < 0 || j >= secs.length) return;
+      pushUndo('Reorder sections');
+      const [s] = secs.splice(i, 1); secs.splice(j, 0, s);
+      commit('structure', `Moved ${s.title} ${delta < 0 ? 'up' : 'down'}`);
+      renderPreview(); renderStructure(body);
+      $('[data-live]', body).textContent = `${s.title} moved to position ${j + 1}`;
+      if (focus) $(`[data-id="${id}"]`, body).focus();
+      flashSection(id);
+    };
+    $$('.struct-row', list).forEach((row) => {
+      const id = row.dataset.id;
+      $$('[data-move]', row).forEach((b) => (b.onclick = () => move(id, +b.dataset.move)));
+      $('[data-vis]', row).onclick = () => {
+        const s = section(id);
+        pushUndo((s.hidden ? 'Show ' : 'Hide ') + s.title);
+        s.hidden = !s.hidden;
+        commit('structure', `${s.hidden ? 'Hid' : 'Showed'} ${s.title}`);
+        renderPreview(); renderStructure(body); renderLeft();
+      };
+      row.onkeydown = (e) => { if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); move(id, e.key === 'ArrowUp' ? -1 : 1, true); } };
+      row.ondragstart = (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); row.classList.add('dragging'); };
+      row.ondragend = () => row.classList.remove('dragging');
+      row.ondragover = (e) => {
+        e.preventDefault();
+        const r = row.getBoundingClientRect();
+        $$('.struct-row', list).forEach((x) => x.classList.remove('drop-above', 'drop-below'));
+        row.classList.add(e.clientY < r.top + r.height / 2 ? 'drop-above' : 'drop-below');
+      };
+      row.ondragleave = () => row.classList.remove('drop-above', 'drop-below');
+      row.ondrop = (e) => {
+        e.preventDefault();
+        const from = e.dataTransfer.getData('text/plain');
+        if (!from || from === id) return renderStructure(body);
+        const above = row.classList.contains('drop-above');
+        pushUndo('Reorder sections');
+        const fi = secs.findIndex((s) => s.id === from);
+        const [s] = secs.splice(fi, 1);
+        let ti = secs.findIndex((x) => x.id === id);
+        if (!above) ti += 1;
+        secs.splice(ti, 0, s);
+        commit('structure', `Moved ${s.title}`);
+        renderPreview(); renderStructure(body);
+        flashSection(from);
+      };
+    });
+  }
+
+  function renderDesign(body) {
+    const t = doc().theme;
+    const D = MOCK.themeDefaults;
+    const slider = (k, label, min, max, step, unit) => `
+      <div class="slider-field">
+        <div class="slider-top"><label for="d-${k}">${label}</label><output data-out="${k}">${t[k]}${unit}</output></div>
+        <input type="range" id="d-${k}" data-theme-key="${k}" min="${min}" max="${max}" step="${step}" value="${t[k]}" data-unit="${unit}">
+      </div>`;
+    body.innerHTML = `
+      <div class="instant-note">${icon('zap', 14)}<div><strong>Instant, and free.</strong> Design changes go straight to the renderer. No LLM call, no tokens.</div></div>
+      <div class="design-group">
+        <div class="dg-label">Font</div>
+        <div class="font-options">${Object.keys(Docs.FONT_STACKS).map((f) => `
+          <label class="font-opt ${t.font === f ? 'on' : ''}"><input type="radio" name="font" value="${f}" ${t.font === f ? 'checked' : ''}>
+            <span class="font-sample" style="font-family:${Docs.FONT_STACKS[f]}">Aa</span><span class="font-name">${f}</span></label>`).join('')}</div>
+      </div>
+      <div class="design-group">
+        <div class="dg-label">Sizes</div>
+        ${slider('baseSize', 'Body text', 9, 12, 0.5, ' pt')}
+        ${slider('headingSize', 'Section headings', 10, 15, 0.5, ' pt')}
+        ${slider('nameSize', 'Your name', 16, 30, 1, ' pt')}
+      </div>
+      <div class="design-group">
+        <div class="dg-label">Spacing</div>
+        ${slider('margin', 'Page margins', 10, 25, 1, ' mm')}
+        ${slider('lineHeight', 'Line spacing', 1.1, 1.7, 0.05, '')}
+        ${slider('sectionGap', 'Space between sections', 4, 24, 1, ' pt')}
+      </div>
+      <div class="design-group">
+        <div class="dg-label">Accent colour</div>
+        <div class="swatches">${MOCK.accents.map((c) => `<button class="swatch ${t.accent.toLowerCase() === c.toLowerCase() ? 'on' : ''}" style="--c:${c}" data-accent="${c}" aria-label="Accent ${c}"></button>`).join('')}
+          <label class="swatch swatch-custom" title="Custom colour"><input type="color" value="${t.accent}" data-accent-custom aria-label="Custom accent colour"></label></div>
+      </div>
+      <div class="design-foot">
+        <button class="btn btn-ghost btn-sm" data-reset ${JSON.stringify(t) === JSON.stringify(D) ? 'disabled' : ''}>${icon('undo', 14)} Reset to template defaults</button>
+        <span class="muted small" data-design-ms>Last render ${ui.lastRenderMs} ms</span>
+      </div>`;
+
+    const changed = (label) => {
+      commit('adjustment', 'Adjusted design', 'design');
+      renderPreview({ design: true });
+      $('[data-design-ms]', body).textContent = `Last render ${ui.lastRenderMs} ms`;
+      $('[data-reset]', body).disabled = JSON.stringify(t) === JSON.stringify(D);
+    };
+    $$('input[name="font"]', body).forEach((r) => (r.onchange = () => {
+      pushUndo('Font change'); t.font = r.value;
+      $$('.font-opt', body).forEach((o) => o.classList.toggle('on', $('input', o).checked));
+      changed('font');
+    }));
+    $$('[data-theme-key]', body).forEach((r) => (r.oninput = () => {
+      const k = r.dataset.themeKey;
+      pushUndo('Design adjustment', 'design-' + k);
+      t[k] = +r.value;
+      $(`[data-out="${k}"]`, body).textContent = r.value + r.dataset.unit;
+      changed(k);
+    }));
+    $$('[data-accent]', body).forEach((b) => (b.onclick = () => {
+      pushUndo('Accent colour'); t.accent = b.dataset.accent;
+      $$('.swatch', body).forEach((x) => x.classList.toggle('on', x === b));
+      changed('accent colour');
+    }));
+    $('[data-accent-custom]', body).oninput = (e) => { pushUndo('Accent colour', 'accent-custom'); t.accent = e.target.value; $$('.swatch', body).forEach((x) => x.classList.remove('on')); changed('accent colour'); };
+    $('[data-reset]', body).onclick = () => { pushUndo('Reset design'); p.docs[ui.kind].theme = clone(D); commit('adjustment', 'Reset design to template defaults'); renderPreview({ design: true }); renderDesign(body); };
+  }
+
+  /* ---------- History ---------- */
+  const REV_ICON = { generation: 'spark', rewrite: 'spark', edit: 'pencil', adjustment: 'palette', structure: 'layers', restore: 'undo' };
+  function openHistory() {
+    const d = $('[data-drawer]', root);
+    renderHistory();
+    d.classList.add('open'); d.setAttribute('aria-hidden', 'false');
+    $('[data-close-drawer]', d).focus();
+  }
+  function closeHistory() {
+    const d = $('[data-drawer]', root);
+    d.classList.remove('open'); d.setAttribute('aria-hidden', 'true');
+    if (ui.viewing) { ui.viewing = null; renderPreview(); lockInspector(false); }
+  }
+  function renderHistory() {
+    const list = $('[data-revs]', root);
+    const revs = [...p.revisions[ui.kind]].reverse();
+    $('.drawer-sub', root).textContent = `Every change to the ${kindLabel(ui.kind).toLowerCase()} is saved here automatically. Select one to preview it.`;
+    list.innerHTML = revs.map((r, i) => `
+      <li><button class="rev ${ui.viewing && ui.viewing.id === r.id ? 'on' : ''} ${!ui.viewing && i === 0 ? 'current' : ''}" data-rev="${r.id}">
+        <span class="rev-icon rev-${r.kind}">${icon(REV_ICON[r.kind] || 'pencil', 14)}</span>
+        <span class="rev-main"><span class="rev-label">${esc(r.label)}</span><span class="muted small">${esc(clockTime(r.ts))}${r.kind === 'generation' || r.kind === 'rewrite' ? ', used the LLM' : ''}</span></span>
+        ${i === 0 ? '<span class="pill">Current</span>' : ''}
+      </button></li>`).join('');
+    $$('[data-rev]', list).forEach((b) => (b.onclick = () => {
+      const r = p.revisions[ui.kind].find((x) => x.id === b.dataset.rev);
+      const isCurrent = r === p.revisions[ui.kind][p.revisions[ui.kind].length - 1];
+      ui.viewing = isCurrent ? null : r;
+      ui.pending = null;
+      renderPreview(); lockInspector(!!ui.viewing); renderHistory();
+    }));
+  }
+  function restoreRevision(r) {
+    pushUndo('Restore revision');
+    p.docs[ui.kind] = clone(r.snapshot);
+    ui.viewing = null; ui.selected = null;
+    commit('restore', `Restored the version from ${clockTime(r.ts)}`);
+    renderPreview(); renderInspector(); renderLeft(); renderHistory();
+    toast('Restored. The version you replaced is still in history.');
+  }
+
+  /* ---------- Regenerate ---------- */
+  function regenerate() {
+    openModal({
+      title: 'Regenerate both documents?',
+      body: `<p>This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on ${esc(st.activeModel.model)}.</p><p class="muted">Your current versions stay in history, so you can restore them.</p>
+        <p class="muted small">For small changes, rewriting one section is quicker and cheaper.</p>`,
+      actions: [{ label: 'Cancel' }, { label: 'Regenerate', kind: 'btn-primary', fn: async () => {
+        $('[data-sheet]', root).classList.add('regenerating');
+        toast('Regenerating with ' + st.activeModel.model + '…');
+        await sleep(3200);
+        if (!alive) return;
+        const fresh = Docs.createProject(st.kb, p.jdText, p.brief, p.selected);
+        ['resume', 'coverLetter'].forEach((k) => {
+          undo[k].push({ label: 'Regenerate', snapshot: clone(p.docs[k]) });
+          fresh.docs[k].theme = p.docs[k].theme;
+          p.docs[k] = fresh.docs[k];
+          p.revisions[k].push({ id: uid('r'), ts: Date.now(), kind: 'generation', label: 'Regenerated from job brief', snapshot: clone(p.docs[k]) });
+        });
+        p.updatedAt = Date.now(); Store.save();
+        ui.selected = null; ui.pending = null;
+        $('[data-sheet]', root).classList.remove('regenerating');
+        renderPreview(); renderInspector(); renderLeft(); updateUndoBtn();
+        toast('Both documents regenerated');
+      } }],
+    });
+  }
+
+  /* ---------- Export ---------- */
+  function openExport() {
+    const names = { resume: Docs.fileName(st.kb, 'resume', p.company), coverLetter: Docs.fileName(st.kb, 'coverLetter', p.company) };
+    const ch = Docs.runChecks(p, 'resume', st.kb).findings.length + Docs.runChecks(p, 'coverLetter', st.kb).findings.length;
+    openModal({
+      title: 'Export PDF',
+      body: `
+        ${ch ? `<div class="callout callout-warn small">${icon('alert', 14)}<div>Checks found ${ch} ${ch === 1 ? 'issue' : 'issues'} across both documents. You can still export.</div></div>` : ''}
+        <label class="export-opt"><input type="checkbox" value="resume" ${ui.kind === 'resume' ? 'checked' : ''}><span>${icon('file', 16)}</span><span><strong>Resume</strong><br><code>${esc(names.resume)}</code></span></label>
+        <label class="export-opt"><input type="checkbox" value="coverLetter" ${ui.kind === 'coverLetter' ? 'checked' : ''}><span>${icon('file', 16)}</span><span><strong>Cover letter</strong><br><code>${esc(names.coverLetter)}</code></span></label>
+        <p class="muted small">${esc(st.prefs.paper)}, single column, selectable text in reading order. In this mock your browser's print dialog opens; choose "Save as PDF". The real app writes the file directly.</p>`,
+      actions: [{ label: 'Cancel' }, { label: 'Export PDF', kind: 'btn-primary', fn: (r) => {
+        const kinds = $$('.export-opt input:checked', r).map((x) => x.value);
+        if (!kinds.length) { toast('Choose at least one document', { kind: 'error' }); return false; }
+        const btn = $('.modal-foot .btn-primary', r);
+        btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-light"></span> Compiling with Typst';
+        setTimeout(() => {
+          const pr = $('#print-root');
+          pr.innerHTML = kinds.map((k) => `<div class="sheet print-sheet paper-${st.prefs.paper.toLowerCase()}">${k === 'resume' ? Docs.renderResume(p.docs[k], st.kb) : Docs.renderCoverLetter(p.docs[k], st.kb, p.brief)}</div>`).join('');
+          const oldTitle = document.title;
+          document.title = names[kinds[0]].replace(/\.pdf$/, '');
+          $('#modal-root').innerHTML = '';
+          if (!window.__noPrint) window.print();
+          document.title = oldTitle;
+          toast('Exported ' + kinds.map((k) => names[k]).join(' and '));
+        }, 900);
+        return false;
+      } }],
+    });
+  }
+
+  renderAll();
+  return () => {
+    alive = false;
+    window.removeEventListener('resize', onResize);
+    document.removeEventListener('keydown', onKey);
+    Store.saveNow();
+  };
+};
