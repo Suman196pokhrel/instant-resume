@@ -12,7 +12,8 @@ These are the agreed destinations, not a claim that publication or deployment is
 ## Files
 
 - [Current scope](docs/CURRENT_SCOPE.md): goals, supported flows, and mock limitations.
-- [Original MVP overview](docs/Resume%20Tailor%20MVP%20Overview.pdf): historical October brief; current scope supersedes its import and rollout decisions.
+- [MVP overview PDF](docs/Resume%20Tailor%20MVP%20Overview.pdf): current five-page summary of the agreed scope and delivery plan.
+- [Overview source](docs/MVP_OVERVIEW.md): editable source used to regenerate the PDF.
 - [Build specification](docs/BUILD_SPEC.md): proposed resume-tailoring MVP and its acceptance criteria.
 - [Interactive mock](mock/index.html): current interaction exploration with seeded demo data.
 
@@ -26,7 +27,7 @@ The mock supports opening directly from the filesystem. AI generation and PDF/DO
 
 ## Guidance for contributors and implementing LLMs
 
-Read [Current scope](docs/CURRENT_SCOPE.md) first, then [Build specification](docs/BUILD_SPEC.md), then inspect the mock. Current scope governs product/platform decisions; the build spec governs implementation within that scope; the mock guides interactions and visual details. The October PDF is historical context only.
+Read [Current scope](docs/CURRENT_SCOPE.md) first, then [Build specification](docs/BUILD_SPEC.md), then inspect the mock. Current scope governs product/platform decisions; the build spec governs implementation within that scope; the mock guides interactions and visual details. The overview Markdown/PDF summarises those decisions without overriding the scope or build spec. The superseded October PDF is retained in Git history.
 
 Keep real local operation and the public demo distinct. The local app needs real provider integration and persistence. The Vercel demo uses simulated extraction/generation, browser-local state, and sample fixtures; manual edits, layout changes, and history can remain genuinely interactive. It must not request real provider keys or imply that simulated results are real AI output. See the build spec's public-demo acceptance criteria before deployment.
 
@@ -38,7 +39,7 @@ The mock now focuses on one workflow: enter background manually or import a resu
 
 Job scraping, discovery, schedulers, career maps, experiments, listing-trust checks, outreach, and application-stage tracking have been removed. Volunteer work and additional sections are supported in onboarding, knowledge-base editing, and document generation. The original resume text is retained as reference material and excluded from automatic document selection.
 
-When a product behavior changes, update its relevant Markdown documentation in the same commit, or explicitly record that it remains an experiment. Keep the PDF as the historical brief until a revised edition is deliberately produced. Git records changes; it does not automatically reconcile the mock and specification.
+When a product behavior changes, update its relevant Markdown documentation in the same commit, or explicitly record that it remains an experiment. Update `docs/MVP_OVERVIEW.md` and regenerate its PDF when overview-level decisions change. Git records changes; it does not automatically reconcile the mock and specification.
 
 ## Publication and demo plan
 
@@ -58,3 +59,13 @@ git commit -m "Describe the product change"
 ```
 
 Credentials, personal runtime data, dependencies, and generated output are excluded through `.gitignore`. The mock's browser-stored state is separate from the tracked source files.
+
+## Regenerate the overview PDF
+
+From the repository root, with Python 3 and ReportLab 4.5.1 installed:
+
+```sh
+python scripts/render_overview.py
+```
+
+The script uses standard PDF fonts and no network access. Review the rendered pages and commit the Markdown source and generated PDF together. The previous October edition is available in Git history.

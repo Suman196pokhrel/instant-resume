@@ -1,6 +1,6 @@
 # Resume Tailor: current product scope
 
-Updated 8 November 2026. This is the authority for product and platform decisions. Read it before `BUILD_SPEC.md`, which defines implementation within this scope. `mock/` guides interactions; the October PDF is historical context and must not override either Markdown document.
+Updated 8 November 2026. This is the authority for product and platform decisions. Read it before `BUILD_SPEC.md`, which defines implementation within this scope. `mock/` guides interactions. `MVP_OVERVIEW.md` and its generated PDF summarise the current decisions without overriding this scope or the build spec; the superseded October PDF remains in Git history.
 
 ## Goal
 
@@ -76,4 +76,4 @@ The dashboard is a list of saved application documents, not a job-search CRM.
 
 ## Documentation discipline
 
-Update this scope and the relevant build-spec flow in the same commit as behavior changes. Keep the October PDF as a historical brief; it is not the current authority on resume import or launch scope. Choosing and adding the distribution license remains a release decision; no license has been inferred during this mock revision.
+Update this scope and the relevant build-spec flow in the same commit as behavior changes. Update `MVP_OVERVIEW.md` and run `python scripts/render_overview.py` from the repository root when the overview changes; commit its source and generated PDF together. Review the rendered pages before committing. Choosing and adding the distribution license remains a release decision; no license has been inferred during this mock revision.

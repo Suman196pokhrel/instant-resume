@@ -1,10 +1,10 @@
 # Resume Tailor: MVP Build Specification
 
-> **For the implementing LLM:** read `CURRENT_SCOPE.md` first. It governs product and platform decisions; this specification governs implementation within that scope; `mock/` guides interactions and visual details. The October PDF is historical context only. Do not revive removed features or interpret the Vercel demo as a requirement to host the real application as SaaS.
+> **For the implementing LLM:** read `CURRENT_SCOPE.md` first. It governs product and platform decisions; this specification governs implementation within that scope; `mock/` guides interactions and visual details. `MVP_OVERVIEW.md` and its generated PDF are current summaries, not independent requirements; the superseded October PDF remains in Git history. Do not revive removed features or interpret the Vercel demo as a requirement to host the real application as SaaS.
 >
 > This repo currently contains a static mock, not the working Next.js application described below. Build two clearly distinguished experiences: the real, locally hosted BYOK application and a public simulated demo on Vercel. Read sections 1.1, 3.1, 18.5 and 20 before planning implementation or publication.
 >
-> Original spec: 22 October 2026. Product/platform decisions confirmed: 8 November 2026. GitHub publication and Vercel deployment are planned destinations, not completed actions.
+> Original spec: 22 October 2026. Product/platform decisions confirmed: 8 November 2026. GitHub publication and Vercel deployment are planned destinations, not completed actions. Keep overview-level decisions aligned in `MVP_OVERVIEW.md` and regenerate the PDF with `python scripts/render_overview.py` from the repository root (Python 3 and ReportLab 4.5.1).
 
 ---
 
