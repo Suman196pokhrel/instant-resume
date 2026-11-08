@@ -1,10 +1,35 @@
 # Resume Tailor: current product scope
 
-Updated 8 November 2026. This scope supersedes conflicting rollout and import decisions in the historical PDF overview. The build specification describes the intended application; `mock/` demonstrates its interactions.
+Updated 8 November 2026. This is the authority for product and platform decisions. Read it before `BUILD_SPEC.md`, which defines implementation within this scope. `mock/` guides interactions; the October PDF is historical context and must not override either Markdown document.
 
 ## Goal
 
-An open-source, locally hosted tool that turns a pasted job description and the user's real background into editable application documents. Users bring their own AI provider keys. No subscription, billing, or managed service in this scope.
+An open-source, locally hosted tool that turns a pasted job description and the user's real background into editable application documents. Users bring their own AI provider keys. The code will be published on GitHub and developed in public. Vercel will host a simulated public product demo. No subscription, billing, live public AI service, or managed real-user application is in scope.
+
+## Agreed platforms and operating modes
+
+| Concern | Decision |
+|---|---|
+| Source, issues and contributions | Public GitHub repository; build in public |
+| Full application | User-operated local app with a local database and user-owned provider keys |
+| AI costs | User pays their selected provider directly; no platform credits or subscription |
+| Public experience | Simulated interactive product demo on Vercel |
+| Initial demo artifact | Existing static `mock/` HTML/CSS/JavaScript, not the future full Next.js server |
+| Demo data and processing | Synthetic fixtures and browser-local edits; simulated provider responses; no backend or live AI |
+| Domain | Optional; a hosting-provided address is sufficient initially |
+| Current status | Local mock and docs exist. GitHub publication, Vercel configuration and deployment are separate pending work |
+
+### What the demo demonstrates
+
+Visitors can explore sample career information and job descriptions, choose Quick generate or Studio, review simulated results, edit text and layout, inspect checks/history and try export. They need no account, API key, payment or installation. A visible “Interactive demo · Sample data · AI responses are simulated” notice must distinguish the demo from the real application.
+
+Generation, extraction and AI rewrite proposals may use fixtures or deterministic transformations. Manual edits, history, local saving and rendering remain interactive; there is no requirement to prebuild every possible edited document. Current PDF export uses the browser print dialog; Typst compilation is a real-application implementation target, not a completed mock capability.
+
+Before public deployment, disable real API-key collection and live-provider paths, make reset easy to find, explain local data storage, and keep personal uploads optional with a sample-first path. Link to the source repository and local setup instructions once they exist. Do not label the current mock a fully implemented AI product. These are deployment requirements, not claims that this documentation-only change has implemented them.
+
+### Engineering boundaries
+
+Keep one narrow user problem: preparing tailored application documents from stored experience. CI, reproducible local setup, validated AI outputs, useful error handling and evaluation support that problem. Public multi-tenant infrastructure, remote workers, always-on jobs, and cloud databases are not required by the demo. If durable background execution later becomes necessary, document its need and key-handling implications before changing the browser-direct provider design.
 
 ## Primary flow
 
@@ -33,7 +58,7 @@ Volunteer-only backgrounds must work. Additional sections remain editable and av
 
 The dashboard is a list of saved application documents, not a job-search CRM.
 
-## Success for this iteration
+## Feature acceptance for the simplified mock
 
 - Only Applications, Knowledge base and Settings remain in main navigation.
 - Both onboarding paths lead to a reviewable, editable knowledge base.
@@ -41,6 +66,13 @@ The dashboard is a list of saved application documents, not a job-search CRM.
 - Saving an import does not silently mix in demo background or overwrite existing data.
 - The removed features have no screens, navigation links or active script dependencies.
 - Existing document editing, checks, history and exports remain available.
+
+## Release acceptance
+
+- The local application has reproducible setup instructions, real BYOK operation, and tests; simulated behavior is not passed off as completed provider integration.
+- GitHub contains an explicit license selected by the owner, synthetic fixtures, contribution guidance and a clear account of completed versus planned work.
+- The Vercel artifact is demo-only and passes the public-demo checks in the build spec. It contains no real provider credentials and does not require a local API server.
+- The public demo/source URLs are added to documentation only after they exist. No deployment is implied by documenting these decisions.
 
 ## Documentation discipline
 

@@ -1,8 +1,10 @@
 # Resume Tailor: MVP Build Specification
 
-> **For the implementing LLM:** this document is the complete brief for building the Resume Tailor MVP. Read all of it before writing code. It describes the product, the decisions already made, the data model, the LLM contract, every screen and flow, the visual design system, animations, and the test plan. A clickable HTML mock of the finished UI exists in `mock/` (open `mock/index.html`). When this document and the mock disagree, **this document wins**; when this document is silent on a visual detail, **copy the mock**.
+> **For the implementing LLM:** read `CURRENT_SCOPE.md` first. It governs product and platform decisions; this specification governs implementation within that scope; `mock/` guides interactions and visual details. The October PDF is historical context only. Do not revive removed features or interpret the Vercel demo as a requirement to host the real application as SaaS.
 >
-> Source documents: `docs/Resume Tailor MVP Overview.pdf` (product decisions) and `mock/` (UI and flows). Original spec: 22 October 2026. Scope revision: 8 November 2026. See `CURRENT_SCOPE.md` for the simplified product goals and mock limitations; it supersedes the historical PDF where they differ.
+> This repo currently contains a static mock, not the working Next.js application described below. Build two clearly distinguished experiences: the real, locally hosted BYOK application and a public simulated demo on Vercel. Read sections 1.1, 3.1, 18.5 and 20 before planning implementation or publication.
+>
+> Original spec: 22 October 2026. Product/platform decisions confirmed: 8 November 2026. GitHub publication and Vercel deployment are planned destinations, not completed actions.
 
 ---
 
@@ -35,7 +37,7 @@
 
 ## 1. Assignment summary
 
-Build **Resume Tailor**, a local-first web app that turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It must run on the owner's machine with `pnpm dev` and a local SQLite file. Open source and self-hosted, with the user's own AI provider keys. No subscription, accounts, managed hosting, or billing in this scope.
+Build **Resume Tailor**, a local-first web app that turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It must run on a user's machine with `pnpm dev` and a local SQLite file. Open source and self-hosted, with the user's own AI provider keys. Source will be kept publicly on GitHub and developed in public. Vercel hosts only a simulated public product demo. No subscription, accounts, managed real-user backend, or billing in this scope.
 
 Users build the knowledge base either through manual onboarding or by importing an existing resume and reviewing extracted details before saving. Preserve volunteer work and every other section, including unfamiliar content as additional sections.
 
@@ -52,7 +54,23 @@ Core principles (these shape every decision):
 4. **The API key never leaves the browser** except to the provider. LLM calls go browser → provider directly.
 5. **Everything saves automatically**, with revision history and undo.
 
-Deliverable: a working Next.js app meeting the acceptance criteria in section 20, with the tests in section 18 passing.
+Deliverables: a working local Next.js application, its public GitHub source and reproducible setup, and a separately deployed simulated Vercel demo meeting the mode-specific criteria in sections 18 and 20. Implementing local AI integration and preparing the public demo are separate milestones; neither substitutes for the other.
+
+### 1.1 Mode boundaries and current implementation status
+
+| Capability | Real local application target | Current mock / public demo target |
+|---|---|---|
+| Provider access | User's own API keys; real requests to chosen provider | Simulated provider only; no real key entry or provider calls in the public release |
+| Resume import | Real PDF/DOCX/TXT extraction into a review draft | PDF/DOCX explicitly use sample extraction; TXT/pasted text use a basic local parser |
+| Generation and rewrites | Schema-validated provider responses with evidence references | Fixtures/deterministic transformations, visibly simulated |
+| Editing and design | Interactive, with local persistence and history | Interactive, persisted in the visitor's browser |
+| Data | Local SQLite plus on-device key storage | Synthetic initial data, browser-local state; no cloud database |
+| Rendering/export | Typst worker and downloadable PDFs | HTML preview and browser print-to-PDF today; do not claim actual Typst compilation |
+| Runtime | Local Next.js server, installed by the user | Static browser application served by Vercel |
+
+Sections describing real providers, encryption, SQLite, API routes, Typst and the Next.js stack apply to the real local app unless explicitly stated otherwise. Mock timings, model names, key masks and generated text are demonstration fixtures, not proof that an integration exists. Verify supported model IDs and current SDK APIs against official documentation during implementation rather than copying mock identifiers.
+
+No paid service or live public AI demo is planned. Do not add extra product features to justify infrastructure. The current browser-direct LLM architecture requires the browser to stay open during generation; the rendering Web Worker is not a durable background job service. A future durable execution design would require an explicit architecture revision, including where keys and job state live.
 
 ---
 
@@ -99,8 +117,10 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 
 | Concern | Choice |
 |---|---|
+| Source and collaboration | Public GitHub repository; build in public |
+| Public demo host | Vercel; static simulated demo, no provider secrets or database |
 | Framework | Next.js (App Router), TypeScript strict mode |
-| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). Public hosting and sync are outside the current scope. |
+| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). The real app runs locally; Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
 | Database | SQLite via libSQL (`@libsql/client`), file `./data/resume-tailor.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
@@ -121,6 +141,19 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 Conventions: Australian by default (A4, AU spelling, work rights line, referees section), configurable in Settings (A4/Letter, Australian/US).
 
 Layout: **single column only** for ATS safety. **One** resume template and **one** cover letter template in the MVP.
+
+---
+
+### 3.1 GitHub and Vercel delivery requirements
+
+- GitHub is the source/collaboration destination. Publish code, versioned docs, synthetic fixtures, tests and reproducible local setup. Add an owner-selected open-source license before public release; do not invent a license choice or claim this repo is already licensed.
+- Initial Vercel deployment serves **only `mock/`** as static HTML/CSS/JavaScript. Keep docs, local data, key stores and development configuration out of the deployment artifact. No Next.js route handlers, database service or live LLM functions are needed for this static artifact.
+- Use a Git-connected deployment workflow with checks before production promotion; preview deployments can support review. Do not deploy every change directly to the public demo without validating it.
+- If the mock is later replaced by a demo build of the real UI, provide a separate static/demo target with mock provider and browser persistence adapters. A runtime toggle alone must not enable live providers on the public deployment. Never deploy the full local server under the assumption that setting one mock-provider flag removes its database/API dependencies.
+- Public demo: immediately visible simulation notice, sample-first entry, no login/key/payment requirements, reset action, clear local-storage behavior, and links to GitHub/local setup once available. All examples must be synthetic. Uploaded content stays in the browser in this mode; make that distinction explicit from real provider processing.
+- Hosted demo settings may demonstrate provider selection, but must disable real key collection and real connection tests. The current mock's editable connection form needs this public-release adjustment; it is not completed by this specification update.
+- Vercel project, public repository URL and domain are not configured by this document. A custom domain is optional. Add actual links only after publication; publishing and deploying remain separate authorized tasks.
+- CI uses fixture/mock providers and no personal API keys. Real-provider checks are opt-in local verification, documented separately from the deterministic CI suite. Do not claim passing fixture tests prove provider connectivity or output quality.
 
 ---
 
@@ -167,7 +200,8 @@ resume-tailor/
   app/
     layout.tsx                 # fonts, Toaster, global CSS
     page.tsx                   # redirect: onboarding incomplete → /onboarding, else /dashboard
-    onboarding/page.tsx        # full-screen wizard, no app shell
+    onboarding/page.tsx        # chooser, manual wizard and import review
+    import/page.tsx            # upload/paste, extraction and review handoff
     (shell)/layout.tsx         # App shell: sidebar + top bar + model picker
     (shell)/dashboard/page.tsx
     (shell)/kb/[section]/page.tsx
@@ -308,7 +342,8 @@ Revision rules:
 Prefs { paper: 'A4'|'Letter'; spelling: 'en-AU'|'en-US';
         quick: { theme: 'classic'|'modern'|'compact'; pages: 1|2; coverLetter: boolean; tone: 'Professional'|'Warm'|'Concise' };
         dismissedOnboardingBanner: boolean }
-OnboardingState { step: number; maxStep: number; draft: Partial<KnowledgeBase>; completed: boolean }
+OnboardingState { step: number; maxStep: number; draft: Partial<KnowledgeBase>; completed: boolean;
+                  imported?: string; saveMode: 'merge'|'replace' }
 ActiveModel { provider: 'anthropic'|'openai'|'gemini'; model: string }   // stored client-side with connections
 ```
 
@@ -339,7 +374,7 @@ Validate every JSON column with the Zod schema on read and on write. Reject inva
 | `POST /api/kb/:type` | Add entry (type: roles, portfolio, education, skills, credentials, referees) |
 | `PATCH /api/kb/:type/:id`, `DELETE /api/kb/:type/:id` | Edit or delete entry |
 | `GET/PUT /api/onboarding` | Wizard progress and draft |
-| `POST /api/onboarding/complete` | Merge the draft into the KB, mark complete |
+| `POST /api/onboarding/complete` | Validate and save reviewed draft in explicit merge/replace mode; mark complete |
 | `GET /api/projects` | List: id, company, role, location, updatedAt, keyword match counts |
 | `POST /api/projects` | Create with brief, selected, documents and initial revisions in one transaction |
 | `GET /api/projects/:id` | Project, both documents, revisions |
@@ -362,7 +397,7 @@ Saving from the client: debounce document saves by 600 ms. Show "Saving" then "S
 
 | Provider | Key prefix | Models shown in picker |
 |---|---|---|
-| Anthropic | `sk-ant-` | claude-sonnet-5-5 (default), claude-opus-5-5, claude-haiku-5-5 |
+| Anthropic | `sk-ant-` | Verified supported model IDs configured during implementation; mock labels are fixtures |
 | OpenAI | `sk-` | the provider's current flagship and a small model (configurable list in `lib/llm/providers.ts`) |
 | Gemini | `AIza` | the provider's current pro and flash models (configurable) |
 
@@ -376,7 +411,7 @@ interface LlmAdapter {
 
 Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true`. Verify CORS for all three providers in the first spike (risk listed in the overview). If a provider can't be called from the browser, report it; don't proxy keys through the server.
 
-**Mock provider:** implement `MockLlmAdapter`, enabled when `NEXT_PUBLIC_LLM_MOCK=1` or when the active connection is the built-in "Mock" provider in development builds. It returns deterministic fixture outputs with realistic delays (stages of 2–3.6 s), and supports scenarios `happy | gaps | findings | error-stage-1…5` via a `?mock=` query param or a dev-only setting. **All e2e tests run against the mock provider.**
+**Mock provider:** implement `MockLlmAdapter`, enabled when `NEXT_PUBLIC_LLM_MOCK=1` or when the active connection is the built-in "Mock" provider in development builds. It returns deterministic fixture outputs with realistic delays (stages of 2–3.6 s), and supports scenarios `happy | gaps | findings | error-stage-1…5` via a `?mock=` query param or a dev-only setting. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
 
 ### 8.2 Connections and key storage
 
@@ -681,7 +716,7 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | `/` | Redirect: onboarding not complete and KB empty → `/onboarding`; else `/dashboard` | none |
 | `/onboarding` | Choose manual entry or resume import, then review | Full screen, own top bar |
 | `/import` | Resume upload/pasted text and extraction review | App shell |
-| `/dashboard` | Projects | App shell |
+| `/dashboard` | Applications | App shell |
 | `/kb/[section]` | Knowledge base (sections: contact, workRights, roles, portfolio, education, skills, credentials, referees, volunteering, additional; default roles) | App shell |
 | `/settings` | Settings | App shell |
 | `/new` | New project chooser | App shell |
@@ -689,7 +724,7 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | `/new/studio` | Studio setup (stepper) | App shell |
 | `/projects/[id]` | Workspace | App shell, compact sidebar, own bar |
 
-Sidebar: brand (dark rounded square with a document icon, "Resume Tailor") → Dashboard, Knowledge base, Settings (the active item is white with an inset border and an accent icon). Footer: "Stored on this device" with a teal dot. (The mock's "Demo controls" are mock-only; replace them with a dev-only panel behind `NODE_ENV=development` if useful.)
+Sidebar: brand (dark rounded square with a document icon, "Resume Tailor") → Applications, Knowledge base, Settings (the active item is white with an inset border and an accent icon). Footer: "Stored on this device" with a teal dot. (The mock's "Demo controls" are mock-only; replace them with a dev-only panel behind `NODE_ENV=development` if useful.)
 
 Navigation map:
 
@@ -701,7 +736,7 @@ Navigation map:
                    │                       │                         └─ Regenerate (stays)
                    │                       └─▶ /new/studio ─▶ generate ─▶ /projects/[id]
                    └─ banner "Start onboarding" ─▶ /onboarding
-Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcrumbs "Projects / New project / …"
+Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcrumbs "Applications / New application / …"
 ```
 
 ### 13.1 Dashboard
@@ -878,7 +913,7 @@ A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries �
 State: a Zustand store per project holding `{ kind, selectedSectionId, inspectorTab, leftTab, zoom, viewingRevision, pendingProposal, busy, undoStacks: {resume, coverLetter} }`, plus the documents. Persist through the API (debounced) after every mutation.
 
 **Bar:**
-- "‹ Projects / {role} at {company}" (the company part muted).
+- "‹ Applications / {role} at {company}" (the company part muted).
 - Document tabs: Resume | Cover letter (segmented). Switching keeps each document's own state.
 - Save pill: "Saving" with a small spinner, then "✓ Saved".
 - Undo icon button, with the tooltip "Undo: {label}" or "Nothing to undo". Ctrl/Cmd+Z does the same when focus isn't in a text field.
@@ -938,7 +973,7 @@ Export downloads `resume-tailor-backup-YYYY-MM-DD.json` with the toast "Exported
 - Australian spelling in the UI copy when spelling is en-AU (colour, optimise).
 - Avoid middle-dot joined meta strings and arrow suffixes on buttons in copy (the mock uses separators only inside the preview status).
 
-All the strings quoted in sections 8–14 are the source of truth for copy.
+Use "Applications" and "New application" in user-facing navigation; `Project` and `/projects` remain internal schema/route names. Public demo simulation notices and disabled key entry override real-provider settings copy. Other strings in sections 8–14 govern the local application.
 
 ---
 
@@ -1019,7 +1054,7 @@ Mock-provider scenarios (also used by e2e tests):
 
 ## 18. Testing plan
 
-Vitest for unit, component and route-handler tests; Playwright for end-to-end. Every test runs offline using the mock provider and a temporary SQLite file (`file::memory:` or a temp path per test file). Aim for at least 80% line coverage on `lib/`. `pnpm test` and `pnpm test:e2e` must pass before the work is considered done.
+Vitest for unit, component and route-handler tests; Playwright for end-to-end. Every automated CI test runs offline using the mock provider and a temporary SQLite file (`file::memory:` or a temp path per test file). Aim for at least 80% line coverage on `lib/`. `pnpm test` and `pnpm test:e2e` must pass before the work is considered done.
 
 ### 18.1 Unit (`tests/unit`)
 
@@ -1054,7 +1089,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 
 ### 18.3 Route handlers (`tests/api`)
 
-CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes documents and revisions; backup export contains no `connections`, `key` or `apiKey` fields (deep scan); import round-trips the data unchanged; onboarding complete merges the draft without duplicating IDs.
+CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes documents and revisions; backup export contains no `connections`, `key` or `apiKey` fields (deep scan); import round-trips the data unchanged; onboarding complete supports explicit merge and replace modes, preserves existing documents, retains existing contact/work-rights in merge mode and does not duplicate stable IDs.
 
 ### 18.4 End-to-end (`tests/e2e`, Playwright, mock provider, seeded DB)
 
@@ -1073,6 +1108,18 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 
 ---
 
+### 18.5 Import, public demo and release verification
+
+- Test TXT/paste parsing, PDF/DOCX simulation labels, invalid/empty/oversized files, unknown sections, original-text retention, editing the review draft, cancellation, and merge/replace behavior. Test real PDF/DOCX extraction separately in the local application; do not treat sample extraction as parser coverage.
+- Test volunteer-only and education-only backgrounds through both generation flows. Exclude reference-only original text from automatic selection. Verify imported details do not silently mix with demo identity data.
+- Serve the demo artifact independently of the local app. Verify direct/reloaded routes, import review, Quick generate, Studio, editing, history, export, persistence and reset with no local API server.
+- Inspect browser requests during every demo flow: no real provider traffic, key submission, backend storage calls or uploaded document transfer. Verify public demo cannot enable a live adapter via URL parameters, stored preferences or the provider picker.
+- Verify simulation labels, empty/error scenarios, keyboard access, narrow-screen layout, and browser print/export behavior. Sample generation may be simulated; manual editing must actually work.
+- Check that the deployment artifact contains only intended public assets and synthetic fixtures. Build/release failures must not promote a broken demo. Document the actual public URLs after deployment.
+- Current mock checks use JavaScript syntax checks and DOM interaction smoke tests; the application-level `pnpm` commands below are future implementation requirements, not commands available in this static checkout.
+
+---
+
 ## 19. Milestones and build order
 
 Do them in this order. Each ends with its tests green.
@@ -1082,7 +1129,8 @@ Do them in this order. Each ends with its tests green.
 | M0 | Scaffold | Next.js, Tailwind v4, shadcn, fonts, tokens in `globals.css`, App shell, routes stubbed, Vitest and Playwright configured, CSP |
 | M1 | Schemas and DB | Zod schemas, Drizzle tables and migrations, route handlers, seed script, API tests |
 | M2 | Typst spike (de-risk early) | Worker, fonts, resume and letter templates rendering seed data; measure compile time (aim for under 300 ms re-render) and confirm PDF text order |
-| M3 | Knowledge base and onboarding | Wizard, KB screen, field schemas, highlights editor |
+| M3 | Knowledge base and onboarding | Manual/import chooser, wizard, KB screen, volunteer/additional fields, review and merge/replace |
+| M3a | Resume extraction | Real local PDF/DOCX/TXT input handling, provider extraction, unknown-content preservation and failure states; simulated equivalent for public demo |
 | M4 | Connections and LLM adapter | Keystore, Settings cards, key validation and test call, model picker, mock provider, a CORS check for all 3 providers |
 | M5 | Studio setup and generation | Extract brief, match, skeleton, generate with patch validation, Studio stepper |
 | M6 | Workspace | Preview, Content (edit and rewrite with diff), Structure, Design, autosave, revisions, undo |
@@ -1090,6 +1138,7 @@ Do them in this order. Each ends with its tests green.
 | M8 | History and export | History drawer, restore, Export dialog, file naming |
 | M9 | Quick generate | Pipeline emitter, page fitting, the input, progress, error and result screens, Settings defaults |
 | M10 | Backup and polish | Backup export and import, empty states, responsive layout, reduced motion, accessibility pass, e2e suite complete |
+| M11 | Open-source release and public demo | Owner-selected license, GitHub publication/setup/contribution docs, CI, static Vercel demo with simulation boundary and public-demo checks passing |
 
 ---
 
@@ -1099,7 +1148,7 @@ Do them in this order. Each ends with its tests green.
 
 **US2 Connect an API key:** OpenAI, Anthropic and Gemini; the key is checked with a test call before saving; an invalid key shows a clear error; the key is stored encrypted and never exported; the model switches in one click from anywhere.
 
-**US3 See past projects:** a left nav with Dashboard, Knowledge base and Settings; cards show company, role and last edited; the empty state has a dashed box, "No projects yet" and a New project button; selecting a card opens the Workspace.
+**US3 See past applications:** a left nav with Applications, Knowledge base and Settings; cards show company, role and last edited; the empty state has "No applications yet" and a New application button; selecting a card opens the Workspace.
 
 **US4 Generate from a JD:** paste plain text; extracted requirements and keywords are shown before generation (Studio) or live during it (Quick); output uses only KB facts (every bullet has a valid source); the rendered preview appears when generation finishes (target under 60 s with a real provider); on failure the reason is shown and Retry works without pasting again.
 
@@ -1132,17 +1181,23 @@ Do them in this order. Each ends with its tests green.
 - Settings has the default theme, page budget (1 or 2), cover letter switch and tone.
 - Stage changes are announced, focus moves to the result heading, and reduced motion is respected.
 
-General: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm db:seed && pnpm dev`; a README documents setup, scripts, the mock provider and scenarios.
+**Local application acceptance:** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm dev` (empty user KB); `pnpm db:seed` is optional synthetic demo data; a README documents setup, scripts, BYOK costs/data flow, the mock provider and scenarios. CI is deterministic/offline with mock providers; real integration behavior is separately verified and documented.
+
+**Public demo acceptance:** a Vercel-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
+
+**Open-source/publication acceptance:** source is published on GitHub with the owner-selected license, setup and contribution guidance, tests and an honest completed/planned feature list. Document actual repository/demo URLs when live. No paid SaaS, tracking CRM or scraping functionality is required for acceptance.
 
 ---
 
 ## 21. Out of scope (MVP)
 
-Job discovery and scraping; scheduled searches; batch auto-tailoring; listing-trust scores; outreach/contact discovery; career maps; resume experiments; paid plans and subscriptions; managed cloud hosting; multi-column layouts; LinkedIn profile integration; the application status tracker or kanban; DOCX or other export formats; MCP or chat-app integrations; more than one resume and one cover letter template; interview-style onboarding; server sync, accounts or multiple devices; dark mode.
+Job discovery and scraping; scheduled searches; batch auto-tailoring; listing-trust scores; outreach/contact discovery; career maps; resume experiments; paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is explicitly in scope); multi-column layouts; LinkedIn profile integration; the application status tracker or kanban; DOCX or other export formats; MCP or chat-app integrations; more than one resume and one cover letter template; interview-style onboarding; server sync, accounts or multiple devices; dark mode.
 
 ---
 
 ## 22. Open decisions (defaults chosen, flagged for the owner)
+
+GitHub source, local BYOK operation, the simulated Vercel demo, and the absence of a paid service are confirmed decisions, not open alternatives. The repository URL, Vercel project and owner-selected distribution license remain release setup items.
 
 | Decision | Default used in this spec |
 |---|---|
