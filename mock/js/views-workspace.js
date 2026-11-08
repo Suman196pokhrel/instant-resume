@@ -17,7 +17,6 @@ Views.project = function (root, params) {
     lastRenderMs: 0,
     leftOpen: window.innerWidth > 1100,
     instructionDraft: '',
-    pane: params[1] === 'overview' ? 'overview' : 'docs', // docs = Studio, overview = the application around it
   };
   const undo = { resume: [], coverLetter: [] };
   let alive = true;
@@ -80,7 +79,7 @@ Views.project = function (root, params) {
   /* ---------- Layout ---------- */
   function renderAll() {
     root.innerHTML = shell(`
-      <div class="ws ${ui.leftOpen ? '' : 'left-closed'} ${ui.pane === 'overview' ? 'ws-ov' : ''}">
+      <div class="ws ${ui.leftOpen ? '' : 'left-closed'}">
         <div class="ws-bar">
           <div class="ws-bar-left">
             <a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a>
@@ -88,11 +87,9 @@ Views.project = function (root, params) {
             <span class="ws-title" title="${esc(p.role)} at ${esc(p.company)}">${esc(p.role)} <span class="muted">at ${esc(p.company)}</span></span>
           </div>
           <div class="doc-tabs" role="tablist" aria-label="Document">
-            ${['resume', 'coverLetter'].map((k) => `<button role="tab" aria-selected="${ui.pane === 'docs' && ui.kind === k}" class="${ui.pane === 'docs' && ui.kind === k ? 'on' : ''}" data-kind="${k}">${kindLabel(k)}</button>`).join('')}
-            <button role="tab" aria-selected="${ui.pane === 'overview'}" class="${ui.pane === 'overview' ? 'on' : ''}" data-pane="overview" data-tip="Stage, the saved job ad, people to contact and the listing check">Overview</button>
+            ${['resume', 'coverLetter'].map((k) => `<button role="tab" aria-selected="${ui.kind === k}" class="${ui.kind === k ? 'on' : ''}" data-kind="${k}">${kindLabel(k)}</button>`).join('')}
           </div>
           <div class="ws-bar-right">
-            <span data-stage-host>${stageSelect(p, 'data-ws-stage')}</span>
             <span class="save-pill saved ws-doc-only" data-save>${icon('check', 13)} Saved</span>
             <button class="icon-btn ws-doc-only" data-undo aria-label="Undo">${icon('undo', 16)}</button>
             <button class="btn btn-ghost btn-sm ws-doc-only" data-history>${icon('history', 15)} History</button>
@@ -117,7 +114,6 @@ Views.project = function (root, params) {
                 <button class="icon-btn" data-zoom="+" aria-label="Zoom in">+</button>
               </div>
               <span class="render-status muted small" data-render-status></span>
-              <button class="btn btn-ghost btn-sm as-sent" data-as-sent ${p.sent ? '' : 'hidden'} data-tip="See exactly what the employer received">${icon('eye', 14)} View as sent</button>
             </div>
             <div class="preview-scroll" data-scroll>
               <div class="revision-banner" data-rev-banner hidden></div>
@@ -135,7 +131,6 @@ Views.project = function (root, params) {
             <div class="insp-lock" data-insp-lock hidden><p>You're viewing an older revision. Restore it or go back to the current version to edit.</p></div>
           </aside>
         </div>
-        <div class="ws-overview" data-ov></div>
         <div class="drawer" data-drawer aria-hidden="true">
           <div class="drawer-head"><h2>History</h2><button class="icon-btn" data-close-drawer aria-label="Close history">${icon('x')}</button></div>
           <p class="muted small drawer-sub">Every change to the ${kindLabel(ui.kind).toLowerCase()} is saved here automatically.</p>
@@ -146,50 +141,10 @@ Views.project = function (root, params) {
     bindChrome();
     renderLeft(); renderInspector(); updateUndoBtn();
     bootRenderer();
-    if (ui.pane === 'overview') renderOverview();
-  }
-
-  /* ---------- Overview pane: the application around the documents ---------- */
-  function setPane(pane) {
-    ui.pane = pane;
-    $('.ws', root).classList.toggle('ws-ov', pane === 'overview');
-    $$('[data-kind]', root).forEach((x) => { const on = pane === 'docs' && x.dataset.kind === ui.kind; x.classList.toggle('on', on); x.setAttribute('aria-selected', on); });
-    const ov = $('[data-pane]', root); ov.classList.toggle('on', pane === 'overview'); ov.setAttribute('aria-selected', pane === 'overview');
-    history.replaceState(null, '', `#/project/${p.id}${pane === 'overview' ? '/overview' : ''}`);
-    if (pane === 'overview') renderOverview(); else { $('[data-ov]', root).innerHTML = ''; fitZoom(); }
-  }
-  function renderOverview() {
-    const host = $('[data-ov]', root);
-    host.innerHTML = overviewHtml(p);
-    bindOverview(host, p, {
-      rerender: () => { renderOverview(); refreshStage(); },
-      gotoKind: (k) => { ui.kind = k; ui.viewing = null; setPane('docs'); renderPreview(); renderInspector(); renderLeft(); updateUndoBtn(); },
-      viewSent: (k) => { ui.kind = k; setPane('docs'); viewAsSent(); renderInspector(); renderLeft(); },
-    });
-  }
-  function refreshStage() {
-    $('[data-stage-host]', root).innerHTML = stageSelect(p, 'data-ws-stage');
-    bindStage();
-    const b = $('[data-as-sent]', root);
-    if (b) b.hidden = !p.sent;
-  }
-  function bindStage() {
-    $('[data-ws-stage]', root).onchange = (e) => { setAppStage(p, e.target.value); Store.saveNow(); refreshStage(); if (ui.pane === 'overview') renderOverview(); };
-  }
-  function viewAsSent() {
-    const snap = p.sent && p.sent[ui.kind];
-    if (!snap) { toast('No cover letter was sent with this application'); return; }
-    ui.viewing = { snapshot: snap, ts: p.sent.at, label: `sent to ${p.company}` };
-    ui.pending = null;
-    renderPreview(); lockInspector(true);
   }
 
   function bindChrome() {
-    $('[data-pane]', root).onclick = () => setPane('overview');
-    bindStage();
-    $('[data-as-sent]', root).onclick = viewAsSent;
     $$('[data-kind]', root).forEach((b) => (b.onclick = () => {
-      if (ui.pane === 'overview') { ui.kind = b.dataset.kind; ui.viewing = null; setPane('docs'); renderPreview(); renderInspector(); renderLeft(); updateUndoBtn(); return; }
       if (ui.kind === b.dataset.kind) return;
       ui.kind = b.dataset.kind; ui.selected = null; ui.pending = null; ui.viewing = null;
       $$('[data-kind]', root).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });

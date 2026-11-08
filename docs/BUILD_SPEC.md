@@ -2,7 +2,7 @@
 
 > **For the implementing LLM:** this document is the complete brief for building the Resume Tailor MVP. Read all of it before writing code. It describes the product, the decisions already made, the data model, the LLM contract, every screen and flow, the visual design system, animations, and the test plan. A clickable HTML mock of the finished UI exists in `mock/` (open `mock/index.html`). When this document and the mock disagree, **this document wins**; when this document is silent on a visual detail, **copy the mock**.
 >
-> Source documents: `docs/Resume Tailor MVP Overview.pdf` (product decisions) and `mock/` (UI and flows). Date of this spec: 22 October 2026.
+> Source documents: `docs/Resume Tailor MVP Overview.pdf` (product decisions) and `mock/` (UI and flows). Original spec: 22 October 2026. Scope revision: 8 November 2026. See `CURRENT_SCOPE.md` for the simplified product goals and mock limitations; it supersedes the historical PDF where they differ.
 
 ---
 
@@ -35,7 +35,9 @@
 
 ## 1. Assignment summary
 
-Build **Resume Tailor**, a local-first web app that turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It must run on the owner's machine with `pnpm dev` and a local SQLite file. No accounts, no hosting needed for the MVP.
+Build **Resume Tailor**, a local-first web app that turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It must run on the owner's machine with `pnpm dev` and a local SQLite file. Open source and self-hosted, with the user's own AI provider keys. No subscription, accounts, managed hosting, or billing in this scope.
+
+Users build the knowledge base either through manual onboarding or by importing an existing resume and reviewing extracted details before saving. Preserve volunteer work and every other section, including unfamiliar content as additional sections.
 
 Two ways to create documents:
 
@@ -87,7 +89,7 @@ Use one word per thing in code, UI and tests.
 | Gap | A must-have requirement with no supporting KB evidence | |
 | Render / Export | Typst compile to preview / save PDF to disk | |
 | Studio / Workspace | The manual editing screen (`/projects/[id]`) | |
-| Application | **Reserved** for the post-MVP tracker. Do not use in the MVP UI. | |
+| Application | User-facing name for a saved target-job workspace (the `Project` data entity), not a submission/status tracker. The mock uses this label consistently. | `Project` |
 
 Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, Onboarding wizard, KB screen, Settings, Workspace, Job panel, Checks panel, Preview, Document tabs, Inspector (Content / Structure / Design tabs), Instruction box, Model picker, History drawer.
 
@@ -98,7 +100,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Concern | Choice |
 |---|---|
 | Framework | Next.js (App Router), TypeScript strict mode |
-| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). Vercel + Turso later. |
+| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). Public hosting and sync are outside the current scope. |
 | Database | SQLite via libSQL (`@libsql/client`), file `./data/resume-tailor.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
@@ -220,8 +222,12 @@ Education    { id; degree; institution; year?; notes? }
 SkillGroup   { id; group; items: string[] }
 Credential   { id; kind: 'Certification'|'Award'|'Publication'|'Patent'; title; issuer?; year? }
 Referee      { id; name; title?; company?; contact }
-KnowledgeBase{ schemaVersion; contact; workRights; roles; portfolio; education; skills; credentials; referees }
+VolunteerRole{ id; title; company /* organisation */; location?; start?; end?; highlights: Highlight[] }
+AdditionalSection{ id; title; notes; referenceOnly?: boolean }
+KnowledgeBase{ schemaVersion; contact; workRights; roles; volunteering; portfolio; education; skills; credentials; referees; additional }
 ```
+
+Volunteer work renders as an experience-style section titled Volunteer work. Additional sections retain their title and content; reference-only original resume text is excluded from automatic selection. Normalise older knowledge bases with empty `volunteering` and `additional` arrays.
 
 IDs are stable strings (`role-…`, `hl-…`, `pf-…`, `ed-…`, `sk-…`, `cr-…`, `ref-…`), generated with a short random suffix. **Never reuse or change an ID**; bullets reference highlight IDs.
 
@@ -245,7 +251,7 @@ The user can edit title, company, location, team, and add or remove keywords bef
 ```ts
 Bullet      { id; text; source: string /* highlight ID, required */ }
 SectionItem { id; ref: string /* KB entry ID */; heading; sub?; meta?; line?; bullets?: Bullet[] }
-SectionKind = 'summary' | 'experience' | 'skills' | 'portfolio' | 'education' | 'credentials' | 'referees' | 'paragraph'
+SectionKind = 'summary' | 'experience' | 'skills' | 'portfolio' | 'education' | 'credentials' | 'referees' | 'additional' | 'paragraph'
 Section     { id; kind: SectionKind; title; hidden: boolean; text?: string; items?: SectionItem[] }
 Theme       { font: 'Liberation Sans'|'Carlito'|'Inter'; baseSize; headingSize; nameSize; margin; lineHeight; sectionGap; accent }
 Document    { id; projectId; kind: 'resume'|'coverLetter'; theme: Theme; sections: Section[];
@@ -316,7 +322,7 @@ Defaults: A4, en-AU, quick = { classic, 2, true, Professional }.
 
 | Table | Columns |
 |---|---|
-| `kb_entries` | `id` PK, `type` ('contact'\|'workRights'\|'role'\|'portfolio'\|'education'\|'skills'\|'credential'\|'referee'), `position` int, `data` JSON text, `schema_version`, `updated_at` |
+| `kb_entries` | `id` PK, `type` ('contact'\|'workRights'\|'role'\|'portfolio'\|'education'\|'skills'\|'credential'\|'referee'|'volunteering'|'additional'), `position` int, `data` JSON text, `schema_version`, `updated_at` |
 | `projects` | `id` PK, `company`, `role`, `location`, `jd_text`, `brief` JSON, `selected` JSON, `source`, `cover_letter_off` bool, `gaps` JSON, `schema_version`, `created_at`, `updated_at` |
 | `documents` | `id` PK, `project_id` FK cascade, `kind`, `content` JSON (sections, recipient), `theme` JSON, `updated_at` |
 | `revisions` | `id` PK, `document_id` FK cascade, `ts`, `kind`, `label`, `coalesce_key`, `snapshot` JSON |
@@ -385,7 +391,7 @@ Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-bro
 
 ### 8.3 LLM contract
 
-Four calls. Each uses `generateObject` with a Zod schema; **output that fails validation is rejected before it touches anything**. Retry once on a validation failure, then surface an error.
+Four tailoring calls, plus a resume-import extraction call described in 14.1a. Each uses `generateObject` with a Zod schema; **output that fails validation is rejected before it touches anything**. Retry once on a validation failure, then surface an error.
 
 **1. Extract brief**: input: JD text. Output: `JobBrief`. Keywords must be terms that appear in the JD.
 
@@ -673,9 +679,10 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | Route | Screen | Shell |
 |---|---|---|
 | `/` | Redirect: onboarding not complete and KB empty → `/onboarding`; else `/dashboard` | none |
-| `/onboarding` | Onboarding wizard | Full screen, own top bar |
+| `/onboarding` | Choose manual entry or resume import, then review | Full screen, own top bar |
+| `/import` | Resume upload/pasted text and extraction review | App shell |
 | `/dashboard` | Projects | App shell |
-| `/kb/[section]` | Knowledge base (sections: contact, workRights, roles, portfolio, education, skills, credentials, referees; default roles) | App shell |
+| `/kb/[section]` | Knowledge base (sections: contact, workRights, roles, portfolio, education, skills, credentials, referees, volunteering, additional; default roles) | App shell |
 | `/settings` | Settings | App shell |
 | `/new` | New project chooser | App shell |
 | `/new/quick` | Quick generate (input → progress → result) | App shell |
@@ -700,16 +707,16 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 ### 13.1 Dashboard
 
 - Optional banner (if onboarding is incomplete and not dismissed): "Finish setting up your knowledge base" with a "Continue onboarding" action and a dismiss button.
-- Page head: h1 "Projects", sub "One project per job you apply for. Everything saves automatically." Search box on the right ("Search company or role"; filters cards live).
-- Top bar action: primary "New project" (+ icon).
-- Card: monogram, role (15.5px/600), company, location (muted), footer "Edited {time ago}" and a keyword pill `{matched} of {total} keywords` (warn variant if the resume has findings). A ⋯ menu opens a dialog with Open, Duplicate and Delete project (Delete shows the toast "Project deleted" with Undo).
-- The last tile is a dashed "New project" card.
-- Empty state: dashed box, file icon, **"No projects yet"**, "A project holds the job description, your tailored resume and your cover letter for one job.", primary "New project".
+- Page head: h1 "Applications", sub "One job description, a tailored resume and a cover letter. Everything saves automatically." Search box on the right ("Search company or role"; filters cards live).
+- Top bar action: primary "New application" (+ icon).
+- Card: monogram, role (15.5px/600), company, location (muted), footer "Edited {time ago}". A ⋯ menu opens a dialog with Open, Duplicate and Delete project (Delete shows the toast "Project deleted" with Undo).
+- The last tile is a dashed "New application" card.
+- Empty state: dashed box, file icon, **"No applications yet"**, "A project holds the job description, your tailored resume and your cover letter for one job.", primary "New application".
 - Time-ago format: "just now", "5 minutes ago", "2 hours ago", "3 days ago", "2 weeks ago".
 
 ### 13.2 Knowledge base
 
-- Head: "Knowledge base", "Every fact here is entered once. Resumes and cover letters can only use what's stored here." Top bar actions: "Import" and "Export backup".
+- Head: "Knowledge base", "Every fact here is entered once. Resumes and cover letters can only use what's stored here." Top bar actions: "Import resume", "Import backup" and "Export backup". Resume import starts a review draft; backup import is a separate restore operation.
 - Left sub-nav lists the sections with counts. Right: the section title and "Add {noun}".
 - Entry card: title, sub, meta, the KB ID (small monospace) and an Edit button. Roles and portfolio items list their highlights in rows, each with a metric pill on the right. Skill groups show chips.
 - Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base".
@@ -731,24 +738,30 @@ Every preference change saves immediately, with the toast "Preference saved".
 
 ### 14.1 Onboarding wizard (US1)
 
-Full-screen. Top bar: brand; a centred progress bar labelled "Step {n} of 9" with "{k} steps left" (or "Last step"); "Save and exit" (goes to the dashboard, keeping progress). Left rail: numbered steps (the content really is a sequence) with check icons for done steps and "optional" tags; steps up to the furthest one reached are clickable.
+Full-screen. Top bar: brand; a centred progress bar labelled "Step {n} of 11" with "{k} steps left" (or "Last step"); "Save and exit" (goes to the dashboard, keeping progress). Left rail: numbered steps (the content really is a sequence) with check icons for done steps and "optional" tags; steps up to the furthest one reached are clickable.
 
 | # | Step | Required | Blurb |
 |---|---|---|---|
-| 1 | Contact details | yes | How employers reach you. This goes at the top of every resume and cover letter. |
-| 2 | Work rights | yes | Australian employers often screen on this, so it sits under your name. |
-| 3 | Experience | yes (at least 1 role) | Add each role, newest first. Highlights are the raw material for bullets, so be specific and include numbers. |
-| 4 | Portfolio items | optional | Personal, academic or open-source work you built. |
-| 5 | Education | optional | Degrees, diplomas and relevant courses. |
-| 6 | Skills | yes (at least 1 group) | Group your skills. Only skills listed here can appear on a resume. |
-| 7 | Achievements and publications | optional | Certifications, awards, talks, papers and patents. |
-| 8 | Referees | optional | Optional. You can also show "Available on request". |
-| 9 | Review | | Check everything looks right, then save it to your knowledge base. |
+| 1 | Contact details | name and valid email required at final save | How employers reach you |
+| 2 | Work rights | optional | Only include information explicitly supplied |
+| 3 | Experience | optional | Paid roles and achievements |
+| 4 | Volunteer work | optional | Community work, mentoring and unpaid roles |
+| 5 | Portfolio items | optional | Personal, academic or open-source work |
+| 6 | Education | optional | Qualifications and courses |
+| 7 | Skills | optional | Skills grouped by area |
+| 8 | Achievements and publications | optional | Certifications, awards, papers and patents |
+| 9 | Referees | optional | Referee details |
+| 10 | Additional sections | optional | Languages, summaries and unfamiliar sections |
+| 11 | Review | yes | Correct, remove, and confirm details before saving |
+
+Do not require paid experience: volunteer-only and education-based backgrounds must work. Entry forms may validate their own required fields; an import may retain incomplete details for review without inventing missing information.
 
 Field schemas (* = required):
-- Contact: Full name*, Email* (format check: "Enter an email like name@example.com"), Phone, Location*, LinkedIn, GitHub or website.
-- Work rights: Work rights* (select from `WorkRightsStatus`), Notice period, Notes.
+- Contact: Full name*, Email* (format check: "Enter an email like name@example.com"), Phone, Location, LinkedIn, GitHub or website.
+- Work rights: Work rights (optional section; required only when completing this step) (select from `WorkRightsStatus`), Notice period, Notes.
 - Role: Job title*, Employer*, Location, Start*, End*, plus highlights.
+- Volunteer role: same fields as Role, with Organisation instead of Employer.
+- Additional section: Title*, Details* (multiline), with internal `referenceOnly` flag for original source text.
 - Portfolio item: Name*, One-line summary*, Link, plus highlights.
 - Education: Qualification*, Institution*, Year completed, Notes.
 - Skill group: Group name*, Skills separated by commas*.
@@ -759,11 +772,21 @@ Highlights editor: rows of [textarea "What you did and the result, e.g. Cut API 
 
 Behaviour:
 - Inline validation on Continue. Errors appear under the fields: "Enter your full name", "Enter your email". Focus moves to the first invalid field. Optional labels say "optional" in muted text.
-- Repeatable steps show saved entries as compact cards (Edit, Remove), then a dashed form "Add your first role" or "Add another role" with "Save role". On Continue, a partially filled valid form is saved automatically. If the minimum isn't met: "Add at least one role to continue. You can add more later."
+- Repeatable steps show saved entries as compact cards (Edit, Remove), then a dashed form "Add your first role" or "Add another role" with "Save role". On Continue, a partially filled valid form is saved automatically. All background sections may be skipped; no paid role is required.
 - "Save and continue" shows a brief spinner, saves the step (PUT `/api/onboarding`), moves on, and shows "✓ Saved" fading near the footer. "Skip this step" appears on optional steps.
 - Returning to `/onboarding` resumes at the saved step, with the toast "Picked up where you left off: {step}".
 - Review lists each step with a summary, a status pill ("{n} added", "Done", "Empty") and Edit. "Save to knowledge base" merges the draft (POST complete) and shows the done screen: animated check, "Your knowledge base is ready", "{n} entries saved. Every resume and cover letter you make will draw only on these facts.", then "Review knowledge base" and "Start a project".
 - Dev only: a "Fill with sample" button per step that loads the seed data (section 17).
+
+### 14.1a Resume import and review
+
+Entry points: onboarding chooser and Knowledge base → Import resume. Accept PDF, DOCX and TXT up to 10 MB, or pasted text. Show unsupported-file, empty-file and read-failure states without modifying the saved KB.
+
+Production goal: extract contact details, work history, volunteer work, projects, education, skills, credentials, referees, and any other sections through the user's configured provider. Explain provider data transfer before extraction. Do not infer work rights or invent missing fields. Preserve unmatched content as Additional sections and retain original text as reference-only material.
+
+Create an onboarding draft and open Review, with every step available for correction. No extracted information enters the KB until the user confirms. Let the user choose between adding entries while retaining existing contact/work-rights fields, or explicitly replacing the KB. Confirm replacement of an unfinished onboarding draft. Existing application documents remain intact. Sample KB replacement is the default for demo onboarding, visibly selected in Review.
+
+The current static mock deliberately simulates PDF/DOCX extraction with labelled sample details. TXT and pasted text use a basic local parser, with original text preserved for comparison; they do not promise production-quality extraction. API connections and document generation remain simulated. Production parsing, OCR for scanned files, provider integration, and comprehensive extraction accuracy are implementation work, not completed mock capabilities.
 
 ### 14.2 New project chooser
 
@@ -847,7 +870,7 @@ A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries �
 
 1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
 2. **Job brief:** "Job brief" / "Extracted from the ad. Fix anything that's wrong; keywords drive tailoring and checks." A pill "✦ Extracted by {model}". Editable Role, Company, Location and Team (optional). Two columns: Requirements list (and Nice to have); Keywords as removable chips (teal with ✓ when the KB supports them, dashed grey otherwise; help text "Teal keywords are backed by your knowledge base. Grey ones aren't, so they can't be claimed."), plus "Add a keyword". A work-rights callout if the ad states a requirement: "{ad requirement}. Your knowledge base says: {status}." Buttons: "Edit job description" and "Choose entries".
-3. **Choose entries:** "Choose what to draw on" / "Suggestions are based on keyword matches. Only ticked entries can appear in the documents." A counter pill "{n} of {total} selected". Grouped checkbox rows (Experience, Portfolio, Education, Certifications and awards, Referees), each with the entry name, "Matches React, TypeScript…" (up to 5) or "No keyword matches", and a "Suggested" pill. At least one role is required: "Select at least one role from Experience". Footer: "Runs on {model}, about 6,000 tokens" and primary "✦ Generate resume and cover letter".
+3. **Choose entries:** "Choose what to draw on" / "Suggestions are based on keyword matches. Only ticked entries can appear in the documents." A counter pill "{n} of {total} selected". Grouped checkbox rows (Experience, Portfolio, Education, Certifications and awards, Referees), each with the entry name, "Matches React, TypeScript…" (up to 5) or "No keyword matches", and a "Suggested" pill. At least one non-reference KB entry is required: "Select at least one knowledge base entry". Include volunteer roles and additional sections; original resume text is reference-only. Footer: "Runs on {model}, about 6,000 tokens" and primary "✦ Generate resume and cover letter".
 4. **Generate:** h1 "Generating for {company}", "Using {model}. Only facts from the entries you chose can be used." Six stages with icons and times, where "on device" tags mark the non-LLM steps: Matching knowledge base entries to the brief (on device), Drafting the resume, Drafting the cover letter, Validating the response (done note "{n} operations, all valid"), Running checks (on device), Rendering the PDF preview (on device). An elapsed counter. A ghost page on the right whose lines grow as sections draft. On failure: the stage turns red and a callout reads "Generation stopped while drafting the cover letter." / "{Provider} returned {code}: {message}. Nothing was saved, and your job description, brief and selections are kept." with Retry, Switch model (opens the picker) and Back to entries. On success: save the project and go to the Workspace, with the toast "Generated in {s}s. Review the checks before you export." (or "No issues found.").
 
 ### 14.5 Workspace (`/projects/[id]`)
@@ -1072,7 +1095,7 @@ Do them in this order. Each ends with its tests green.
 
 ## 20. Acceptance criteria (definition of done)
 
-**US1 Guided onboarding:** steps for contact, work rights, experience, portfolio, education, skills, achievements and publications (plus referees and review); a progress bar shows the current step and steps left; each step saves on completion; closing and returning resumes; inline validation; optional steps can be skipped; every entry is editable later on the KB screen.
+**US1 Guided onboarding and import:** offer manual entry or resume upload first; extracted data opens a review draft before save; include volunteer work and additional sections; preserve unfamiliar content and original text; allow a background without paid roles. Existing manual flow: steps for contact, work rights, experience, portfolio, education, skills, achievements and publications (plus referees and review); a progress bar shows the current step and steps left; each step saves on completion; closing and returning resumes; inline validation; optional steps can be skipped; every entry is editable later on the KB screen.
 
 **US2 Connect an API key:** OpenAI, Anthropic and Gemini; the key is checked with a test call before saving; an invalid key shows a clear error; the key is stored encrypted and never exported; the model switches in one click from anywhere.
 
@@ -1115,7 +1138,7 @@ General: `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass
 
 ## 21. Out of scope (MVP)
 
-Multi-column layouts; importing an existing resume or LinkedIn profile; the application status tracker or kanban; DOCX or other export formats; MCP or chat-app integrations; more than one resume and one cover letter template; interview-style onboarding; server sync, accounts or multiple devices; dark mode.
+Job discovery and scraping; scheduled searches; batch auto-tailoring; listing-trust scores; outreach/contact discovery; career maps; resume experiments; paid plans and subscriptions; managed cloud hosting; multi-column layouts; LinkedIn profile integration; the application status tracker or kanban; DOCX or other export formats; MCP or chat-app integrations; more than one resume and one cover letter template; interview-style onboarding; server sync, accounts or multiple devices; dark mode.
 
 ---
 
@@ -1125,7 +1148,7 @@ Multi-column layouts; importing an existing resume or LinkedIn profile; the appl
 |---|---|
 | Key encryption approach (passphrase vs device key) | Non-extractable device key in IndexedDB |
 | Conventions | Australian by default, switchable to US in Settings |
-| Audience at launch | Owner only (local) |
+| Audience at launch | Open-source users hosting locally with their own provider keys; no paid plan |
 | ORM | Drizzle |
 | Low keyword coverage finding threshold | Below 60% |
 | How gaps are decided | LLM match call returns evidence IDs, validated locally; gap = must-have with no valid evidence |

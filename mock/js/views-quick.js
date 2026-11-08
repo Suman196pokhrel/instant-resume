@@ -112,7 +112,7 @@ function createMockPipeline({ jdText, scenario, prefs }) {
       maybeFail(i);
       const b = ctx.brief;
       ctx.selected = Docs.suggestSelection(kb, b);
-      const entries = [...kb.roles, ...kb.portfolio, ...kb.credentials]
+      const entries = [...kb.roles, ...(kb.volunteering || []), ...kb.portfolio, ...kb.credentials]
         .filter((e) => ctx.selected.includes(e.id) && Docs.matchedKeywords(Docs.entryText(e), b.keywords).length);
       const matched = entries.map((e) => (e.company ? `${e.title}, ${e.company}` : e.name || e.title)).slice(0, 4);
       const skills = kb.skills.flatMap((g) => g.items).filter((s) => b.keywords.some((k) => Docs.kwMatch(s, k))).slice(0, 5);
@@ -226,15 +226,11 @@ function quickView(root) {
 
   const hasConn = () => !!st.connections[st.activeModel.provider];
   const plural = (n, one, many) => `${n} ${n === 1 ? one : many}`;
-  // Arriving from Jobs: crumbs and the result screen lead back to Matches
-  const fromJob = qd.jobId && typeof jobsState === 'function' ? jobsState().jobs.find((j) => j.id === qd.jobId) : null;
-  const crumbs = fromJob
-    ? `<a class="crumb" href="#/jobs">${icon('chevLeft', 15)} Jobs</a><span class="crumb-sep">/</span><span>${esc(fromJob.company)}</span><span class="crumb-sep">/</span><span>Quick generate</span>`
-    : `<a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a><span class="crumb-sep">/</span><a class="crumb" href="#/new">New application</a><span class="crumb-sep">/</span><span>Quick generate</span>`;
+  const crumbs = `<a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a><span class="crumb-sep">/</span><a class="crumb" href="#/new">New application</a><span class="crumb-sep">/</span><span>Quick generate</span>`;
   const elapsed = () => ((performance.now() - startedAt) / 1000).toFixed(1);
 
   function frame(inner) {
-    root.innerHTML = shell(`<div class="qg-wrap">${inner}</div><div class="sr-only" aria-live="polite" data-announce></div>`, { route: fromJob ? 'jobs' : 'dashboard', title: crumbs });
+    root.innerHTML = shell(`<div class="qg-wrap">${inner}</div><div class="sr-only" aria-live="polite" data-announce></div>`, { route: 'dashboard', title: crumbs });
     bindShell(root);
   }
   function announce(msg) {
@@ -445,7 +441,6 @@ function quickView(root) {
       if (replaceProjectId) { st.projects = st.projects.filter((x) => x.id !== replaceProjectId); replaceProjectId = null; }
       res.project.updatedAt = Date.now();
       st.projects.push(res.project);
-      if (qd.jobId) { linkProjectToJob(res.project, qd.jobId); qd.jobId = null; }
       Store.saveNow();
       announce('Your documents are ready');
       await sleep(reducedMotion() ? 0 : 450);
@@ -503,7 +498,6 @@ function quickView(root) {
             <p class="muted">${esc(p.role)} at ${esc(p.company)}. Generated in ${secs}s with ${esc(st.activeModel.model)}.</p>
           </div>
           <div class="qg-actions">
-            ${fromJob ? `<a class="link-btn qg-regen" href="#/jobs">${icon('chevLeft', 14)} Back to matches</a>` : ''}
             <button class="link-btn qg-regen" data-regen>${icon('undo', 14)} Regenerate</button>
             <a class="btn btn-ghost" href="#/project/${p.id}">${icon('pencil', 15)} Open in Studio</a>
             <button class="btn btn-primary" data-dl-all>${icon('download', 15)} ${kinds.length > 1 ? 'Download both' : 'Download resume'}</button>
@@ -554,12 +548,6 @@ function quickView(root) {
   }
 
   renderInput();
-  // Arriving from Jobs with "Automatic": start straight away, no paste needed
-  if (qd.autoStart) {
-    qd.autoStart = false;
-    Store.save();
-    if (hasConn() && qd.jdText.trim().length >= 80) start();
-  }
   return () => { if (pipeline) pipeline.cancel(); stopTimer(); };
 }
 

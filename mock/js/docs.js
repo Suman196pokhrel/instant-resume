@@ -30,11 +30,11 @@ const Docs = (function () {
     summary: 'Summary', experience: 'Experience', skills: 'Skills', portfolio: 'Portfolio',
     education: 'Education', credentials: 'Certifications and awards', referees: 'Referees',
   };
-  const STANDARD_HEADINGS = ['summary', 'profile', 'experience', 'work experience', 'skills', 'portfolio', 'projects', 'education', 'certifications and awards', 'certifications', 'awards', 'publications', 'referees', 'references'];
+  const STANDARD_HEADINGS = ['summary', 'profile', 'experience', 'work experience', 'skills', 'portfolio', 'projects', 'education', 'certifications and awards', 'certifications', 'awards', 'publications', 'referees', 'references', 'volunteer work', 'languages'];
 
   /* ---------- KB helpers ---------- */
   function allHighlights(kb) {
-    return [...kb.roles, ...kb.portfolio].flatMap((e) => e.highlights.map((h) => ({ ...h, owner: e })));
+    return [...kb.roles, ...(kb.volunteering || []), ...kb.portfolio].flatMap((e) => (e.highlights || []).map((h) => ({ ...h, owner: e })));
   }
   function findHighlight(kb, id) { return allHighlights(kb).find((h) => h.id === id); }
   function kbSkillList(kb) { return kb.skills.flatMap((g) => g.items); }
@@ -52,13 +52,14 @@ const Docs = (function () {
 
   function kbAllText(kb) {
     return [
-      ...kb.roles.map(entryText), ...kb.portfolio.map(entryText), ...kb.education.map(entryText),
+      ...(kb.volunteering || []).map(entryText), ...(kb.additional || []).map(entryText), ...kb.roles.map(entryText), ...kb.portfolio.map(entryText), ...kb.education.map(entryText),
       ...kb.credentials.map(entryText), kbSkillList(kb).join(' '), kb.workRights.status, kb.workRights.noticePeriod,
     ].join(' ');
   }
 
   function suggestSelection(kb, brief) {
     const ids = [];
+    [...(kb.volunteering || []), ...(kb.additional || []).filter(e => !e.referenceOnly)].forEach(e => ids.push(e.id));
     kb.roles.forEach((r) => ids.push(r.id));
     kb.portfolio.forEach((p) => { if (matchedKeywords(entryText(p), brief.keywords).length) ids.push(p.id); });
     kb.education.forEach((e) => ids.push(e.id));
@@ -71,7 +72,7 @@ const Docs = (function () {
   function scoreHighlight(h, kws) { return matchedKeywords(h.text + ' ' + (h.skills || []).join(' '), kws).length; }
 
   function pickBullets(entry, kws, n) {
-    return entry.highlights
+    return (entry.highlights || [])
       .map((h, i) => ({ h, i, s: scoreHighlight(h, kws) }))
       .sort((a, b) => b.s - a.s || a.i - b.i)
       .slice(0, n)
@@ -79,16 +80,9 @@ const Docs = (function () {
   }
 
   function buildSummary(kb, brief) {
-    const kws = brief.keywords;
-    const fe = ['React', 'TypeScript', 'Accessibility', 'Design system', 'Performance'].filter((k) => kws.includes(k)).length;
-    const be = ['Node.js', 'PostgreSQL', 'AWS', 'Terraform', 'Lambda', 'Event-driven', 'Docker'].filter((k) => kws.includes(k)).length;
-    const focus = fe >= be
-      ? 'fast, accessible React and TypeScript web apps'
-      : 'reliable Node.js services and event-driven systems on AWS';
-    const proof = fe >= be
-      ? 'Recently rebuilt a shipment tracking dashboard to load in 1.1s and led a design system rollout across four teams.'
-      : 'Recently designed a pricing service on AWS Lambda that handles 2M quotes a month and cut AWS spend by 25%.';
-    return `Senior software engineer with eight years building ${focus} for logistics and education companies in Sydney and Melbourne. ${proof} Looking to bring that experience to the ${brief.team || brief.title} team at ${brief.company}.`;
+    const role = kb.roles[0] || (kb.volunteering || [])[0];
+    const skills = kbSkillList(kb).filter(k => kwMatch(brief.keywords.join(' '),k)).slice(0,4);
+    return [role ? `${role.title}${role.company ? ' at ' + role.company : ''}.` : '', skills.length ? `Skills include ${skills.join(', ')}.` : '', `Applying for ${brief.title} at ${brief.company}.`].filter(Boolean).join(' ');
   }
 
   function generateResume(kb, brief, selected) {
@@ -99,7 +93,7 @@ const Docs = (function () {
       { id: uid('s'), kind: 'summary', title: SECTION_TITLES.summary, hidden: false, text: buildSummary(kb, brief) },
       {
         id: uid('s'), kind: 'experience', title: SECTION_TITLES.experience, hidden: false,
-        items: roles.map((r, i) => ({ id: uid('i'), ref: r.id, heading: r.title, sub: r.company, meta: `${r.location}  |  ${r.start} to ${r.end}`, bullets: pickBullets(r, kws, [4, 3, 2][i] || 2) })),
+        items: roles.map((r, i) => ({ id: uid('i'), ref: r.id, heading: r.title, sub: r.company, meta: [r.location, [r.start,r.end].filter(Boolean).join(' to ')].filter(Boolean).join(' | '), bullets: pickBullets(r, kws, [4, 3, 2][i] || 2) })),
       },
       {
         id: uid('s'), kind: 'skills', title: SECTION_TITLES.skills, hidden: false,
@@ -122,23 +116,21 @@ const Docs = (function () {
       },
       {
         id: uid('s'), kind: 'referees', title: SECTION_TITLES.referees, hidden: false,
-        items: kb.referees.filter(sel).map((r) => ({ id: uid('i'), ref: r.id, heading: r.name, sub: `${r.title}, ${r.company}`, meta: r.contact })),
+        items: kb.referees.filter(sel).map((r) => ({ id: uid('i'), ref: r.id, heading: r.name, sub: [r.title,r.company].filter(Boolean).join(', '), meta: r.contact })),
       },
+      ...((kb.volunteering || []).filter(sel).length ? [{id:uid('s'),kind:'experience',title:'Volunteer work',hidden:false,items:kb.volunteering.filter(sel).map(r=>({id:uid('i'),ref:r.id,heading:r.title,sub:r.company,meta:[r.start,r.end].filter(Boolean).join(' to '),bullets:pickBullets(r,kws,3)}))}] : []),
+      ...(kb.additional || []).filter(sel).map(e=>({id:uid('s'),kind:'additional',title:e.title,hidden:false,items:[{id:uid('i'),ref:e.id,heading:e.title,line:e.notes}]})),
     ].filter((s) => s.kind === 'summary' || (s.items && s.items.length));
     return { kind: 'resume', theme: clone(MOCK.themeDefaults), sections };
   }
 
   function generateCoverLetter(kb, brief) {
-    const kws = brief.keywords;
-    const [r1, r2] = kb.roles;
-    const top1 = pickBullets(r1, kws, 2);
-    const top2 = r2 ? pickBullets(r2, kws, 1) : [];
-    const req = brief.requirements.slice(1, 3).map((r) => `"${lowerFirst(r)}"`);
+    const evidence = [...kb.roles, ...(kb.volunteering || []), ...kb.portfolio].flatMap(e => (e.highlights || []).map(h => h.text)).slice(0,2);
     const paras = [
-      { title: 'Opening', text: `I'm applying for the ${brief.title} role at ${brief.company}. I've spent eight years building web products in Sydney and Melbourne, most recently as a ${r1.title} at ${r1.company}, and the work your ${brief.team || ''} team does lines up closely with mine.`.replace('  ', ' ') },
-      { title: 'Evidence', text: `At ${r1.company} I ${lowerFirst(top1[0].text)}. I also ${lowerFirst(top1[1].text)}.` },
-      { title: 'Fit', text: `Your ad mentions ${req.join(' and ')}. ${r2 ? `Before ${r1.company}, at ${r2.company}, I ${lowerFirst(top2[0].text)}.` : ''} I like working closely with product and design, and I'd bring the same habits to ${brief.company}.` },
-      { title: 'Close', text: `${RIGHTS_PHRASE[kb.workRights.status] || "I have the right to work in Australia"}${kb.workRights.noticePeriod ? ` and can start with ${kb.workRights.noticePeriod}${/s$/.test(kb.workRights.noticePeriod) ? "'" : "'s"} notice` : ''}. Thank you for considering my application; I'd welcome a chat about the role.` },
+      {title:'Opening',text:`I'm applying for the ${brief.title} role at ${brief.company}.`},
+      {title:'Evidence',text:evidence.join(' ') || 'Add relevant achievements to your knowledge base to build this paragraph.'},
+      {title:'Fit',text:kbSkillList(kb).length ? `My recorded skills include ${kbSkillList(kb).slice(0,5).join(', ')}.` : 'Review the job requirements and add supporting experience.'},
+      {title:'Close',text:[RIGHTS_PHRASE[kb.workRights.status], 'Thank you for considering my application.'].filter(Boolean).join('. ')},
     ];
     return {
       kind: 'coverLetter',
@@ -393,7 +385,7 @@ const Docs = (function () {
         let anyMatch = false;
         next.items.forEach((it) => {
           if (!it.bullets) return;
-          const owner = [...kb.roles, ...kb.portfolio].find((e) => e.id === it.ref);
+          const owner = [...kb.roles, ...(kb.volunteering || []), ...kb.portfolio].find((e) => e.id === it.ref);
           const src = (b) => findHighlight(kb, b.source);
           it.bullets.sort((a, b) => (hlMatches(src(b)) ? 1 : 0) - (hlMatches(src(a)) ? 1 : 0));
           if (owner && !it.bullets.some((b) => hlMatches(src(b)))) {

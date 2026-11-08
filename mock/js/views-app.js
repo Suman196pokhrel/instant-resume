@@ -6,7 +6,7 @@ const KB_SCHEMA = {
     { k: 'name', label: 'Full name', req: true, ph: 'Jordan Whitlock' },
     { k: 'email', label: 'Email', req: true, type: 'email', ph: 'you@example.com' },
     { k: 'phone', label: 'Phone', ph: '04xx xxx xxx' },
-    { k: 'location', label: 'Location', req: true, ph: 'Sydney NSW' },
+    { k: 'location', label: 'Location', ph: 'Sydney NSW' },
     { k: 'linkedin', label: 'LinkedIn', ph: 'linkedin.com/in/…' },
     { k: 'github', label: 'GitHub or website', ph: 'github.com/…' },
   ] },
@@ -58,6 +58,7 @@ function fieldsHtml(schema, values = {}, idp = 'f') {
     const id = `${idp}-${f.k}`;
     const input = f.type === 'select'
       ? `<select id="${id}" name="${f.k}"><option value="">Choose…</option>${f.options.map((o) => `<option ${o === v ? 'selected' : ''}>${esc(o)}</option>`).join('')}</select>`
+      : f.type === 'textarea' ? `<textarea id="${id}" name="${f.k}" rows="6">${esc(v || '')}</textarea>`
       : `<input id="${id}" name="${f.k}" type="${f.type || 'text'}" value="${esc(v || '')}" placeholder="${esc(f.ph || '')}" autocomplete="off">`;
     return `<div class="field ${f.wide ? 'field-wide' : ''}" data-field="${f.k}">
       <label for="${id}">${esc(f.label)}${f.req ? '' : ' <span class="optional">optional</span>'}</label>${input}
@@ -138,198 +139,41 @@ function monogram(name) {
   return `<span class="monogram" style="--h:${h}">${esc(name.charAt(0))}</span>`;
 }
 
-/* Applications home: one compact, sortable list. A row is one application (one job).
-   Stage tabs with counts replace summary charts; "Needs you" replaces the old Up next panel.
-   The funnel and other charts live in Career map. */
-const HOME_TABS = [
-  ['needs', 'Needs you', 'Applications with something for you to do now'],
-  ['all', 'All', 'Every application'],
-  ['draft', 'Drafts', 'Documents ready or in progress, not sent yet'],
-  ['sent', 'Sent', 'Sent and waiting on a reply'],
-  ['interview', 'Interviewing', 'Interviews and offers'],
-  ['closed', 'Closed', 'Rejected or no reply'],
-];
-const HOME_PAGE = 25;
-
-function nextStepFor(row) {
-  const days = row.sentAt ? (Date.now() - row.sentAt) / 864e5 : 0;
-  const dateIn = (d) => new Date(Date.now() + d * 864e5).toLocaleDateString('en-AU', { weekday: 'short', day: 'numeric', month: 'short' });
-  switch (row.stage) {
-    case 'draft':
-      return row.findings ? { text: `Fix ${row.findings} ${row.findings === 1 ? 'issue' : 'issues'}`, tone: 'warn', needs: true } : { text: 'Ready to send', tone: 'accent', needs: true };
-    case 'applied':
-      if (row.warm) return { text: `Ask ${row.warm.split(' ')[0]} for ${row.warmAsk === 'intro' ? 'an intro' : 'a referral'}`, tone: 'accent', needs: true };
-      if (days >= 21) return { text: 'Probably no reply', tone: 'muted', needs: false };
-      if (days >= 7) return { text: 'Follow up now', tone: 'warn', needs: true };
-      return { text: `Follow up ${dateIn(7 - days)}`, tone: '', needs: false };
-    case 'interview': return { text: 'Prepare for interview', tone: 'accent', needs: true };
-    case 'offer': return { text: 'Decide on the offer', tone: 'accent', needs: true };
-    default: return { text: '', tone: 'muted', needs: false };
-  }
-}
-
-function homeRows() {
-  const st = Store.state;
-  const r = insightState();
-  const rows = st.projects.map((p) => {
-    const stage = appStage(p);
-    const job = appJob(p);
-    const warm = stage === 'applied' ? peopleFor(job).find((x) => x.degree === 1) : null;
-    const contacted = Object.values(r.outreach[job.id] || {}).some((v) => v !== 'none');
-    const j = projectJob(p);
-    return {
-      key: p.id, company: p.company, title: p.role, stage, docs: true,
-      sentAt: stage === 'draft' ? null : appSentAt(p), updated: p.updatedAt,
-      href: stage === 'draft' ? `#/project/${p.id}` : `#/project/${p.id}/overview`,
-      findings: stage === 'draft' ? Docs.runChecks(p, 'resume', st.kb).findings.length : 0,
-      warm: warm && !contacted ? warm.name : null, warmAsk: warm && warm.ask, src: j && j.platform,
-    };
-  });
-  JOBS_MOCK.history.filter((a) => !st.projects.some((p) => p.company === a.projectRef)).forEach((a) => {
-    const at = Date.now() - a.daysAgo * 864e5;
-    rows.push({ key: a.id, company: a.company, title: a.title, stage: a.status, docs: false, sentAt: at, updated: at, href: '' });
-  });
-  if (st.demo.bulkApps) rows.push(...bulkSampleRows());
-  rows.forEach((x) => (x.next = nextStepFor(x)));
-  return rows;
-}
-
-// Demo only: lots of applications, to see how the list holds up at 200+
-function bulkSampleRows() {
-  const cos = ['Atlas Freight', 'Bramble', 'Cobalt Labs', 'Driftwood', 'Ember Health', 'Fernway', 'Gumtree Digital', 'Halcyon', 'Ironbark', 'Juniper Pay', 'Kestrel', 'Lantern', 'Mosaic Bank', 'Northwind', 'Opal Energy', 'Pikelet', 'Quill', 'Riverstone', 'Saltbush', 'Tern Analytics'];
-  const roles = ['Senior Frontend Engineer', 'Full Stack Engineer', 'Senior Software Engineer', 'Lead Engineer', 'Frontend Developer', 'Platform Engineer'];
-  const stages = ['applied', 'applied', 'applied', 'ghosted', 'ghosted', 'rejected', 'rejected', 'interview', 'draft', 'applied', 'ghosted', 'offer'];
-  return Array.from({ length: 220 }, (_, i) => {
-    const days = (i * 37) % 60;
-    const at = Date.now() - days * 864e5 - i * 3600e3;
-    return { key: 'bulk-' + i, company: cos[i % cos.length] + (i >= cos.length ? ' ' + (Math.floor(i / cos.length) + 1) : ''), title: roles[(i * 7) % roles.length], stage: stages[(i * 5) % stages.length], docs: false, sentAt: stages[(i * 5) % stages.length] === 'draft' ? null : at, updated: at, href: '', sample: true };
-  });
-}
-
-const tabMatch = (tab, x) => tab === 'all' ? true : tab === 'needs' ? x.next.needs : tab === 'draft' ? x.stage === 'draft' : tab === 'sent' ? x.stage === 'applied' : tab === 'interview' ? ['interview', 'offer'].includes(x.stage) : ['rejected', 'ghosted'].includes(x.stage);
-
-function sentCell(x) {
-  if (!x.sentAt) return '<span class="muted">Not sent</span>';
-  const d = Math.floor((Date.now() - x.sentAt) / 864e5);
-  const age = x.stage !== 'applied' ? '' : d >= 21 ? 'cold' : d >= 7 ? 'follow' : 'wait';
-  const tip = age === 'cold' ? 'Over 3 weeks: most employers that reply do so by now' : age === 'follow' ? 'A week or more: a short follow-up helps' : age === 'wait' ? 'Too early to chase' : '';
-  return `<span class="al-age ${age ? 'al-age-' + age : ''}" ${tip ? `data-tip="${tip}"` : ''}>${d === 0 ? 'Today' : d === 1 ? 'Yesterday' : d + ' days ago'}</span>`;
-}
-
 Views.dashboard = function (root) {
   const st = Store.state;
-  insightState();
-  const ui = (st.homeUi = st.homeUi || { tab: null, sort: 'updated', dir: -1, q: '' });
-  let limit = HOME_PAGE;
-  const strong = jobsState().jobs.filter((j) => j.status === 'new' && j.score >= 85).length;
-
+  let query = '';
   function render() {
-    const all = st.demo.emptyDashboard ? [] : homeRows();
-    const counts = Object.fromEntries(HOME_TABS.map(([k]) => [k, all.filter((x) => tabMatch(k, x)).length]));
-    if (!ui.tab) ui.tab = counts.needs ? 'needs' : 'all';
-    const q = ui.q.toLowerCase().trim();
-    const order = { draft: 0, applied: 1, interview: 2, offer: 3, rejected: 4, ghosted: 5 };
-    const key = { company: (x) => x.company.toLowerCase(), stage: (x) => order[x.stage], sent: (x) => x.sentAt || Infinity, updated: (x) => x.updated }[ui.sort];
-    const rows = all.filter((x) => tabMatch(ui.tab, x) && (!q || (x.company + ' ' + x.title).toLowerCase().includes(q)))
-      .sort((a, b) => {
-        if (ui.sort === 'sent' && !a.sentAt !== !b.sentAt) return a.sentAt ? -1 : 1; // unsent drafts always last
-        const A = key(a), B = key(b); return (A < B ? -1 : A > B ? 1 : 0) * ui.dir;
-      });
-    const shown = rows.slice(0, limit);
-    const th = (k, label) => `<button class="al-th ${ui.sort === k ? 'on' : ''}" data-sort="${k}" aria-label="Sort by ${label.toLowerCase()}">${label}${ui.sort === k ? `<span class="al-dir">${ui.dir > 0 ? '↑' : '↓'}</span>` : ''}</button>`;
-    const banner = !st.dismissedOnboardingBanner ? `
-      <div class="banner">
-        ${icon('book', 18)}
-        <div><strong>Your knowledge base is filled with sample data.</strong> Walk through onboarding to see how a new user would build theirs.</div>
-        <a class="btn btn-sm btn-ghost" href="#/onboarding">Start onboarding</a>
-        <button class="icon-btn" data-dismiss aria-label="Dismiss">${icon('x', 15)}</button>
-      </div>` : '';
-
+    const projects = (st.demo.emptyDashboard ? [] : st.projects).filter(p => (p.company + ' ' + p.role).toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt-a.updatedAt);
     root.innerHTML = shell(`
-      ${banner}
-      <div class="page-head al-head">
-        <div><h1>Applications</h1><p class="muted">One per job: the ad, your resume and cover letter, and what happened after you sent it.</p></div>
-        ${all.length ? `<div class="search"><span>${icon('search', 15)}</span><input type="search" placeholder="Search company or role" data-search value="${esc(ui.q)}" aria-label="Search applications"></div>` : ''}
-      </div>
-      ${all.length ? `
-      <div class="al-bar">
-        <div class="al-tabs" role="tablist" aria-label="Show">${HOME_TABS.map(([k, l, tip]) => `<button role="tab" aria-selected="${ui.tab === k}" class="al-tab ${ui.tab === k ? 'on' : ''} ${k === 'needs' && counts.needs ? 'al-tab-needs' : ''}" data-tab="${k}" data-tip="${tip}">${l} <span class="count ${k === 'needs' && counts.needs ? 'count-warn' : ''}">${counts[k]}</span></button>`).join('')}</div>
-        ${strong ? `<a class="al-matches" href="#/jobs" data-tip="Jobs your sweeps found that scored 85 or more">${icon('radar', 14)} ${strong} strong ${strong === 1 ? 'match' : 'matches'} waiting</a>` : ''}
-      </div>
-      ${rows.length ? `
-      <div class="al" role="table" aria-label="Applications">
-        <div class="al-row al-hrow" role="row">${th('company', 'Company and role')}${th('stage', 'Stage')}${th('sent', 'Sent')}<span class="al-th al-th-static">Next step</span>${th('updated', 'Last change')}<span></span></div>
-        ${shown.map((x, i) => `
-        <div class="al-row ${x.href ? 'al-link' : 'al-nodoc'}" role="row" ${x.href ? `data-href="${x.href}" tabindex="0"` : ''} style="--i:${Math.min(i, 12)}">
-          <span class="al-co" role="cell">${monogram(x.company)}<span class="al-co-txt"><strong>${esc(x.company)}</strong><span class="muted">${esc(x.title)}</span></span>${x.src ? `<span data-tip="Found by your sweeps on ${esc(platformOf(x.src).name)}">${platformBadge(x.src)}</span>` : ''}</span>
-          <span role="cell">${x.docs ? stageSelect(Store.project(x.key), `data-row-stage="${x.key}"`) : `<span class="al-stage-static stage-${x.stage}" data-tip="${x.sample ? 'Sample row (Demo controls)' : 'Sent before this app, so there are no documents to open'}"><span class="stage-dot"></span>${STATUS_LABEL[x.stage]}</span>`}</span>
-          <span role="cell" class="al-sent">${sentCell(x)}</span>
-          <span role="cell" class="al-next al-next-${x.next.tone || 'plain'}">${esc(x.next.text)}</span>
-          <span role="cell" class="al-upd muted">${timeAgo(x.updated)}</span>
-          <span role="cell">${x.docs ? `<button class="icon-btn" data-row-menu="${x.key}" aria-haspopup="menu" aria-expanded="false" aria-label="More for ${esc(x.company)}" data-tip="Open documents, overview, duplicate, delete">${icon('dots', 16)}</button>` : ''}</span>
-        </div>`).join('')}
-      </div>
-      <div class="al-foot">
-        <span class="muted small">Showing ${shown.length} of ${rows.length}</span>
-        ${rows.length > shown.length ? `<button class="btn btn-ghost btn-sm" data-more>Show ${Math.min(HOME_PAGE, rows.length - shown.length)} more</button>` : ''}
-      </div>` : `
-      <div class="al-empty"><p class="muted">${q ? `No applications match "${esc(ui.q)}".` : ui.tab === 'needs' ? 'Nothing needs you right now.' : 'Nothing here yet.'}</p>${q ? '<button class="btn btn-ghost btn-sm" data-clear>Clear search</button>' : ui.tab !== 'all' ? '<button class="btn btn-ghost btn-sm" data-tab="all">Show all</button>' : ''}</div>`}` : `
-      <div class="empty-state">
-        <div class="empty-icon">${icon('file', 28)}</div>
-        <h3>No applications yet</h3>
-        <p class="muted">An application holds one job's ad, your tailored resume and cover letter, and everything that happens after you send it.</p>
-        <div class="row-gap center"><a class="btn btn-primary" href="#/new">${icon('plus')} New application</a><a class="btn btn-ghost" href="#/jobs">Find jobs</a></div>
-      </div>`}
-    `, { route: 'dashboard', title: '', actions: `<a class="btn btn-primary" href="#/new">${icon('plus')} New application</a>` });
+      ${!st.dismissedOnboardingBanner ? `<div class="banner">${icon('book',18)}<div><strong>Start with your own background.</strong> This demo currently includes sample data. Upload a resume or enter your details.</div><a class="btn btn-ghost" href="#/onboarding">Set up knowledge base</a></div>` : ''}
+      <div class="page-head"><div><h1>Applications</h1><p class="muted">One job description, a tailored resume and a cover letter. Everything saves automatically.</p></div><div class="search"><input type="search" data-search aria-label="Search applications" placeholder="Search company or role" value="${esc(query)}"></div></div>
+      <div class="card-grid">${projects.map(p => `<article class="project-card"><div class="pc-top">${monogram(p.company)}<button class="icon-btn" data-menu="${p.id}" aria-label="More for ${esc(p.company)}">${icon('dots')}</button></div><a class="pc-role" href="#/project/${p.id}">${esc(p.role)}</a><div class="pc-company">${esc(p.company)}</div><div class="muted pc-loc">${esc(p.location)}</div><div class="pc-foot muted small">Edited ${timeAgo(p.updatedAt)}</div></article>`).join('')}<a class="project-card project-card-new" href="#/new">${icon('plus')} New application</a></div>
+      ${!projects.length ? `<p class="muted">${query ? 'No matching applications.' : 'No applications yet. Paste a job description to get started.'}</p>` : ''}
+    `, {route:'dashboard', title:'', actions:'<a class="btn btn-primary" href="#/new">New application</a>'});
     bindShell(root);
-    bind();
-  }
-
-  function bind() {
-    const d = $('[data-dismiss]', root);
-    if (d) d.onclick = () => { st.dismissedOnboardingBanner = true; Store.save(); $('.banner', root).remove(); };
-    $$('[data-tab]', root).forEach((b) => (b.onclick = () => { ui.tab = b.dataset.tab; limit = HOME_PAGE; Store.save(); render(); }));
-    $$('[data-sort]', root).forEach((b) => (b.onclick = () => { const k = b.dataset.sort; ui.dir = ui.sort === k ? -ui.dir : k === 'company' || k === 'stage' ? 1 : -1; ui.sort = k; Store.save(); render(); $(`[data-sort="${k}"]`, root).focus(); }));
-    const s = $('[data-search]', root);
-    if (s) s.oninput = debounce(() => { ui.q = s.value; limit = HOME_PAGE; render(); const n = $('[data-search]', root); n.focus(); n.setSelectionRange(n.value.length, n.value.length); }, 150);
-    const c = $('[data-clear]', root);
-    if (c) c.onclick = () => { ui.q = ''; render(); };
-    const m = $('[data-more]', root);
-    if (m) m.onclick = () => { limit += HOME_PAGE; render(); };
-    $$('[data-href]', root).forEach((row) => {
-      const go = () => (location.hash = row.dataset.href);
-      row.addEventListener('click', (e) => { if (!e.target.closest('select, button, label')) go(); });
-      row.addEventListener('keydown', (e) => {
-        if (e.target !== row) return;
-        if (e.key === 'Enter') go();
-        if (e.key === 'ArrowDown' || e.key === 'ArrowUp') { e.preventDefault(); const rs = $$('[data-href]', root); const i = rs.indexOf(row); (rs[i + (e.key === 'ArrowDown' ? 1 : -1)] || row).focus(); }
-      });
-    });
-    $$('[data-row-stage]', root).forEach((sel) => (sel.onchange = () => { setAppStage(Store.project(sel.dataset.rowStage), sel.value); Store.saveNow(); render(); }));
-    $$('[data-row-menu]', root).forEach((b) => (b.onclick = () => {
-      const p = Store.project(b.dataset.rowMenu);
-      openMenu(b, [
-        { label: 'Open documents', icon: 'file', fn: () => (location.hash = '#/project/' + p.id) },
-        { label: 'Open overview', icon: 'eye', fn: () => (location.hash = `#/project/${p.id}/overview`) },
-        { label: 'Duplicate', icon: 'copy', fn: () => { const c2 = clone(p); c2.id = uid('p'); c2.role = p.role + ' (copy)'; c2.updatedAt = Date.now(); delete c2.sent; delete c2.status; delete c2.jobId; st.projects.push(c2); Store.save(); render(); toast('Application duplicated'); } },
-        '-',
-        { label: 'Delete', icon: 'trash', danger: true, fn: () => {
-          const idx = st.projects.indexOf(p);
-          st.projects.splice(idx, 1); Store.save(); render();
-          toast('Application deleted', { action: { label: 'Undo', fn: () => { st.projects.splice(idx, 0, p); Store.save(); render(); } } });
-        } },
+    $('[data-search]',root).oninput = debounce(e => { query=e.target.value; render(); const el=$('[data-search]',root); el.focus(); el.setSelectionRange(query.length,query.length); },150);
+    $$('[data-menu]',root).forEach(b => b.onclick=()=>{
+      const p=Store.project(b.dataset.menu);
+      openMenu(b,[
+        {label:'Open',icon:'file',fn:()=>location.hash='#/project/'+p.id},
+        {label:'Duplicate',icon:'copy',fn:()=>{const copy=clone(p); copy.id=uid('p'); copy.role+=' (copy)'; copy.updatedAt=Date.now(); st.projects.push(copy); Store.save(); render();}},
+        {label:'Delete',icon:'trash',danger:true,fn:()=>{const i=st.projects.indexOf(p);st.projects.splice(i,1);Store.save();render();toast('Application deleted',{action:{label:'Undo',fn:()=>{st.projects.splice(i,0,p);Store.save();render();}}});}}
       ]);
-    }));
+    });
   }
-
   render();
 };
 
 /* ---------- Knowledge base ---------- */
-const KB_ORDER = ['contact', 'workRights', 'roles', 'portfolio', 'education', 'skills', 'credentials', 'referees'];
+KB_SCHEMA.volunteering = { ...KB_SCHEMA.roles, label: 'Volunteer work', noun: 'volunteer role', fields: KB_SCHEMA.roles.fields.map(f => f.k === 'company' ? {...f, label:'Organisation'} : f) };
+KB_SCHEMA.additional = {label:'Additional sections', noun:'section', fields:[{k:'title',label:'Section title',req:true},{k:'notes',label:'Details',req:true,wide:true,type:'textarea'}]};
+
+const KB_ORDER = ['contact', 'workRights', 'roles', 'volunteering', 'portfolio', 'education', 'skills', 'credentials', 'referees', 'additional'];
 
 function kbEntrySummary(type, e) {
   switch (type) {
+    case 'additional': return { title: e.title, line: e.notes };
+    case 'volunteering':
     case 'roles': return { title: e.title, sub: `${e.company}, ${e.location}`, meta: `${e.start} to ${e.end}` };
     case 'portfolio': return { title: e.name, sub: e.summary, meta: e.link };
     case 'education': return { title: e.degree, sub: e.institution, meta: e.year, line: e.notes };
@@ -357,7 +201,7 @@ function importBackup(onDone) {
     try {
       const data = JSON.parse(await f.text());
       if (!data.knowledgeBase || !Array.isArray(data.projects)) throw new Error('missing');
-      Store.state.kb = data.knowledgeBase;
+      Store.state.kb = normalizeKnowledgeBase(data.knowledgeBase);
       Store.state.projects = data.projects;
       Store.saveNow();
       toast(`Imported your knowledge base and ${data.projects.length} projects`);
@@ -417,7 +261,7 @@ Views.kb = function (root, params) {
     </div>
   `, {
     route: 'kb', title: '',
-    actions: `<button class="btn btn-ghost" data-import>${icon('upload')} Import</button><button class="btn btn-ghost" data-export>${icon('download')} Export backup</button>`,
+    actions: `<a class="btn btn-primary" href="#/import">${icon('upload')} Import resume</a><button class="btn btn-ghost" data-import>${icon('upload')} Import backup</button><button class="btn btn-ghost" data-export>${icon('download')} Export backup</button>`,
   });
   bindShell(root);
   $('[data-export]', root).onclick = exportBackup;

@@ -195,6 +195,12 @@ function closeMenu() {
 window.addEventListener('hashchange', closeMenu);
 
 /* ---------- Store ---------- */
+function normalizeKnowledgeBase(kb) {
+  kb.contact ||= {}; kb.workRights ||= {};
+  for (const key of ['roles', 'volunteering', 'portfolio', 'education', 'skills', 'credentials', 'referees', 'additional']) kb[key] ||= [];
+  return kb;
+}
+
 const STORAGE_KEY = 'resume-tailor-mock-v1';
 
 const Store = {
@@ -202,7 +208,7 @@ const Store = {
   load() {
     try {
       const raw = localStorage.getItem(STORAGE_KEY);
-      if (raw) { this.state = JSON.parse(raw); return; }
+      if (raw) { this.state = JSON.parse(raw); normalizeKnowledgeBase(this.state.kb); if (this.state.sampleKb == null) this.state.sampleKb = this.state.kb.contact.name === MOCK.kb.contact.name; if (this.state.onboarding.draft) normalizeKnowledgeBase(this.state.onboarding.draft); return; }
     } catch (e) { /* storage blocked: fall through to seed */ }
     this.state = seedState();
     this.saveNow();
@@ -222,7 +228,7 @@ const Store = {
 };
 
 function seedState() {
-  const kb = clone(MOCK.kb);
+  const kb = normalizeKnowledgeBase(clone(MOCK.kb));
   const now = Date.now();
   const H = 3600e3, D = 24 * H;
   const seeds = [
@@ -238,6 +244,7 @@ function seedState() {
   });
   return {
     schemaVersion: 1,
+    sampleKb: true,
     kb,
     projects,
     connections: {
@@ -350,8 +357,6 @@ function bindModelPicker(root) {
 function shell(content, { route, title, actions = '', compact = false, flush = false } = {}) {
   const nav = [
     { r: 'dashboard', label: 'Applications', ic: 'file' },
-    { r: 'jobs', label: 'Jobs', ic: 'radar' },
-    { r: 'map', label: 'Career map', ic: 'orbit' },
     { r: 'kb', label: 'Knowledge base', ic: 'book' },
     { r: 'settings', label: 'Settings', ic: 'gear' },
   ];
@@ -393,7 +398,6 @@ function openDemoControls() {
     body: `
       <p class="muted small">These exist only in the mock, so you can see states that are hard to reach otherwise.</p>
       <label class="switch-row"><input type="checkbox" id="dc-empty" ${d.emptyDashboard ? 'checked' : ''}><span><strong>Show empty Applications page</strong><br><span class="muted small">Hides applications so you can see the empty state.</span></span></label>
-      <label class="switch-row"><input type="checkbox" id="dc-bulk" ${d.bulkApps ? 'checked' : ''}><span><strong>Add 220 sample applications</strong><br><span class="muted small">See how the Applications list holds up at scale.</span></span></label>
       <label class="switch-row"><input type="checkbox" id="dc-fail" ${d.failGeneration ? 'checked' : ''}><span><strong>Fail the next generation</strong><br><span class="muted small">The next run stops partway with a provider error, so you can try Retry.</span></span></label>
       <div class="switch-row"><span><label for="dc-scenario"><strong>Quick generate scenario</strong></label><br><span class="muted small">Same as adding ?mock=… to the URL. The URL wins if both are set.</span>
         <select id="dc-scenario" class="dc-select">${['happy', 'gaps', 'findings', 'error-stage-1', 'error-stage-2', 'error-stage-3', 'error-stage-4', 'error-stage-5'].map((v) => `<option ${(d.quickScenario || 'happy') === v ? 'selected' : ''}>${v}</option>`).join('')}</select></span></div>
@@ -404,7 +408,6 @@ function openDemoControls() {
     actions: [{ label: 'Done', kind: 'btn-primary' }],
     onMount(root, close) {
       $('#dc-empty', root).onchange = (e) => { d.emptyDashboard = e.target.checked; Store.save(); Router.refresh(); };
-      $('#dc-bulk', root).onchange = (e) => { d.bulkApps = e.target.checked; Store.save(); Router.refresh(); };
       $('#dc-fail', root).onchange = (e) => { d.failGeneration = e.target.checked; Store.save(); };
       $('#dc-scenario', root).onchange = (e) => { d.quickScenario = e.target.value; Store.save(); };
       $('#dc-noconn', root).onchange = (e) => {

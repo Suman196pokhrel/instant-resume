@@ -33,7 +33,6 @@ function studioSetupView(root) {
   const st = Store.state;
   if (!st.newDraft) st.newDraft = { stage: 'jd', jdText: '', brief: null, selected: null };
   const nd = st.newDraft;
-  const fromJob = nd.jobId && typeof jobsState === 'function' ? jobsState().jobs.find((j) => j.id === nd.jobId) : null;
   if (nd.stage === 'extracting' || nd.stage === 'generating') nd.stage = nd.brief ? (nd.stage === 'generating' ? 'select' : 'brief') : 'jd';
   let alive = true;
   let failure = null;
@@ -48,9 +47,7 @@ function studioSetupView(root) {
       <div class="new-wrap">
         <ol class="stepper">${STEPS.map(([k, l], i) => `<li class="${i === stepIdx() ? 'current' : ''} ${i < stepIdx() ? 'done' : ''}"><span class="step-num">${i < stepIdx() ? icon('check', 12) : i + 1}</span>${l}</li>`).join('')}</ol>
         ${inner}
-      </div>`, { route: fromJob ? 'jobs' : 'dashboard', title: fromJob
-        ? `<a class="crumb" href="#/jobs">${icon('chevLeft', 15)} Jobs</a><span class="crumb-sep">/</span><span>${esc(fromJob.company)}</span><span class="crumb-sep">/</span><span>Studio</span>`
-        : `<a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a><span class="crumb-sep">/</span><a class="crumb" href="#/new">New application</a><span class="crumb-sep">/</span><span>Studio</span>` });
+      </div>`, { route: 'dashboard', title: `<a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a><span class="crumb-sep">/</span><a class="crumb" href="#/new">New application</a><span class="crumb-sep">/</span><span>Studio</span>` });
     bindShell(root);
   }
 
@@ -141,21 +138,23 @@ function studioSetupView(root) {
     const b = nd.brief;
     const groups = [
       ['roles', 'Experience', (e) => `${e.title}, ${e.company}`],
+      ['volunteering', 'Volunteer work', (e) => `${e.title}, ${e.company}`],
+      ['additional', 'Additional sections', (e) => e.title],
       ['portfolio', 'Portfolio', (e) => e.name],
       ['education', 'Education', (e) => `${e.degree}, ${e.institution}`],
       ['credentials', 'Certifications and awards', (e) => e.title],
       ['referees', 'Referees', (e) => `${e.name}, ${e.title}`],
     ];
-    const total = groups.reduce((n, [k]) => n + st.kb[k].length, 0);
+    const total = groups.reduce((n, [k]) => n + st.kb[k].filter(e => !e.referenceOnly).length, 0);
     const suggested = Docs.suggestSelection(st.kb, b);
     frame(`
       <section class="panel new-panel">
         <div class="panel-head"><div><h1>Choose what to draw on</h1><p class="muted">Suggestions are based on keyword matches. Only ticked entries can appear in the documents.</p></div>
           <span class="pill" data-sel-count>${nd.selected.length} of ${total} selected</span></div>
         <div class="select-groups">
-          ${groups.map(([k, label, name]) => st.kb[k].length ? `
+          ${groups.map(([k, label, name]) => st.kb[k].filter(e => !e.referenceOnly).length ? `
             <fieldset class="select-group"><legend>${label}</legend>
-              ${st.kb[k].map((e) => {
+              ${st.kb[k].filter(e => !e.referenceOnly).map((e) => {
                 const m = Docs.matchedKeywords(Docs.entryText(e), b.keywords);
                 return `<label class="select-item">
                   <input type="checkbox" value="${e.id}" ${nd.selected.includes(e.id) ? 'checked' : ''}>
@@ -179,7 +178,7 @@ function studioSetupView(root) {
     }));
     $('[data-back]', root).onclick = () => { nd.stage = 'brief'; Store.save(); renderBrief(); };
     $('[data-generate]', root).onclick = () => {
-      if (!nd.selected.some((id) => id.startsWith('role'))) return toast('Select at least one role from Experience', { kind: 'error' });
+      if (!nd.selected.length) return toast('Select at least one knowledge base entry', { kind: 'error' });
       generate();
     };
   }
@@ -236,7 +235,6 @@ function studioSetupView(root) {
     if (!alive) return;
     const p = Docs.createProject(st.kb, nd.jdText, clone(nd.brief), nd.selected);
     st.projects.push(p);
-    if (nd.jobId) linkProjectToJob(p, nd.jobId);
     st.newDraft = null;
     Store.saveNow();
     sessionStorage.setItem('rt-fresh', ((performance.now() - startedAt) / 1000).toFixed(1));

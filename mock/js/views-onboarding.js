@@ -2,24 +2,33 @@
 
 const ONB_STEPS = [
   { key: 'contact', title: 'Contact details', blurb: 'How employers reach you. This goes at the top of every resume and cover letter.', req: true },
-  { key: 'workRights', title: 'Work rights', blurb: 'Australian employers often screen on this, so it sits under your name.', req: true },
-  { key: 'roles', title: 'Experience', blurb: 'Add each role, newest first. Highlights are the raw material for bullets, so be specific and include numbers.', req: true, min: 1 },
+  { key: 'workRights', title: 'Work rights', blurb: 'Australian employers often screen on this, so it can be included when relevant.', req: false },
+  { key: 'roles', title: 'Experience', blurb: 'Add each role, newest first. Highlights are the raw material for bullets, so be specific and include numbers.', req: false },
+  { key: 'volunteering', title: 'Volunteer work', blurb: 'Community work, mentoring and unpaid roles count too.', req: false },
   { key: 'portfolio', title: 'Portfolio items', blurb: 'Personal, academic or open-source work you built.', req: false },
   { key: 'education', title: 'Education', blurb: 'Degrees, diplomas and relevant courses.', req: false },
-  { key: 'skills', title: 'Skills', blurb: 'Group your skills. Only skills listed here can appear on a resume.', req: true, min: 1 },
+  { key: 'skills', title: 'Skills', blurb: 'Group your skills. Only skills listed here can appear on a resume.', req: false },
   { key: 'credentials', title: 'Achievements and publications', blurb: 'Certifications, awards, talks, papers and patents.', req: false },
   { key: 'referees', title: 'Referees', blurb: 'Optional. You can also show "Available on request".', req: false },
+  { key: 'additional', title: 'Additional sections', blurb: 'Keep languages, interests, summaries and any other details from your resume.', req: false },
   { key: 'review', title: 'Review', blurb: 'Check everything looks right, then save it to your knowledge base.' },
 ];
 
 function emptyDraft() {
-  return { contact: {}, workRights: {}, roles: [], portfolio: [], education: [], skills: [], credentials: [], referees: [] };
+  return normalizeKnowledgeBase({});
 }
 
-Views.onboarding = function (root) {
+Views.onboarding = function (root, params = []) {
+  if (params[0] !== 'manual' && !Store.state.onboarding.visited && !Store.state.onboarding.imported) {
+    root.innerHTML = shell(`<div class="new-wrap"><div class="page-head"><div><h1>Build your knowledge base</h1><p class="muted">Start from your existing resume or enter your background yourself.</p></div></div><div class="choice-grid"><a class="choice choice-primary" href="#/import"><span class="choice-ic">${icon('upload',24)}</span><h2>Import an existing resume</h2><p>Bring in your contact details, experience, volunteer work, education and other sections. Review everything before saving.</p><span class="btn btn-primary">Upload resume</span></a><a class="choice" href="#/onboarding/manual"><span class="choice-ic">${icon('pencil',24)}</span><h2>Enter details manually</h2><p>Work through the guided fields at your own pace. Optional sections can be skipped.</p><span class="btn btn-ghost">Start manually</span></a></div><p class="muted small">Open source, self-hosted, with your own AI provider key. This mock makes no provider calls.</p></div>`,{route:'kb',title:'Set up your background'});
+    bindShell(root); return;
+  }
   const st = Store.state;
   const ob = st.onboarding;
   if (!ob.draft) ob.draft = emptyDraft();
+  normalizeKnowledgeBase(ob.draft);
+  if (ob.replace == null) ob.replace = !!st.sampleKb || (st.sampleKb == null && st.kb.contact.name === MOCK.kb.contact.name);
+  ob.step = Math.min(ob.step, ONB_STEPS.length - 1);
   const resumed = ob.visited && ob.step > 0;
   ob.visited = true;
   Store.save();
@@ -78,7 +87,7 @@ Views.onboarding = function (root) {
           <span class="pill ${n ? 'pill-ok' : ''}">${Array.isArray(v) ? n + ' added' : n ? 'Done' : 'Empty'}</span>
           <button class="btn btn-ghost btn-sm" data-goto="${i}">Edit</button></div>`;
       }).join('');
-      return `<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p>`;
+      return `${ob.imported ? `<div class="callout">${icon('upload',16)}<div><strong>${esc(ob.imported)}</strong><p>Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p></div></div>` : ''}<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p><label class="field"><span>Save behavior</span><select data-save-mode><option value="merge" ${ob.replace ? '' : 'selected'}>Add entries; keep existing contact and work rights</option><option value="replace" ${ob.replace ? 'selected' : ''}>Replace the knowledge base with this reviewed background</option></select></label><p class="muted small">Replacement affects the knowledge base, not saved application documents.</p>`;
     }
     // Repeatable steps: saved entries, then a form for a new (or edited) one
     const list = d[step.key];
@@ -129,6 +138,8 @@ Views.onboarding = function (root) {
   }
 
   function bind(step) {
+    const mode = $('[data-save-mode]', root);
+    if (mode) mode.onchange = () => { ob.replace = mode.value === 'replace'; Store.save(); };
     $$('[data-goto]', root).forEach((b) => (b.onclick = () => go(+b.dataset.goto, +b.dataset.goto > ob.step ? 1 : -1)));
     $('[data-back]', root).onclick = () => go(ob.step - 1, -1);
     const skip = $('[data-skip]', root);
@@ -137,7 +148,7 @@ Views.onboarding = function (root) {
 
     const sample = $('[data-sample]', root);
     if (sample) sample.onclick = () => {
-      const src = clone(MOCK.kb[step.key]);
+      const src = clone(MOCK.kb[step.key] || []);
       ob.draft[step.key] = src; editingIdx = null; Store.save();
       render(); toast('Filled with sample data');
     };
@@ -174,14 +185,17 @@ Views.onboarding = function (root) {
 
   function finish() {
     const d = ob.draft;
+    if (!d.contact.name || !d.contact.email || !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(d.contact.email)) { toast('Review your name and a valid email in Contact details before saving.', {kind:'error'}); go(0, -1); return; }
+    if (ob.replace) st.kb = emptyDraft();
     let added = 0;
-    if (d.contact.name) { Object.assign(st.kb.contact, d.contact, { id: 'kb-contact' }); added++; }
-    if (d.workRights.status) { Object.assign(st.kb.workRights, d.workRights, { id: 'kb-rights' }); added++; }
-    ['roles', 'portfolio', 'education', 'skills', 'credentials', 'referees'].forEach((k) => {
+    if (d.contact.name && !st.kb.contact.name) { Object.assign(st.kb.contact, d.contact, { id: 'kb-contact' }); added++; }
+    if (d.workRights.status && !st.kb.workRights.status) { Object.assign(st.kb.workRights, d.workRights, { id: 'kb-rights' }); added++; }
+    ['roles', 'volunteering', 'portfolio', 'education', 'skills', 'credentials', 'referees', 'additional'].forEach((k) => {
       d[k].forEach((e) => { if (!st.kb[k].some((x) => x.id === e.id)) { st.kb[k].push(e); } added++; });
     });
     st.onboarding = { step: 0, draft: null, visited: false };
     st.dismissedOnboardingBanner = true;
+    st.sampleKb = false;
     Store.saveNow();
     root.innerHTML = `
       <div class="onb onb-done">
