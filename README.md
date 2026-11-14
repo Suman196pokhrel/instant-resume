@@ -8,6 +8,7 @@
   <img src="https://img.shields.io/badge/BYOK-Claude%20%C2%B7%20GPT%20%C2%B7%20Gemini-1A2320?style=flat-square" alt="Bring your own key: Claude, GPT, Gemini">
   <img src="https://img.shields.io/badge/Next.js-TypeScript-1A2320?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js and TypeScript">
   <img src="https://img.shields.io/badge/PDF-Typst-239DAD?style=flat-square&logo=typst&logoColor=white" alt="PDF rendering with Typst">
+  <a href="LICENSE"><img src="https://img.shields.io/badge/license-PolyForm%20Noncommercial-47514D?style=flat-square" alt="License: PolyForm Noncommercial 1.0.0"></a>
 </p>
 
 <p align="center"><b>Paste a job ad. Get a tailored, ATS-safe resume and cover letter, written only from facts you have actually recorded.</b></p>
@@ -16,49 +17,49 @@
   <img src="docs/assets/workspace.png" alt="Workspace: live resume preview, keyword and grounding checks, and a section inspector" width="100%">
 </p>
 
-## 💡 The problem
+## The problem
 
 AI resume writers are fast, but they **make things up**: inflated numbers, tools you've never used, generic filler. Recruiters notice, and so do interviewers.
 
 Resume Tailor treats your career history as a **knowledge base of facts**. Every generated bullet carries the ID of the fact it came from, and a local rules engine flags anything that doesn't trace back.
 
-## ✨ Highlights
+## Highlights
 
 | | |
 |---|---|
-| 🔗 **Every claim traceable** | Bullets reference a stored highlight ID. Numbers or technologies that aren't in your record are flagged before you export. |
-| 🎯 **Surgical AI edits** | Rewrite one section with a plain instruction. The model returns RFC 6902 JSON Patch ops, checked against a path whitelist and schema, and shown as a word-level diff you accept or reject. |
-| ⚡ **Design is free** | Fonts, spacing and colour go straight to the renderer: no LLM call, no tokens, re-rendered in under 300 ms. |
-| 🔐 **Your key, your machine** | Bring your own Claude, GPT or Gemini key, encrypted with AES-GCM in the browser. Calls go browser → provider directly. Data lives in a local SQLite file. |
-| 🧾 **ATS-safe output** | Single-column Typst PDFs with selectable text in reading order, plus honest parse-safety checks. No made-up "ATS score". |
-| 🕓 **Nothing is lost** | Autosave, per-document revision history, restore and undo. |
+| <img src="docs/assets/icons/link.svg" width="18" height="18" align="top" alt=""> **Every claim traceable** | Bullets reference a stored highlight ID. Numbers or technologies that aren't in your record are flagged before you export. |
+| <img src="docs/assets/icons/target.svg" width="18" height="18" align="top" alt=""> **Surgical AI edits** | Rewrite one section with a plain instruction. The model returns RFC 6902 JSON Patch ops, checked against a path whitelist and schema, and shown as a word-level diff you accept or reject. |
+| <img src="docs/assets/icons/zap.svg" width="18" height="18" align="top" alt=""> **Design is free** | Fonts, spacing and colour go straight to the renderer: no LLM call, no tokens, re-rendered in under 300 ms. |
+| <img src="docs/assets/icons/lock.svg" width="18" height="18" align="top" alt=""> **Your key, your machine** | Bring your own Claude, GPT or Gemini key, encrypted with AES-GCM in the browser. Calls go browser → provider directly. Data lives in a local SQLite file. |
+| <img src="docs/assets/icons/file-check.svg" width="18" height="18" align="top" alt=""> **ATS-safe output** | Single-column Typst PDFs with selectable text in reading order, plus honest parse-safety checks. No made-up "ATS score". |
+| <img src="docs/assets/icons/history.svg" width="18" height="18" align="top" alt=""> **Nothing is lost** | Autosave, per-document revision history, restore and undo. |
 
-## 🧭 How it works
+## How it works
 
 ```mermaid
 flowchart LR
-  A["📄 Your resume<br/>or manual entry"] --> B["✅ Review<br/>nothing saved unseen"]
-  B --> KB[("🗂️ Knowledge base<br/>facts with IDs")]
-  JD["📋 Job description"] --> BR["Job brief<br/>requirements + keywords"]
-  KB --> G["🤖 Generate<br/>LLM → JSON Patch"]
+  A["Your resume<br/>or manual entry"] --> B["Review<br/>nothing saved unseen"]
+  B --> KB[("Knowledge base<br/>facts with IDs")]
+  JD["Job description"] --> BR["Job brief<br/>requirements + keywords"]
+  KB --> G["Generate<br/>LLM → JSON Patch"]
   BR --> G
-  G --> V{"🛡️ Patch validator<br/>paths · schema · sources"}
-  V -->|valid| D["📝 Tailored resume<br/>+ cover letter"]
+  G --> V{"Patch validator<br/>paths · schema · sources"}
+  V -->|valid| D["Tailored resume<br/>+ cover letter"]
   V -.->|rejected| G
-  D --> C["🔍 Rules engine<br/>grounding · keywords · phrases"]
-  C --> P["🖨️ Typst PDF"]
+  D --> C["Rules engine<br/>grounding · keywords · phrases"]
+  C --> P["Typst PDF"]
 ```
 
 Two ways in:
 
-- **⚡ Quick generate**: paste a job ad and watch a five-stage pipeline (read → match → write → fit pages → check) produce finished PDFs in about 15 seconds. Gaps are flagged, never blocking.
-- **🎛️ Studio**: review the extracted brief, choose which experience to draw on, then edit section by section.
+- **Quick generate**: paste a job ad and watch a five-stage pipeline (read → match → write → fit pages → check) produce finished PDFs in about 15 seconds. Gaps are flagged, never blocking.
+- **Studio**: review the extracted brief, choose which experience to draw on, then edit section by section.
 
 <p align="center">
   <img src="docs/assets/quick-generate.png" alt="Quick generate result: keyword coverage, gaps, findings and both documents ready to download" width="90%">
 </p>
 
-## 🧰 Tech stack
+## Tech stack
 
 | Layer | Choice |
 |---|---|
@@ -69,9 +70,9 @@ Two ways in:
 | Rendering | Typst compiled to WASM in a Web Worker |
 | Testing | Vitest, Testing Library, Playwright with a deterministic mock provider |
 
-## 📍 Status
+## Status
 
-> 🚧 **Design complete, implementation in progress.** The product is fully specified and prototyped. The production app is being built in public, milestone by milestone.
+> **Design complete, implementation in progress.** The product is fully specified and prototyped. The production app is being built in public, milestone by milestone.
 
 - [x] Product and build specification ([`docs/SPEC.md`](docs/SPEC.md))
 - [x] Interactive mock covering every flow, with simulated AI ([`mock/`](mock/))
@@ -80,9 +81,9 @@ Two ways in:
 - [ ] Knowledge base, onboarding and resume import (M3)
 - [ ] Provider connections, Studio, Workspace and checks (M4–M7)
 - [ ] History, export, Quick generate and backup (M8–M10)
-- [ ] Open-source release and public Vercel demo (M11)
+- [ ] Public release and Vercel demo (M11)
 
-## 🚀 Try the mock
+## Try the mock
 
 No install and no API key. It runs straight from the file system:
 
@@ -94,7 +95,7 @@ xdg-open mock/index.html   # macOS: open mock/index.html
 
 Uses synthetic sample data. AI responses are simulated, and **Demo controls** in the sidebar show the empty, error and gap states.
 
-## 📂 Repository
+## Repository
 
 ```
 docs/SPEC.md   single source of truth: scope, architecture, schemas, flows, tests
@@ -102,8 +103,10 @@ mock/          static interactive demo (HTML, CSS, vanilla JS)
 AGENTS.md      entry point for AI coding agents
 ```
 
-## 🤝 Contributing
+## Contributing
 
 Read [`docs/SPEC.md`](docs/SPEC.md) first. It defines what to build, in what order, and when it's done. Keep fixtures synthetic, and update the spec and mock alongside any behaviour change.
 
-<sub>No licence has been chosen yet; one will be added before the first release.</sub>
+## Licence
+
+Source-available under the [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, clone, modify and share for personal and other noncommercial purposes. **Commercial use, including selling or offering it as a paid service, requires a separate commercial licence**: open an issue or contact [@Suman196pokhrel](https://github.com/Suman196pokhrel).

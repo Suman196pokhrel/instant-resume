@@ -40,7 +40,7 @@
 
 ### 1.1 Goal
 
-**Resume Tailor** is an open-source, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
+**Resume Tailor** is a source-available, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
 
 - Runs on the user's machine (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
 - Source on a public GitHub repository, built in public.
@@ -133,7 +133,7 @@ CI, reproducible local setup, validated AI outputs, useful error handling and ev
 | This specification | Current |
 | `mock/` static interactive demo | Exists; matches this spec's flows with simulated AI |
 | Real Next.js application | Not started; build from M0 (§19) |
-| GitHub publication | Repository exists; licence not yet chosen |
+| GitHub publication | Public repository; licensed under PolyForm Noncommercial 1.0.0 (`LICENSE`) |
 | Vercel demo deployment | Not configured; pre-deployment items in §1.5 pending |
 | Custom domain | Optional; a hosting-provided address is sufficient |
 
@@ -211,7 +211,8 @@ Layout: **single column only** for ATS safety. **One** resume template and **one
 
 ### 3.1 GitHub and Vercel delivery requirements
 
-- GitHub is the source/collaboration destination. Publish code, versioned docs, synthetic fixtures, tests and reproducible local setup. Add an owner-selected open-source license before public release; do not invent a license choice or claim this repo is already licensed.
+- GitHub is the source/collaboration destination. Publish code, versioned docs, synthetic fixtures, tests and reproducible local setup.
+- Licence: **PolyForm Noncommercial 1.0.0** (`LICENSE`, with the owner's `Required Notice:` line). Free for personal and other noncommercial use, modification and redistribution; commercial use requires a separate paid licence from the owner. Call the project "source-available", never "open source" (the licence is not OSI-approved). Do not change the licence without the owner.
 - Initial Vercel deployment serves **only `mock/`** as static HTML/CSS/JavaScript. Keep docs, local data, key stores and development configuration out of the deployment artifact. No Next.js route handlers, database service or live LLM functions are needed for this static artifact.
 - Use a Git-connected deployment workflow with checks before production promotion; preview deployments can support review. Do not deploy every change directly to the public demo without validating it.
 - If the mock is later replaced by a demo build of the real UI, provide a separate static/demo target with mock provider and browser persistence adapters. A runtime toggle alone must not enable live providers on the public deployment. Never deploy the full local server under the assumption that setting one mock-provider flag removes its database/API dependencies.
@@ -1215,7 +1216,7 @@ Do them in this order. Each ends with its tests green.
 | M8 | History and export | History drawer, restore, Export dialog, file naming |
 | M9 | Quick generate | Pipeline emitter, page fitting, the input, progress, error and result screens, Settings defaults |
 | M10 | Backup and polish | Backup export and import, empty states, responsive layout, reduced motion, accessibility pass, e2e suite complete |
-| M11 | Open-source release and public demo | Owner-selected license, GitHub publication/setup/contribution docs, CI, static Vercel demo with simulation boundary and public-demo checks passing |
+| M11 | Public release and demo | GitHub publication/setup/contribution docs, CI, static Vercel demo with simulation boundary and public-demo checks passing |
 
 ---
 
@@ -1269,7 +1270,7 @@ Do them in this order. Each ends with its tests green.
 
 **Public demo acceptance:** a Vercel-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
 
-**Open-source/publication acceptance:** source is published on GitHub with the owner-selected license, setup and contribution guidance, tests and an honest completed/planned feature list. Document actual repository/demo URLs when live. No paid SaaS, tracking CRM or scraping functionality is required for acceptance.
+**Publication acceptance:** source is published on GitHub under the PolyForm Noncommercial licence, setup and contribution guidance, tests and an honest completed/planned feature list. Document actual repository/demo URLs when live. No paid SaaS, tracking CRM or scraping functionality is required for acceptance.
 
 ---
 
@@ -1283,13 +1284,13 @@ Do them in this order. Each ends with its tests green.
 
 ## 22. Open decisions (defaults chosen, flagged for the owner)
 
-GitHub source, local BYOK operation, the simulated Vercel demo, and the absence of a paid service are confirmed decisions, not open alternatives. The repository URL, Vercel project and owner-selected distribution license remain release setup items.
+GitHub source, local BYOK operation, the simulated Vercel demo, and the absence of a paid service are confirmed decisions, not open alternatives. The Vercel project and domain remain release setup items.
 
 | Decision | Default used in this spec |
 |---|---|
 | Key encryption approach (passphrase vs device key) | Non-extractable device key in IndexedDB |
 | Conventions | Australian by default, switchable to US in Settings |
-| Audience at launch | Open-source users hosting locally with their own provider keys; no paid plan |
+| Audience at launch | Individuals hosting locally with their own provider keys; no paid plan |
 | ORM | Drizzle |
 | Low keyword coverage finding threshold | Below 60% |
 | How gaps are decided | LLM match call returns evidence IDs, validated locally; gap = must-have with no valid evidence |
@@ -1330,5 +1331,5 @@ There is no package.json, build, lint or test yet. Run the mock with `xdg-open m
 
 - When product behaviour changes, update this document and the mock in the same commit. Keep completed, simulated and planned behaviour clearly distinct.
 - All fixtures and examples are synthetic. Never commit real resumes, provider keys or personal databases.
-- Do not invent a licence, Vercel project or domain. Add real links only once they exist. Publishing and deploying are separate tasks that need explicit owner approval.
+- Do not change the licence, or invent a Vercel project or domain. Add real links only once they exist. Publishing and deploying are separate tasks that need explicit owner approval.
 - When anything is unclear, choose the option that keeps facts grounded, keeps formatting free of LLM calls, and matches the mock. Record each assumption in the README.
