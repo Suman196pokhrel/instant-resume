@@ -9,7 +9,7 @@ const ONB_STEPS = [
   { key: 'education', title: 'Education', blurb: 'Degrees, diplomas and relevant courses.', req: false },
   { key: 'skills', title: 'Skills', blurb: 'Group your skills. Only skills listed here can appear on a resume.', req: false },
   { key: 'credentials', title: 'Achievements and publications', blurb: 'Certifications, awards, talks, papers and patents.', req: false },
-  { key: 'referees', title: 'Referees', blurb: 'Optional. You can also show "Available on request".', req: false },
+  { key: 'referees', title: 'Referees', blurb: 'People who can speak to your work. Optional.', req: false },
   { key: 'additional', title: 'Additional sections', blurb: 'Keep languages, interests, summaries and any other details from your resume.', req: false },
   { key: 'review', title: 'Review', blurb: 'Check everything looks right, then save it to your knowledge base.' },
 ];
@@ -87,7 +87,7 @@ Views.onboarding = function (root, params = []) {
           <span class="pill ${n ? 'pill-ok' : ''}">${Array.isArray(v) ? n + ' added' : n ? 'Done' : 'Empty'}</span>
           <button class="btn btn-ghost btn-sm" data-goto="${i}">Edit</button></div>`;
       }).join('');
-      return `${ob.imported ? `<div class="callout">${icon('upload',16)}<div><strong>${esc(ob.imported)}</strong><p>Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p></div></div>` : ''}<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p><label class="field"><span>Save behavior</span><select data-save-mode><option value="merge" ${ob.replace ? '' : 'selected'}>Add entries; keep existing contact and work rights</option><option value="replace" ${ob.replace ? 'selected' : ''}>Replace the knowledge base with this reviewed background</option></select></label><p class="muted small">Replacement affects the knowledge base, not saved application documents.</p>`;
+      return `${ob.imported ? `<div class="callout">${icon('upload',16)}<div><strong>${esc(ob.imported)}</strong><p>Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p></div></div>` : ''}<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p><label class="field"><span>Save behaviour</span><select data-save-mode><option value="merge" ${ob.replace ? '' : 'selected'}>Add entries; keep existing contact and work rights</option><option value="replace" ${ob.replace ? 'selected' : ''}>Replace the knowledge base with this reviewed background</option></select></label><p class="muted small">Replacement affects the knowledge base, not saved application documents.</p>`;
     }
     // Repeatable steps: saved entries, then a form for a new (or edited) one
     const list = d[step.key];
@@ -191,7 +191,7 @@ Views.onboarding = function (root, params = []) {
     if (d.contact.name && !st.kb.contact.name) { Object.assign(st.kb.contact, d.contact, { id: 'kb-contact' }); added++; }
     if (d.workRights.status && !st.kb.workRights.status) { Object.assign(st.kb.workRights, d.workRights, { id: 'kb-rights' }); added++; }
     ['roles', 'volunteering', 'portfolio', 'education', 'skills', 'credentials', 'referees', 'additional'].forEach((k) => {
-      d[k].forEach((e) => { if (!st.kb[k].some((x) => x.id === e.id)) { st.kb[k].push(e); } added++; });
+      d[k].forEach((e) => { if (!st.kb[k].some((x) => x.id === e.id)) { st.kb[k].push(e); added++; } });
     });
     st.onboarding = { step: 0, draft: null, visited: false };
     st.dismissedOnboardingBanner = true;

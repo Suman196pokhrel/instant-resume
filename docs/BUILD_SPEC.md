@@ -65,7 +65,7 @@ Deliverables: a working local Next.js application, its public GitHub source and 
 | Generation and rewrites | Schema-validated provider responses with evidence references | Fixtures/deterministic transformations, visibly simulated |
 | Editing and design | Interactive, with local persistence and history | Interactive, persisted in the visitor's browser |
 | Data | Local SQLite plus on-device key storage | Synthetic initial data, browser-local state; no cloud database |
-| Rendering/export | Typst worker and downloadable PDFs | HTML preview and browser print-to-PDF today; do not claim actual Typst compilation |
+| Rendering/export | Typst worker and downloadable PDFs | HTML preview and browser print-to-PDF from the Workspace Export dialog today; Quick generate result downloads are simulated (toast only, no file). Do not claim actual Typst compilation |
 | Runtime | Local Next.js server, installed by the user | Static browser application served by Vercel |
 
 Sections describing real providers, encryption, SQLite, API routes, Typst and the Next.js stack apply to the real local app unless explicitly stated otherwise. Mock timings, model names, key masks and generated text are demonstration fixtures, not proof that an integration exists. Verify supported model IDs and current SDK APIs against official documentation during implementation rather than copying mock identifiers.
@@ -298,7 +298,7 @@ Rules:
 - Skills items use `heading` (group name) and `line` (comma-separated skills; note that "AWS (Lambda, ECS, SQS)" is one skill, so split on commas outside parentheses).
 - Experience items: `heading` = job title, `sub` = employer, `meta` = "Location | Start to End", `bullets`.
 - Cover letter: 4 `paragraph` sections titled Opening, Evidence, Fit, Close. The template adds the date, recipient block, "Re: {role}", "Dear {recipient}," and the sign-off "Kind regards, {name}".
-- Default resume section order: Summary, Experience, Skills, Portfolio, Education, Certifications and awards, Referees. Omit sections with no items, except Summary.
+- Default resume section order: Summary, Experience, Skills, Portfolio, Education, Certifications and awards, Referees, then Volunteer work (an `experience`-kind section titled "Volunteer work") and one `additional` section per selected additional KB entry (titled with the entry's title). Omit sections with no items, except Summary. Users reorder in the Structure tab.
 
 Theme defaults and ranges (Design tab sliders):
 
@@ -371,7 +371,7 @@ Validate every JSON column with the Zod schema on read and on write. Reject inva
 |---|---|
 | `GET /api/kb` | Whole knowledge base |
 | `PUT /api/kb/contact`, `PUT /api/kb/work-rights` | Replace single entries |
-| `POST /api/kb/:type` | Add entry (type: roles, portfolio, education, skills, credentials, referees) |
+| `POST /api/kb/:type` | Add entry (type: roles, volunteering, portfolio, education, skills, credentials, referees, additional) |
 | `PATCH /api/kb/:type/:id`, `DELETE /api/kb/:type/:id` | Edit or delete entry |
 | `GET/PUT /api/onboarding` | Wizard progress and draft |
 | `POST /api/onboarding/complete` | Validate and save reviewed draft in explicit merge/replace mode; mark complete |
@@ -583,7 +583,7 @@ Summary and paragraphs: every number must appear somewhere in the KB text (ignor
 
 ### 10.4 Parse safety (shown separately, never as a score)
 
-Single-column layout; Selectable text in reading order; Standard section headings (resume only: titles must be in the standard list: summary, profile, experience, work experience, skills, portfolio, projects, education, certifications and awards, certifications, awards, publications, referees, references; hint "Rename unusual headings so job sites can find them"); No tables, columns or images; Contact details in the page body.
+Single-column layout; Selectable text in reading order; Standard section headings (resume only: titles must be in the standard list: summary, profile, experience, work experience, skills, portfolio, projects, education, certifications and awards, certifications, awards, publications, referees, references, volunteer work, languages; hint "Rename unusual headings so job sites can find them"); No tables, columns or images; Contact details in the page body.
 
 Show beneath the list: `There's no universal "ATS score". These checks cover whether job sites can read the file; keyword match is shown above, separately.` **Never show an "ATS score" anywhere.**
 
@@ -623,7 +623,7 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 ### 11.2 Typography
 
 - UI font: **Schibsted Grotesk** (400, 500, 600, 700). Body 14px / 1.5, antialiased.
-- h1 26px, weight 650, letter-spacing −0.02em (22px on the New project screens, 21px on Quick generate progress). h2 17px/600. h3 15px/600. Small 12.5px. Labels 13px/500. Buttons 14px/500 (small buttons 13px).
+- h1 26px, weight 650, letter-spacing −0.02em (22px on the New application screens, 21px on Quick generate progress). h2 17px/600. h3 15px/600. Small 12.5px. Labels 13px/500. Buttons 14px/500 (small buttons 13px).
 - Numbers in meters and counters use `font-variant-numeric: tabular-nums`.
 - Monospace (`ui-monospace, Menlo`) only for file names, masked keys, KB IDs and patch JSON.
 - Document fonts: Liberation Sans (the browser fallback is Arimo, which is metric-compatible), Carlito, Inter.
@@ -648,7 +648,7 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 | History drawer | 360px, slides over the right side, below the Workspace bar |
 | KB layout | 210px sub-nav + flexible list |
 | Onboarding | sticky top bar with a centred progress bar (max 520px); 240px step rail + card up to 760px |
-| New project / Studio setup | max-width 900px |
+| New application / Studio setup | max-width 900px |
 | Quick generate | max-width 980px (input card 780px); progress grid: stages column + live results column (1 : 1.15) |
 | Project cards | grid `repeat(auto-fill, minmax(250px, 1fr))`, gap 14px, min-height 172px |
 | Breakpoints | ≤1180px compact Workspace; ≤900px mobile: the sidebar becomes a bottom bar, single column, the inspector stacks under the preview, and the drawer goes full-screen |
@@ -714,12 +714,12 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | Route | Screen | Shell |
 |---|---|---|
 | `/` | Redirect: onboarding not complete and KB empty → `/onboarding`; else `/dashboard` | none |
-| `/onboarding` | Choose manual entry or resume import, then review | Full screen, own top bar |
+| `/onboarding` | Choose manual entry or resume import, then review | Chooser in the app shell; the wizard and review are full screen with their own top bar |
 | `/import` | Resume upload/pasted text and extraction review | App shell |
 | `/dashboard` | Applications | App shell |
 | `/kb/[section]` | Knowledge base (sections: contact, workRights, roles, portfolio, education, skills, credentials, referees, volunteering, additional; default roles) | App shell |
 | `/settings` | Settings | App shell |
-| `/new` | New project chooser | App shell |
+| `/new` | New application chooser | App shell |
 | `/new/quick` | Quick generate (input → progress → result) | App shell |
 | `/new/studio` | Studio setup (stepper) | App shell |
 | `/projects/[id]` | Workspace | App shell, compact sidebar, own bar |
@@ -732,21 +732,21 @@ Navigation map:
 / ─┬─▶ /onboarding ──(finish)──▶ "Your knowledge base is ready" ─┬─▶ /kb/roles
    │                                                             └─▶ /new
    └─▶ /dashboard ─┬─ card ──────────────────────────▶ /projects/[id]
-                   ├─ New project ─▶ /new ─┬─▶ /new/quick ─▶ result ─┬─ Open in Studio ─▶ /projects/[id]
+                   ├─ New application ─▶ /new ─┬─▶ /new/quick ─▶ result ─┬─ Open in Studio ─▶ /projects/[id]
                    │                       │                         └─ Regenerate (stays)
                    │                       └─▶ /new/studio ─▶ generate ─▶ /projects/[id]
-                   └─ banner "Start onboarding" ─▶ /onboarding
+                   └─ banner "Continue onboarding" ─▶ /onboarding
 Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcrumbs "Applications / New application / …"
 ```
 
 ### 13.1 Dashboard
 
-- Optional banner (if onboarding is incomplete and not dismissed): "Finish setting up your knowledge base" with a "Continue onboarding" action and a dismiss button.
+- Optional banner (if onboarding is incomplete and not dismissed): "Finish setting up your knowledge base" with a "Continue onboarding" action and a dismiss button. The public demo, which starts with sample data, instead shows "Start with your own background. This demo currently includes sample data. Upload a resume or enter your details." with "Set up knowledge base" and a dismiss button; saving onboarding also dismisses it.
 - Page head: h1 "Applications", sub "One job description, a tailored resume and a cover letter. Everything saves automatically." Search box on the right ("Search company or role"; filters cards live).
 - Top bar action: primary "New application" (+ icon).
-- Card: monogram, role (15.5px/600), company, location (muted), footer "Edited {time ago}". A ⋯ menu opens a dialog with Open, Duplicate and Delete project (Delete shows the toast "Project deleted" with Undo).
+- Card: monogram, role (15.5px/600), company, location (muted), footer "Edited {time ago}". A ⋯ button opens a popover menu with Open, Duplicate (adds " (copy)" to the role) and Delete (shows the toast "Application deleted" with Undo).
 - The last tile is a dashed "New application" card.
-- Empty state: dashed box, file icon, **"No applications yet"**, "A project holds the job description, your tailored resume and your cover letter for one job.", primary "New application".
+- Empty state: dashed box, file icon, **"No applications yet"**, "An application holds the job description, your tailored resume and your cover letter for one job.", primary "New application".
 - Time-ago format: "just now", "5 minutes ago", "2 hours ago", "3 days ago", "2 weeks ago".
 
 ### 13.2 Knowledge base
@@ -755,7 +755,7 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 - Left sub-nav lists the sections with counts. Right: the section title and "Add {noun}".
 - Entry card: title, sub, meta, the KB ID (small monospace) and an Edit button. Roles and portfolio items list their highlights in rows, each with a metric pill on the right. Skill groups show chips.
 - Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base".
-- Empty section: "No {section} yet" and "Add one and it becomes available to every project."
+- Empty section: "No {section} yet" and "Add one and it becomes available to every application."
 
 ### 13.3 Settings
 
@@ -810,7 +810,7 @@ Behaviour:
 - Repeatable steps show saved entries as compact cards (Edit, Remove), then a dashed form "Add your first role" or "Add another role" with "Save role". On Continue, a partially filled valid form is saved automatically. All background sections may be skipped; no paid role is required.
 - "Save and continue" shows a brief spinner, saves the step (PUT `/api/onboarding`), moves on, and shows "✓ Saved" fading near the footer. "Skip this step" appears on optional steps.
 - Returning to `/onboarding` resumes at the saved step, with the toast "Picked up where you left off: {step}".
-- Review lists each step with a summary, a status pill ("{n} added", "Done", "Empty") and Edit. "Save to knowledge base" merges the draft (POST complete) and shows the done screen: animated check, "Your knowledge base is ready", "{n} entries saved. Every resume and cover letter you make will draw only on these facts.", then "Review knowledge base" and "Start a project".
+- Review lists each step with a summary, a status pill ("{n} added", "Done", "Empty") and Edit. "Save to knowledge base" merges the draft (POST complete) and shows the done screen: animated check, "Your knowledge base is ready", "{n} entries saved. Every resume and cover letter you make will draw only on these facts.", then "Review knowledge base" and "Start an application".
 - Dev only: a "Fill with sample" button per step that loads the seed data (section 17).
 
 ### 14.1a Resume import and review
@@ -823,9 +823,9 @@ Create an onboarding draft and open Review, with every step available for correc
 
 The current static mock deliberately simulates PDF/DOCX extraction with labelled sample details. TXT and pasted text use a basic local parser, with original text preserved for comparison; they do not promise production-quality extraction. API connections and document generation remain simulated. Production parsing, OCR for scanned files, provider integration, and comprehensive extraction accuracy are implementation work, not completed mock capabilities.
 
-### 14.2 New project chooser
+### 14.2 New application chooser
 
-h1 "New project", sub "One project per job. How would you like to start?" Two large link cards:
+h1 "New application", sub "One application per job. How would you like to start?" Two large link cards:
 - **Quick generate** (primary: accent ring, zap icon, "Recommended" pill): "Paste a job description and get a finished resume and cover letter in about 15 seconds. Anything missing is flagged, never blocking." Button "Quick generate".
 - **Open in Studio** (layers icon): "Review the job brief, choose which experience to use, then edit each section yourself before you export." Button "Open in Studio".
 
@@ -959,7 +959,7 @@ State: a Zustand store per project holding `{ kind, selectedSectionId, inspector
 
 ### 14.6 Backup (US12)
 
-Export downloads `resume-tailor-backup-YYYY-MM-DD.json` with the toast "Exported {file}". Import uses a file picker (JSON), validates the whole file with Zod, then replaces the KB and projects in one transaction. Toast "Imported your knowledge base and {n} projects", or "Import failed: this file isn't a Resume Tailor backup". Connections are never touched.
+Export downloads `resume-tailor-backup-YYYY-MM-DD.json` with the toast "Exported {file}". Import uses a file picker (JSON), validates the whole file with Zod, then replaces the KB and projects in one transaction. Toast "Imported your knowledge base and {n} applications", or "Import failed: this file isn't a Resume Tailor backup". Connections are never touched.
 
 ---
 
@@ -1077,7 +1077,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 
 ### 18.2 Component (`tests/component`, Testing Library + jsdom)
 
-- Onboarding: required field errors appear and focus moves; "Skip this step" only on optional steps; the progress label updates; a minimum-entries error on Experience; resume-at-step after a remount.
+- Onboarding: required field errors appear and focus moves; "Skip this step" only on optional steps; the progress label updates; every background step can be skipped and a volunteer-only background reaches Review; resume-at-step after a remount.
 - Model picker: lists only connected providers' models; switching updates the store and the label.
 - Structure tab: Alt+ArrowUp/Down reorders and announces; the hide toggle keeps the section in the list as "Hidden".
 - Design tab: a slider change updates the theme without calling the LLM adapter (assert the adapter spy wasn't called); Reset is disabled at defaults.
@@ -1095,7 +1095,7 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 
 1. **First run:** an empty DB redirects to `/onboarding`. Fill the required steps, skip the optional ones, reload mid-way to confirm it resumes, then finish and see the done screen. The KB screen shows the entries.
 2. **Connection:** a wrong-prefix error, a rejected key (the mock rejects keys containing "bad"), then success shows the masked key and the model appears in the picker.
-3. **Quick generate (happy):** New project → Quick generate → sample → Generate. The 5 stages complete in order, the live cards appear, the result shows 2 thumbnails and focus is on the h1. Download both fires 2 downloads with the correct file names. The project appears on the dashboard.
+3. **Quick generate (happy):** New application → Quick generate → sample → Generate. The 5 stages complete in order, the live cards appear, the result shows 2 thumbnails and focus is on the h1. Download both fires 2 downloads with the correct file names. The project appears on the dashboard.
 4. **Quick generate (gaps / findings / error-stage-3):** the expected warnings, issue rows and counts appear. For errors: the red stage and the alert, then Retry from this step completes. Start over keeps the text.
 5. **Cancel:** Cancel mid-run returns to the input with the text intact and no new project.
 6. **Studio:** setup → brief edits (remove a keyword) → entries → generate → Workspace loads with the preview.
@@ -1104,7 +1104,7 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 9. **History:** preview an old revision (the inspector is locked), restore it, and confirm a new revision is added.
 10. **Export:** the dialog shows both file names and the PDF downloads; open the PDF with pdf.js in the test and assert the text is selectable and its order starts with the name.
 11. **Backup:** export a file, delete a project, import the file, and confirm the project is back.
-12. **Empty state:** with no projects, the dashed box shows "No projects yet" with a New project button.
+12. **Empty state:** with no applications, the dashed box shows "No applications yet" with a New application button.
 
 ---
 
@@ -1144,7 +1144,7 @@ Do them in this order. Each ends with its tests green.
 
 ## 20. Acceptance criteria (definition of done)
 
-**US1 Guided onboarding and import:** offer manual entry or resume upload first; extracted data opens a review draft before save; include volunteer work and additional sections; preserve unfamiliar content and original text; allow a background without paid roles. Existing manual flow: steps for contact, work rights, experience, portfolio, education, skills, achievements and publications (plus referees and review); a progress bar shows the current step and steps left; each step saves on completion; closing and returning resumes; inline validation; optional steps can be skipped; every entry is editable later on the KB screen.
+**US1 Guided onboarding and import:** offer manual entry or resume upload first; extracted data opens a review draft before save; include volunteer work and additional sections; preserve unfamiliar content and original text; allow a background without paid roles. Existing manual flow: steps for contact, work rights, experience, volunteer work, portfolio, education, skills, achievements and publications, referees, additional sections and review; a progress bar shows the current step and steps left; each step saves on completion; closing and returning resumes; inline validation; optional steps can be skipped; every entry is editable later on the KB screen.
 
 **US2 Connect an API key:** OpenAI, Anthropic and Gemini; the key is checked with a test call before saving; an invalid key shows a clear error; the key is stored encrypted and never exported; the model switches in one click from anywhere.
 

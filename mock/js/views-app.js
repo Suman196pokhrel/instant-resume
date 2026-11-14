@@ -145,12 +145,15 @@ Views.dashboard = function (root) {
   function render() {
     const projects = (st.demo.emptyDashboard ? [] : st.projects).filter(p => (p.company + ' ' + p.role).toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt-a.updatedAt);
     root.innerHTML = shell(`
-      ${!st.dismissedOnboardingBanner ? `<div class="banner">${icon('book',18)}<div><strong>Start with your own background.</strong> This demo currently includes sample data. Upload a resume or enter your details.</div><a class="btn btn-ghost" href="#/onboarding">Set up knowledge base</a></div>` : ''}
+      ${!st.dismissedOnboardingBanner ? `<div class="banner">${icon('book',18)}<div><strong>Start with your own background.</strong> This demo currently includes sample data. Upload a resume or enter your details.</div><a class="btn btn-ghost" href="#/onboarding">Set up knowledge base</a><button class="icon-btn" data-dismiss-banner aria-label="Dismiss">${icon('x')}</button></div>` : ''}
       <div class="page-head"><div><h1>Applications</h1><p class="muted">One job description, a tailored resume and a cover letter. Everything saves automatically.</p></div><div class="search"><input type="search" data-search aria-label="Search applications" placeholder="Search company or role" value="${esc(query)}"></div></div>
+      ${!projects.length && !query ? `<div class="empty-state"><span class="empty-icon">${icon('file',24)}</span><h3>No applications yet</h3><p class="muted">An application holds the job description, your tailored resume and your cover letter for one job.</p><a class="btn btn-primary" href="#/new">${icon('plus')} New application</a></div>` : `
       <div class="card-grid">${projects.map(p => `<article class="project-card"><div class="pc-top">${monogram(p.company)}<button class="icon-btn" data-menu="${p.id}" aria-label="More for ${esc(p.company)}">${icon('dots')}</button></div><a class="pc-role" href="#/project/${p.id}">${esc(p.role)}</a><div class="pc-company">${esc(p.company)}</div><div class="muted pc-loc">${esc(p.location)}</div><div class="pc-foot muted small">Edited ${timeAgo(p.updatedAt)}</div></article>`).join('')}<a class="project-card project-card-new" href="#/new">${icon('plus')} New application</a></div>
-      ${!projects.length ? `<p class="muted">${query ? 'No matching applications.' : 'No applications yet. Paste a job description to get started.'}</p>` : ''}
+      ${!projects.length ? '<p class="muted">No matching applications.</p>' : ''}`}
     `, {route:'dashboard', title:'', actions:'<a class="btn btn-primary" href="#/new">New application</a>'});
     bindShell(root);
+    const dismiss=$('[data-dismiss-banner]',root);
+    if(dismiss) dismiss.onclick=()=>{st.dismissedOnboardingBanner=true;Store.save();render();};
     $('[data-search]',root).oninput = debounce(e => { query=e.target.value; render(); const el=$('[data-search]',root); el.focus(); el.setSelectionRange(query.length,query.length); },150);
     $$('[data-menu]',root).forEach(b => b.onclick=()=>{
       const p=Store.project(b.dataset.menu);
@@ -186,7 +189,7 @@ function kbEntrySummary(type, e) {
 
 function exportBackup() {
   const st = Store.state;
-  const data = { app: 'resume-tailor', schemaVersion: 1, exportedAt: new Date().toISOString(), knowledgeBase: st.kb, projects: st.projects, note: 'API keys are never included in backups.' };
+  const data = { app: 'resume-tailor', schemaVersion: 1, exportedAt: new Date().toISOString(), knowledgeBase: st.kb, projects: st.projects, prefs: st.prefs, note: 'API keys are never included in backups.' };
   const name = `resume-tailor-backup-${new Date().toISOString().slice(0, 10)}.json`;
   downloadFile(name, JSON.stringify(data, null, 2));
   toast(`Exported ${name}`);
@@ -204,7 +207,7 @@ function importBackup(onDone) {
       Store.state.kb = normalizeKnowledgeBase(data.knowledgeBase);
       Store.state.projects = data.projects;
       Store.saveNow();
-      toast(`Imported your knowledge base and ${data.projects.length} projects`);
+      toast(`Imported your knowledge base and ${data.projects.length} ${data.projects.length === 1 ? 'application' : 'applications'}`);
       onDone && onDone();
     } catch (e) {
       toast("Import failed: this file isn't a Resume Tailor backup", { kind: 'error' });
@@ -240,7 +243,7 @@ Views.kb = function (root, params) {
         ${s.chips ? `<div class="chips">${s.chips.map((c) => `<span class="chip">${esc(c)}</span>`).join('')}</div>` : ''}
         ${e.highlights ? `<ul class="kb-highlights">${e.highlights.map((h) => `<li><span>${esc(h.text)}</span>${h.metric ? `<span class="metric">${esc(h.metric)}</span>` : ''}</li>`).join('')}</ul>` : ''}
       </div>`;
-    }).join('') : `<div class="empty-state empty-sm"><h3>No ${esc(sch.label.toLowerCase())} yet</h3><p class="muted">Add one and it becomes available to every project.</p></div>`;
+    }).join('') : `<div class="empty-state empty-sm"><h3>No ${esc(sch.label.toLowerCase())} yet</h3><p class="muted">Add one and it becomes available to every application.</p></div>`;
   }
 
   root.innerHTML = shell(`

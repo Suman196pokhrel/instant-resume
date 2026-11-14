@@ -127,10 +127,10 @@ function createMockPipeline({ jdText, scenario, prefs }) {
       applyQuickPrefs(p, prefs);
       if (scenario === 'findings') Docs.applyDemoFlaws(p);
       ctx.project = p;
-      const exp = p.docs.resume.sections.find((s) => s.kind === 'experience');
+      const exp = p.docs.resume.sections.find((s) => s.kind === 'experience'); // undefined for education-only backgrounds
       const pieces = [
         { kind: 'summary', text: p.docs.resume.sections[0].text },
-        ...exp.items[0].bullets.slice(0, 4).map((b) => ({ kind: 'bullet', text: b.text })),
+        ...(exp?.items[0]?.bullets || []).slice(0, 4).map((b) => ({ kind: 'bullet', text: b.text })),
       ];
       if (prefs.coverLetter) pieces.push({ kind: 'letter', text: p.docs.coverLetter.sections[0].text });
       const n = pieces.length + 1;

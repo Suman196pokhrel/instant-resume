@@ -164,7 +164,7 @@ const Docs = (function () {
     const skills = p.docs.resume.sections.find((s) => s.kind === 'skills');
     skills.items[1].line = skills.items[1].line + ', Jest';
     const open = p.docs.coverLetter.sections[0];
-    open.text = open.text.replace("I've spent", "I'm a passionate engineer and I've spent");
+    open.text = "I'm a passionate engineer. " + open.text;
     p.revisions.resume[0].snapshot = clone(p.docs.resume);
     p.revisions.coverLetter[0].snapshot = clone(p.docs.coverLetter);
   }
