@@ -201,7 +201,7 @@ function normalizeKnowledgeBase(kb) {
   return kb;
 }
 
-const STORAGE_KEY = 'resume-tailor-mock-v1';
+const STORAGE_KEY = 'instant-resume-mock-v1';
 
 const Store = {
   state: null,
@@ -363,9 +363,9 @@ function shell(content, { route, title, actions = '', compact = false, flush = f
   return `
   <div class="shell ${compact ? 'shell-compact' : ''}">
     <aside class="sidebar">
-      <a class="brand" href="#/dashboard" aria-label="Resume Tailor home">
+      <a class="brand" href="#/dashboard" aria-label="Instant Resume home">
         <span class="brand-mark" aria-hidden="true"><svg viewBox="0 0 24 24" width="20" height="20"><path d="M6 3h9l4 4v14H6z" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/><path d="M9 11h7M9 15h4" stroke="currentColor" stroke-width="1.8" stroke-linecap="round"/><path d="M15 3v4h4" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linejoin="round"/></svg></span>
-        <span class="brand-name">Resume Tailor</span>
+        <span class="brand-name">Instant Resume</span>
       </a>
       <nav class="nav">
         ${nav.map((n) => `<a href="#/${n.r}" class="nav-item ${route === n.r ? 'active' : ''}" title="${n.label}">${icon(n.ic, 18)}<span>${n.label}</span></a>`).join('')}

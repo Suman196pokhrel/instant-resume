@@ -41,7 +41,7 @@ Views.onboarding = function (root, params = []) {
     root.innerHTML = `
       <div class="onb">
         <header class="onb-top">
-          <a class="brand" href="#/dashboard"><span class="brand-mark">${icon('file', 18)}</span><span class="brand-name">Resume Tailor</span></a>
+          <a class="brand" href="#/dashboard"><span class="brand-mark">${icon('file', 18)}</span><span class="brand-name">Instant Resume</span></a>
           <div class="onb-progress" role="progressbar" aria-valuenow="${pct}" aria-valuemin="0" aria-valuemax="100" aria-label="Onboarding progress">
             <div class="onb-progress-label"><span>Step ${ob.step + 1} of ${ONB_STEPS.length}</span><span class="muted">${left ? left + (left === 1 ? ' step left' : ' steps left') : 'Last step'}</span></div>
             <div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div>

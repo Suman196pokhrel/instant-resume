@@ -53,7 +53,7 @@ playwright/.cache/
 *.db-journal
 *.sqlite
 *.sqlite3
-resume-tailor-backup-*.json
+instant-resume-backup-*.json
 
 # ---------------------------------------------------------------
 # Logs and debug output

@@ -1,5 +1,5 @@
 <p align="center">
-  <img src="docs/assets/banner.svg" alt="Resume Tailor: tailored resumes and cover letters, grounded in your real experience" width="100%">
+  <img src="docs/assets/banner.svg" alt="Instant Resume: tailored resumes and cover letters, grounded in your real experience" width="100%">
 </p>
 
 <p align="center">
@@ -21,7 +21,7 @@
 
 AI resume writers are fast, but they **make things up**: inflated numbers, tools you've never used, generic filler. Recruiters notice, and so do interviewers.
 
-Resume Tailor treats your career history as a **knowledge base of facts**. Every generated bullet carries the ID of the fact it came from, and a local rules engine flags anything that doesn't trace back.
+Instant Resume treats your career history as a **knowledge base of facts**. Every generated bullet carries the ID of the fact it came from, and a local rules engine flags anything that doesn't trace back.
 
 ## Highlights
 

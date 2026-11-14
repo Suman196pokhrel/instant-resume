@@ -1,4 +1,4 @@
-<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Resume Tailor: tailored resumes and cover letters, grounded in your real experience">
+<svg xmlns="http://www.w3.org/2000/svg" width="1200" height="300" viewBox="0 0 1200 300" role="img" aria-label="Instant Resume: tailored resumes and cover letters, grounded in your real experience">
   <defs>
     <linearGradient id="bg" x1="0" y1="0" x2="1" y2="1">
       <stop offset="0" stop-color="#1A2320"/>
@@ -20,7 +20,7 @@
   </g>
 
   <g font-family="'Segoe UI', Inter, Helvetica, Arial, sans-serif">
-    <text x="182" y="132" font-size="48" font-weight="700" fill="#F3F2EE" letter-spacing="-1">Resume Tailor</text>
+    <text x="182" y="132" font-size="48" font-weight="700" fill="#F3F2EE" letter-spacing="-1">Instant Resume</text>
     <text x="182" y="172" font-size="22" fill="#C9DAD5">Tailored resumes and cover letters, grounded in your real experience.</text>
 
     <g font-size="15" font-weight="600">

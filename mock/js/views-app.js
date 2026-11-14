@@ -189,8 +189,8 @@ function kbEntrySummary(type, e) {
 
 function exportBackup() {
   const st = Store.state;
-  const data = { app: 'resume-tailor', schemaVersion: 1, exportedAt: new Date().toISOString(), knowledgeBase: st.kb, projects: st.projects, prefs: st.prefs, note: 'API keys are never included in backups.' };
-  const name = `resume-tailor-backup-${new Date().toISOString().slice(0, 10)}.json`;
+  const data = { app: 'instant-resume', schemaVersion: 1, exportedAt: new Date().toISOString(), knowledgeBase: st.kb, projects: st.projects, prefs: st.prefs, note: 'API keys are never included in backups.' };
+  const name = `instant-resume-backup-${new Date().toISOString().slice(0, 10)}.json`;
   downloadFile(name, JSON.stringify(data, null, 2));
   toast(`Exported ${name}`);
 }
@@ -210,7 +210,7 @@ function importBackup(onDone) {
       toast(`Imported your knowledge base and ${data.projects.length} ${data.projects.length === 1 ? 'application' : 'applications'}`);
       onDone && onDone();
     } catch (e) {
-      toast("Import failed: this file isn't a Resume Tailor backup", { kind: 'error' });
+      toast("Import failed: this file isn't a Instant Resume backup", { kind: 'error' });
     }
   };
   inp.click();

@@ -1,4 +1,4 @@
-# Resume Tailor: Product and Build Specification
+# Instant Resume: Product and Build Specification
 
 > **The single source of truth for this repository.** Product scope, platform decisions, implementation details, design system, flows, tests and acceptance criteria are all here. No other document overrides it. `mock/` is a working reference for interactions and visual details: when this document is silent, match the mock. When the mock and this document disagree, this document wins; fix the mock or record the decision here.
 >
@@ -40,7 +40,7 @@
 
 ### 1.1 Goal
 
-**Resume Tailor** is a source-available, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
+**Instant Resume** is a source-available, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
 
 - Runs on the user's machine (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
 - Source on a public GitHub repository, built in public.
@@ -186,7 +186,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Public demo host | Vercel; static simulated demo, no provider secrets or database |
 | Framework | Next.js (App Router), TypeScript strict mode |
 | Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). The real app runs locally; Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
-| Database | SQLite via libSQL (`@libsql/client`), file `./data/resume-tailor.db`, accessed only from Next.js route handlers |
+| Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
 | Forms | React Hook Form + Zod resolver |
@@ -267,7 +267,7 @@ Security: set a strict Content-Security-Policy in `next.config` headers: `connec
 ## 5. Project structure
 
 ```
-resume-tailor/
+instant-resume/
   app/
     layout.tsx                 # fonts, Toaster, global CSS
     page.tsx                   # redirect: onboarding incomplete → /onboarding, else /dashboard
@@ -455,7 +455,7 @@ Validate every JSON column with the Zod schema on read and on write. Reject inva
 | `PUT /api/documents/:id` | Save content and theme; body includes the revision to append or coalesce |
 | `GET /api/documents/:id/revisions` | Revision list |
 | `GET/PUT /api/settings` | Prefs |
-| `GET /api/backup` | Export `{ app:'resume-tailor', schemaVersion, exportedAt, knowledgeBase, projects:[…with documents and revisions], prefs }`. **Never includes connections or keys.** |
+| `GET /api/backup` | Export `{ app:'instant-resume', schemaVersion, exportedAt, knowledgeBase, projects:[…with documents and revisions], prefs }`. **Never includes connections or keys.** |
 | `POST /api/backup` | Import; validate fully, then replace the KB and projects in one transaction |
 
 Saving from the client: debounce document saves by 600 ms. Show "Saving" then "Saved" in the Workspace bar. On a failed save, show a toast "Couldn't save your changes. Retrying…" and retry with backoff.
@@ -492,7 +492,7 @@ Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-bro
   2. Wrong prefix: `That doesn't look like an OpenAI key. OpenAI keys start with "sk-".` (use the right article). An OpenAI key must not start with `sk-ant-`.
   3. Shorter than 20 characters: "That key looks too short. Copy the whole key from your provider dashboard."
   4. Then a real test call (smallest model, 1-token request). On a 401: `{Provider} rejected this key (401 invalid_api_key). Check the key is active and copied in full.` On success: "Key works. Saved and encrypted on this device."
-- **Storage:** generate a non-extractable AES-GCM 256 `CryptoKey` once and keep it in IndexedDB (`resume-tailor-keystore`). Encrypt each API key with a random 12-byte IV and store `{ provider, iv, ciphertext, masked, model, addedAt }` in IndexedDB. Decrypt only right before a call. Never send keys to the Next.js server, never log them, never include them in backups.
+- **Storage:** generate a non-extractable AES-GCM 256 `CryptoKey` once and keep it in IndexedDB (`instant-resume-keystore`). Encrypt each API key with a random 12-byte IV and store `{ provider, iv, ciphertext, masked, model, addedAt }` in IndexedDB. Decrypt only right before a call. Never send keys to the Next.js server, never log them, never include them in backups.
 - **Active model:** `{ provider, model }` in localStorage. Model picker in the top bar (and Workspace bar): a dropdown grouped by provider listing connected providers' models with a check on the active one. Not-connected providers show "Add a {provider} key", linking to Settings. Footer note: "Calls go straight from this browser to the provider." Switching shows the toast "Switched to {model}".
 
 ### 8.3 LLM contract
@@ -795,7 +795,7 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | `/new/studio` | Studio setup (stepper) | App shell |
 | `/projects/[id]` | Workspace | App shell, compact sidebar, own bar |
 
-Sidebar: brand (dark rounded square with a document icon, "Resume Tailor") → Applications, Knowledge base, Settings (the active item is white with an inset border and an accent icon). Footer: "Stored on this device" with a teal dot. (The mock's "Demo controls" are mock-only; replace them with a dev-only panel behind `NODE_ENV=development` if useful.)
+Sidebar: brand (dark rounded square with a document icon, "Instant Resume") → Applications, Knowledge base, Settings (the active item is white with an inset border and an accent icon). Footer: "Stored on this device" with a teal dot. (The mock's "Demo controls" are mock-only; replace them with a dev-only panel behind `NODE_ENV=development` if useful.)
 
 Navigation map:
 
@@ -1037,7 +1037,7 @@ State: a Zustand store per project holding `{ kind, selectedSectionId, inspector
 
 ### 14.6 Backup (US12)
 
-Export downloads `resume-tailor-backup-YYYY-MM-DD.json` with the toast "Exported {file}". Import uses a file picker (JSON), validates the whole file with Zod, then replaces the KB and projects in one transaction. Toast "Imported your knowledge base and {n} applications", or "Import failed: this file isn't a Resume Tailor backup". Connections are never touched.
+Export downloads `instant-resume-backup-YYYY-MM-DD.json` with the toast "Exported {file}". Import uses a file picker (JSON), validates the whole file with Zod, then replaces the KB and projects in one transaction. Toast "Imported your knowledge base and {n} applications", or "Import failed: this file isn't a Instant Resume backup". Connections are never touched.
 
 ---
 
@@ -1320,7 +1320,7 @@ There is no package.json, build, lint or test yet. Run the mock with `xdg-open m
 - Plain classic `<script>` tags, not ES modules, so it works over `file://`. Load order in `index.html` matters: `data.js` → `core.js` → `docs.js` → `views-*.js` → `main.js`. All files share one global scope.
 - `data.js`: `window.MOCK` holds the seed KB (persona "Jordan Whitlock", §17), sample JDs and their briefs, providers, banned phrases, theme defaults and presets.
 - `core.js`: helpers (`$`, `$$`, `esc`, `uid`, `clone`), icons, tooltips (`data-tip`), toasts, modals, model picker, app shell and Demo controls, plus:
-  - `Store`: all state, persisted to `localStorage` under `resume-tailor-mock-v1`. Call `Store.save()` (debounced) after changes; `Store.reset()` reseeds; `normalizeKnowledgeBase()` fills missing KB arrays on load.
+  - `Store`: all state, persisted to `localStorage` under `instant-resume-mock-v1`. Call `Store.save()` (debounced) after changes; `Store.reset()` reseeds; `normalizeKnowledgeBase()` fills missing KB arrays on load.
   - `Router`: hash router. `#/<name>/<params…>` dispatches to `Views[name](root, params)`; a view may return a cleanup function.
 - `docs.js`: `Docs` builds documents from the KB, renders them as HTML (stand-in for Typst), runs the rules engine and the mock LLM (brief extraction, rewrites).
 - `views-*.js` register routes: `dashboard`, `kb`, `settings` (views-app; KB field schema in `KB_SCHEMA`, order in `KB_ORDER`), `onboarding`, `import` (`ResumeImport`), `new` (chooser, `#/new/studio`, and `#/new/quick` in views-quick with the mock pipeline emitter), `project` (Workspace).
