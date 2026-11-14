@@ -1,16 +1,16 @@
-# Resume Tailor: MVP Build Specification
+# Resume Tailor: Product and Build Specification
 
-> **For the implementing LLM:** read `CURRENT_SCOPE.md` first. It governs product and platform decisions; this specification governs implementation within that scope; `mock/` guides interactions and visual details. `MVP_OVERVIEW.md` and its generated PDF are current summaries, not independent requirements; the superseded October PDF remains in Git history. Do not revive removed features or interpret the Vercel demo as a requirement to host the real application as SaaS.
+> **The single source of truth for this repository.** Product scope, platform decisions, implementation details, design system, flows, tests and acceptance criteria are all here. No other document overrides it. `mock/` is a working reference for interactions and visual details: when this document is silent, match the mock. When the mock and this document disagree, this document wins; fix the mock or record the decision here.
 >
-> This repo currently contains a static mock, not the working Next.js application described below. Build two clearly distinguished experiences: the real, locally hosted BYOK application and a public simulated demo on Vercel. Read sections 1.1, 3.1, 18.5 and 20 before planning implementation or publication.
->
-> Original spec: 22 October 2026. Product/platform decisions confirmed: 8 November 2026. GitHub publication and Vercel deployment are planned destinations, not completed actions. Keep overview-level decisions aligned in `MVP_OVERVIEW.md` and regenerate the PDF with `python scripts/render_overview.py` from the repository root (Python 3 and ReportLab 4.5.1).
+> Updated 15 November 2026. Replaces `CURRENT_SCOPE.md`, `BUILD_SPEC.md` and `MVP_OVERVIEW.md` (and its PDF), which remain in Git history.
+
+**Before you start:** read §1 (scope and modes), §19 (build order) and §20 (definition of done). Build milestones M0–M11 in order. Read §23 for repository rules.
 
 ---
 
 ## Contents
 
-1. Assignment summary
+1. Product scope and operating modes
 2. Glossary (use these words exactly)
 3. Locked decisions and tech stack
 4. Architecture
@@ -32,45 +32,110 @@
 20. Acceptance criteria (definition of done)
 21. Out of scope
 22. Open decisions (defaults chosen, flagged for the owner)
+23. Repository, mock and documentation rules
 
 ---
 
-## 1. Assignment summary
+## 1. Product scope and operating modes
 
-Build **Resume Tailor**, a local-first web app that turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It must run on a user's machine with `pnpm dev` and a local SQLite file. Open source and self-hosted, with the user's own AI provider keys. Source will be kept publicly on GitHub and developed in public. Vercel hosts only a simulated public product demo. No subscription, accounts, managed real-user backend, or billing in this scope.
+### 1.1 Goal
 
-Users build the knowledge base either through manual onboarding or by importing an existing resume and reviewing extracted details before saving. Preserve volunteer work and every other section, including unfamiliar content as additional sections.
+**Resume Tailor** is an open-source, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
 
-Two ways to create documents:
+- Runs on the user's machine (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
+- Source on a public GitHub repository, built in public.
+- Vercel hosts only a **simulated** public demo (§1.5).
+- No subscription, billing, accounts, managed real-user backend or live public AI service.
+
+Users build the knowledge base by manual onboarding or by importing an existing resume and reviewing the extracted details before saving. Then, for each job, there are two ways to create documents:
 
 - **Quick generate (primary):** paste a job description, watch a 5-stage pipeline, get finished PDFs. Gaps and findings are flagged but never block the download.
-- **Studio (manual):** review the job brief, choose which knowledge base entries to use, generate, then edit in the Workspace. Edit text by hand, rewrite one section with an instruction, reorder or hide sections, adjust the design, review checks, browse history, export.
+- **Studio (manual):** review the job brief, choose which knowledge base entries to use, generate, then edit in the Workspace: edit text by hand, rewrite one section with an instruction, reorder or hide sections, adjust the design, review checks, browse history, export.
 
 Core principles (these shape every decision):
 
-1. **Every claim traces to a stored fact.** Bullets carry the ID of the highlight they came from. The rules engine flags anything ungrounded.
+1. **Every claim traces to a stored fact.** Bullets carry the ID of the highlight they came from. The rules engine flags anything ungrounded. Source IDs and heuristic checks are safeguards, not proof that every sentence is correct; users review generated claims. Never promise a universal "ATS score" or interviews.
 2. **Formatting costs zero tokens.** Design and structure changes never call the LLM and re-render in under 300 ms.
 3. **Small edits stay small.** A rewrite sends one section and gets back JSON Patch operations for that section only. The user sees a diff and accepts or rejects.
-4. **The API key never leaves the browser** except to the provider. LLM calls go browser → provider directly.
+4. **The API key never leaves the browser** except to the provider. LLM calls go browser → provider directly. Local storage does not mean offline AI: the relevant input goes to the user's selected provider, and the UI must say so.
 5. **Everything saves automatically**, with revision history and undo.
 
-Deliverables: a working local Next.js application, its public GitHub source and reproducible setup, and a separately deployed simulated Vercel demo meeting the mode-specific criteria in sections 18 and 20. Implementing local AI integration and preparing the public demo are separate milestones; neither substitutes for the other.
+Deliverables: a working local Next.js application with public GitHub source and reproducible setup, and a separately deployed simulated Vercel demo. Each meets its own criteria in §18 and §20; neither substitutes for the other.
 
-### 1.1 Mode boundaries and current implementation status
+### 1.2 Two operating modes
 
-| Capability | Real local application target | Current mock / public demo target |
+| Capability | Real local application | Public demo (current `mock/`) |
 |---|---|---|
-| Provider access | User's own API keys; real requests to chosen provider | Simulated provider only; no real key entry or provider calls in the public release |
-| Resume import | Real PDF/DOCX/TXT extraction into a review draft | PDF/DOCX explicitly use sample extraction; TXT/pasted text use a basic local parser |
-| Generation and rewrites | Schema-validated provider responses with evidence references | Fixtures/deterministic transformations, visibly simulated |
-| Editing and design | Interactive, with local persistence and history | Interactive, persisted in the visitor's browser |
-| Data | Local SQLite plus on-device key storage | Synthetic initial data, browser-local state; no cloud database |
-| Rendering/export | Typst worker and downloadable PDFs | HTML preview and browser print-to-PDF from the Workspace Export dialog today; Quick generate result downloads are simulated (toast only, no file). Do not claim actual Typst compilation |
-| Runtime | Local Next.js server, installed by the user | Static browser application served by Vercel |
+| Runtime | Local Next.js server installed by the user | Static HTML/CSS/JS served by Vercel; no server |
+| Provider access | User's own API keys; real requests to the chosen provider | Simulated only; no real key entry or provider calls in the public release |
+| Resume import | Real PDF/DOCX/TXT extraction into a review draft | PDF/DOCX show labelled **sample** extraction; TXT and pasted text use a basic local parser |
+| Generation and rewrites | Schema-validated provider responses with evidence references | Fixtures or deterministic transformations, visibly labelled simulated |
+| Editing and design | Interactive, persisted locally, with history | Interactive, persisted in the visitor's browser, with history |
+| Data | Local SQLite plus encrypted on-device key storage | Synthetic sample data and browser-local state; no cloud database |
+| Rendering and export | Typst worker; downloadable PDFs | HTML preview; Workspace export opens the browser print dialog; Quick generate result downloads are simulated (toast only, no file). Never claim Typst compilation |
 
-Sections describing real providers, encryption, SQLite, API routes, Typst and the Next.js stack apply to the real local app unless explicitly stated otherwise. Mock timings, model names, key masks and generated text are demonstration fixtures, not proof that an integration exists. Verify supported model IDs and current SDK APIs against official documentation during implementation rather than copying mock identifiers.
+Sections on real providers, encryption, SQLite, API routes, Typst and the Next.js stack apply to the real app unless stated otherwise. Mock timings, model names, key masks and generated text are fixtures, not proof of an integration. Verify supported model IDs and current SDK APIs against official documentation during implementation; never copy mock identifiers.
 
-No paid service or live public AI demo is planned. Do not add extra product features to justify infrastructure. The current browser-direct LLM architecture requires the browser to stay open during generation; the rendering Web Worker is not a durable background job service. A future durable execution design would require an explicit architecture revision, including where keys and job state live.
+The browser-direct LLM design requires the browser to stay open during generation. The rendering Web Worker is not a durable background job service. Durable background execution would need an explicit architecture revision covering where keys and job state live; document that before changing the design.
+
+### 1.3 Primary flow
+
+```mermaid
+flowchart LR
+  M["Manual entry<br/>11-step wizard"] --> R["Review draft<br/>merge or replace"]
+  I["Resume import<br/>PDF · DOCX · TXT · paste"] --> R
+  R --> KB[("Knowledge base")]
+  KB --> N["New application<br/>paste a job description"]
+  N --> Q["Quick generate<br/>5-stage pipeline"]
+  N --> S["Studio setup<br/>brief → entries → generate"]
+  Q --> W["Workspace<br/>edit · rewrite · checks · history"]
+  S --> W
+  W --> E["Export PDF"]
+```
+
+1. Build the knowledge base manually, or upload a resume / paste its text.
+2. Review, correct and confirm contact details, employment, volunteer work, portfolio items, education, skills, credentials, referees and additional sections.
+3. From Applications, start a new application for a pasted job description. Choose Quick generate or Studio.
+4. Edit the resume and cover letter, inspect checks, adjust layout, review history, export.
+5. Reopen saved applications; maintain or back up the knowledge base.
+
+Main navigation has exactly three items: **Applications, Knowledge base, Settings**. The dashboard is a list of saved application documents, not a job-search CRM.
+
+### 1.4 Knowledge base and import rules
+
+- Nothing from an import is saved to the knowledge base before the user reviews it. Missing facts stay blank; never infer work rights or invent fields.
+- Unrecognised sections are kept as Additional sections, never silently discarded. The original resume text is kept as a reference-only additional section and is never automatically included in documents.
+- Review offers two explicit save modes: **merge** (add entries; keep existing contact and work-rights details) or **replace** (replace the knowledge base). Existing application documents are always preserved. A draft import can be abandoned without changing the saved KB. Confirm before replacing an unfinished onboarding draft. In the demo, replacing the sample KB is selected by default.
+- Importing a resume is distinct from restoring a JSON backup (§14.6).
+- Paid experience is never required. Volunteer-only and education-only backgrounds must work through both generation flows.
+- Manual entry and import feed the same knowledge base and the same document workflows.
+- Real extraction (PDF/DOCX/TXT through the user's provider, OCR, extraction accuracy) is implementation work (M3a), not a mock capability. Explain provider data transfer before extraction. Details: §14.1a.
+
+### 1.5 Public demo
+
+Visitors explore sample career information and sample job descriptions, choose Quick generate or Studio, review simulated results, edit text and layout, inspect checks and history, and try export. They need no account, API key, payment or installation.
+
+- A visible notice on every screen: **"Interactive demo · Sample data · AI responses are simulated"** (implemented in the mock).
+- Generation, extraction and AI rewrite proposals may use fixtures or deterministic transformations. Manual edits, history, local saving and rendering stay genuinely interactive; there is no need to prebuild every edited document.
+- Uploaded content stays in the browser. Make that distinction from real provider processing explicit.
+- **Before public deployment (not yet done):** disable real API-key collection and live-provider paths, make reset easy to find, explain browser-local storage, keep personal uploads optional with a sample-first path, and link to the source repository and local setup once they exist. Never label the mock a fully implemented AI product.
+
+Delivery rules: §3.1. Release checks: §18.5. Acceptance: §20.
+
+### 1.6 Engineering boundaries
+
+CI, reproducible local setup, validated AI outputs, useful error handling and evaluation support the one user problem. Public multi-tenant infrastructure, remote workers, always-on jobs and cloud databases are not needed, including for the demo. Do not add cloud infrastructure, auth, billing or background services for the demo, and do not add product features to justify infrastructure.
+
+### 1.7 Current status
+
+| Item | Status |
+|---|---|
+| This specification | Current |
+| `mock/` static interactive demo | Exists; matches this spec's flows with simulated AI |
+| Real Next.js application | Not started; build from M0 (§19) |
+| GitHub publication | Repository exists; licence not yet chosen |
+| Vercel demo deployment | Not configured; pre-deployment items in §1.5 pending |
+| Custom domain | Optional; a hosting-provided address is sufficient |
 
 ---
 
@@ -125,7 +190,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
 | Forms | React Hook Form + Zod resolver |
-| Editor state | Zustand (one store per open project; see 14.4) |
+| Editor state | Zustand (one store per open project; see 14.5) |
 | UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. No Framer Motion or animation libraries in app screens; CSS transitions only. |
 | Drag and drop | dnd-kit (with keyboard sensor) |
 | LLM | Vercel AI SDK, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. Use `generateObject` with Zod schemas. |
@@ -161,26 +226,31 @@ Layout: **single column only** for ATS safety. **One** resume template and **one
 
 Four layers keep content, design and checks apart, so the LLM only ever patches the tailored document.
 
-```
-Your machine: data in SQLite via the local Next.js server; API key encrypted in the browser
-
-┌──────────────────┐      ┌───────────────────────┐      ┌──────────────────┐
-│ Knowledge base   │─────▶│ LLM call (user's key) │◀─────│ Job description  │
-│ facts with IDs   │      │ browser → provider;   │      │ pasted; brief    │
-└────────┬─────────┘      │ returns JSON / Patch  │      │ extracted        │
-         │ referenced     └──────────┬────────────┘      └────────┬─────────┘
-         │ by ID                     │ validated patches          │
-         ▼                           ▼                            ▼
-         └──────────────▶ ┌───────────────────────┐ ─────▶ ┌──────────────────┐
-                          │ Tailored document     │        │ Rules engine     │
-                          │ one per kind/project; │        │ keywords, banned │
-                          │ edited by hand/patch  │        │ phrases, grounding│
-                          └──────────┬────────────┘        └──────────────────┘
-┌──────────────────┐                 ▼
-│ Design tokens    │──────▶ ┌───────────────────────┐ ─────▶ ┌──────────────────┐
-│ (theme), edited  │        │ Typst renderer (WASM, │        │ Preview and PDF  │
-│ in the UI        │        │ Web Worker)           │        │ single column    │
-└──────────────────┘        └───────────────────────┘        └──────────────────┘
+```mermaid
+flowchart LR
+  subgraph browser["Browser on the user's machine"]
+    KB["Knowledge base<br/>facts with IDs"]
+    JD["Job description<br/>pasted, brief extracted"]
+    LLM["LLM call with the user's key<br/>returns JSON / JSON Patch"]
+    DOC["Tailored document<br/>one per kind per project,<br/>edited by hand or by patch"]
+    RULES["Rules engine<br/>keywords, banned phrases, grounding"]
+    THEME["Design tokens (theme)<br/>edited in the UI"]
+    TYPST["Typst renderer<br/>WASM in a Web Worker"]
+    OUT["Preview and PDF<br/>single column"]
+  end
+  PROV[("AI provider")]
+  API["Next.js route handlers"] --- DB[("SQLite file")]
+  KB -->|referenced by ID| LLM
+  JD --> LLM
+  LLM <-->|direct HTTPS| PROV
+  LLM -->|validated patches| DOC
+  DOC --> RULES
+  JD --> RULES
+  DOC --> TYPST
+  THEME --> TYPST
+  TYPST --> OUT
+  DOC -.->|"persistence as JSON, never keys"| API
+  KB -.-> API
 ```
 
 Request boundaries:
@@ -298,7 +368,7 @@ Rules:
 - Skills items use `heading` (group name) and `line` (comma-separated skills; note that "AWS (Lambda, ECS, SQS)" is one skill, so split on commas outside parentheses).
 - Experience items: `heading` = job title, `sub` = employer, `meta` = "Location | Start to End", `bullets`.
 - Cover letter: 4 `paragraph` sections titled Opening, Evidence, Fit, Close. The template adds the date, recipient block, "Re: {role}", "Dear {recipient}," and the sign-off "Kind regards, {name}".
-- Default resume section order: Summary, Experience, Skills, Portfolio, Education, Certifications and awards, Referees, then Volunteer work (an `experience`-kind section titled "Volunteer work") and one `additional` section per selected additional KB entry (titled with the entry's title). Omit sections with no items, except Summary. Users reorder in the Structure tab.
+- Default resume section order: Summary, Experience, Skills, Portfolio, Education, Certifications and awards, Volunteer work (an `experience`-kind section titled "Volunteer work"), one `additional` section per selected additional KB entry (titled with the entry's title), Referees. Referees always come last by default (Australian convention). Omit sections with no items, except Summary. Users reorder in the Structure tab.
 
 Theme defaults and ranges (Design tab sliders):
 
@@ -409,7 +479,7 @@ interface LlmAdapter {
 }
 ```
 
-Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true`. Verify CORS for all three providers in the first spike (risk listed in the overview). If a provider can't be called from the browser, report it; don't proxy keys through the server.
+Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true`. Verify CORS for all three providers in the first spike. If a provider can't be called from the browser, report it; don't proxy keys through the server.
 
 **Mock provider:** implement `MockLlmAdapter`, enabled when `NEXT_PUBLIC_LLM_MOCK=1` or when the active connection is the built-in "Mock" provider in development builds. It returns deterministic fixture outputs with realistic delays (stages of 2–3.6 s), and supports scenarios `happy | gaps | findings | error-stage-1…5` via a `?mock=` query param or a dev-only setting. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
 
@@ -728,16 +798,23 @@ Sidebar: brand (dark rounded square with a document icon, "Resume Tailor") → A
 
 Navigation map:
 
+```mermaid
+flowchart LR
+  root["/"] -->|"onboarding incomplete and KB empty"| onb["/onboarding"]
+  root --> dash["/dashboard"]
+  onb -->|"finish: Your knowledge base is ready"| kb["/kb/roles"]
+  onb -->|finish| new["/new"]
+  dash -->|card| ws["/projects/[id]"]
+  dash -->|New application| new
+  dash -->|"banner: Continue onboarding"| onb
+  new --> quick["/new/quick"]
+  quick -->|"result: Open in Studio"| ws
+  quick -->|"Regenerate (stays)"| quick
+  new --> studio["/new/studio"]
+  studio -->|generate| ws
 ```
-/ ─┬─▶ /onboarding ──(finish)──▶ "Your knowledge base is ready" ─┬─▶ /kb/roles
-   │                                                             └─▶ /new
-   └─▶ /dashboard ─┬─ card ──────────────────────────▶ /projects/[id]
-                   ├─ New application ─▶ /new ─┬─▶ /new/quick ─▶ result ─┬─ Open in Studio ─▶ /projects/[id]
-                   │                       │                         └─ Regenerate (stays)
-                   │                       └─▶ /new/studio ─▶ generate ─▶ /projects/[id]
-                   └─ banner "Continue onboarding" ─▶ /onboarding
-Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcrumbs "Applications / New application / …"
-```
+
+Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcrumbs "Applications / New application / …".
 
 ### 13.1 Dashboard
 
@@ -1181,6 +1258,13 @@ Do them in this order. Each ends with its tests green.
 - Settings has the default theme, page budget (1 or 2), cover letter switch and tone.
 - Stage changes are announced, focus moves to the result heading, and reduced motion is respected.
 
+**Mock / public demo feature acceptance (current `mock/`):**
+- Only Applications, Knowledge base and Settings in main navigation.
+- Both onboarding paths (manual, import) lead to a reviewable, editable knowledge base; imported details are usable by Quick generate and Studio.
+- Saving an import never silently mixes in demo background data or overwrites existing data.
+- Removed features (§21) have no screens, navigation links or active script dependencies.
+- Document editing, checks, history and export remain available.
+
 **Local application acceptance:** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm dev` (empty user KB); `pnpm db:seed` is optional synthetic demo data; a README documents setup, scripts, BYOK costs/data flow, the mock provider and scenarios. CI is deterministic/offline with mock providers; real integration behavior is separately verified and documented.
 
 **Public demo acceptance:** a Vercel-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
@@ -1191,7 +1275,9 @@ Do them in this order. Each ends with its tests green.
 
 ## 21. Out of scope (MVP)
 
-Job discovery and scraping; scheduled searches; batch auto-tailoring; listing-trust scores; outreach/contact discovery; career maps; resume experiments; paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is explicitly in scope); multi-column layouts; LinkedIn profile integration; the application status tracker or kanban; DOCX or other export formats; MCP or chat-app integrations; more than one resume and one cover letter template; interview-style onboarding; server sync, accounts or multiple devices; dark mode.
+**Removed and must not return:** job scraping and discovery, matching inbox, source connections, scheduled sweeps and schedulers, batch generation from discovered jobs, listing-trust scores, outreach and contact discovery, application-stage tracking (status tracker or kanban), career maps, hiring funnels, timing analytics and resume experiments.
+
+**Also out of scope:** paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is in scope); server sync, accounts or multiple devices; multi-column layouts; more than one resume and one cover letter template; DOCX or other export formats (DOCX *import* is in scope); LinkedIn profile integration; MCP or chat-app integrations; interview-style onboarding; dark mode.
 
 ---
 
@@ -1211,4 +1297,38 @@ GitHub source, local BYOK operation, the simulated Vercel demo, and the absence 
 | Click-to-select sections in the PDF preview | Nice-to-have; the Content tab list is required |
 | Model lists per provider | Kept in one config file; owner updates them |
 
-When anything else is unclear, choose the option that keeps facts grounded, keeps formatting free of LLM calls, and matches the mock. Note each assumption in the README.
+Anything else unclear: see §23.3.
+
+---
+
+## 23. Repository, mock and documentation rules
+
+### 23.1 Repository today
+
+| Path | Purpose |
+|---|---|
+| `docs/SPEC.md` | This document; the only specification |
+| `mock/` | Static interactive demo (§23.2); future Vercel demo artifact |
+| `AGENTS.md` | Short entry point for coding agents; `CLAUDE.md` imports it |
+| `README.md` | Public project overview |
+
+There is no package.json, build, lint or test yet. Run the mock with `xdg-open mock/index.html` (no server; works over `file://`). The real app goes in the structure from §5 with the pnpm scripts listed there.
+
+### 23.2 Mock architecture (`mock/`)
+
+- Plain classic `<script>` tags, not ES modules, so it works over `file://`. Load order in `index.html` matters: `data.js` → `core.js` → `docs.js` → `views-*.js` → `main.js`. All files share one global scope.
+- `data.js`: `window.MOCK` holds the seed KB (persona "Jordan Whitlock", §17), sample JDs and their briefs, providers, banned phrases, theme defaults and presets.
+- `core.js`: helpers (`$`, `$$`, `esc`, `uid`, `clone`), icons, tooltips (`data-tip`), toasts, modals, model picker, app shell and Demo controls, plus:
+  - `Store`: all state, persisted to `localStorage` under `resume-tailor-mock-v1`. Call `Store.save()` (debounced) after changes; `Store.reset()` reseeds; `normalizeKnowledgeBase()` fills missing KB arrays on load.
+  - `Router`: hash router. `#/<name>/<params…>` dispatches to `Views[name](root, params)`; a view may return a cleanup function.
+- `docs.js`: `Docs` builds documents from the KB, renders them as HTML (stand-in for Typst), runs the rules engine and the mock LLM (brief extraction, rewrites).
+- `views-*.js` register routes: `dashboard`, `kb`, `settings` (views-app; KB field schema in `KB_SCHEMA`, order in `KB_ORDER`), `onboarding`, `import` (`ResumeImport`), `new` (chooser, `#/new/studio`, and `#/new/quick` in views-quick with the mock pipeline emitter), `project` (Workspace).
+- The demo notice strip is static markup in `index.html`; its height is the `--demo-h` CSS variable used by sticky elements.
+- Mock-only extras: Demo controls (sidebar) and the `?mock=` scenario parameter (§17). In the real app put these behind a dev-only panel (`NODE_ENV=development`).
+
+### 23.3 Rules for every change
+
+- When product behaviour changes, update this document and the mock in the same commit. Keep completed, simulated and planned behaviour clearly distinct.
+- All fixtures and examples are synthetic. Never commit real resumes, provider keys or personal databases.
+- Do not invent a licence, Vercel project or domain. Add real links only once they exist. Publishing and deploying are separate tasks that need explicit owner approval.
+- When anything is unclear, choose the option that keeps facts grounded, keeps formatting free of LLM calls, and matches the mock. Record each assumption in the README.

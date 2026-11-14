@@ -114,12 +114,12 @@ const Docs = (function () {
         id: uid('s'), kind: 'credentials', title: SECTION_TITLES.credentials, hidden: false,
         items: kb.credentials.filter(sel).map((c) => ({ id: uid('i'), ref: c.id, heading: c.title, sub: c.issuer, meta: c.year })),
       },
+      ...((kb.volunteering || []).filter(sel).length ? [{id:uid('s'),kind:'experience',title:'Volunteer work',hidden:false,items:kb.volunteering.filter(sel).map(r=>({id:uid('i'),ref:r.id,heading:r.title,sub:r.company,meta:[r.start,r.end].filter(Boolean).join(' to '),bullets:pickBullets(r,kws,3)}))}] : []),
+      ...(kb.additional || []).filter(sel).map(e=>({id:uid('s'),kind:'additional',title:e.title,hidden:false,items:[{id:uid('i'),ref:e.id,heading:e.title,line:e.notes}]})),
       {
         id: uid('s'), kind: 'referees', title: SECTION_TITLES.referees, hidden: false,
         items: kb.referees.filter(sel).map((r) => ({ id: uid('i'), ref: r.id, heading: r.name, sub: [r.title,r.company].filter(Boolean).join(', '), meta: r.contact })),
       },
-      ...((kb.volunteering || []).filter(sel).length ? [{id:uid('s'),kind:'experience',title:'Volunteer work',hidden:false,items:kb.volunteering.filter(sel).map(r=>({id:uid('i'),ref:r.id,heading:r.title,sub:r.company,meta:[r.start,r.end].filter(Boolean).join(' to '),bullets:pickBullets(r,kws,3)}))}] : []),
-      ...(kb.additional || []).filter(sel).map(e=>({id:uid('s'),kind:'additional',title:e.title,hidden:false,items:[{id:uid('i'),ref:e.id,heading:e.title,line:e.notes}]})),
     ].filter((s) => s.kind === 'summary' || (s.items && s.items.length));
     return { kind: 'resume', theme: clone(MOCK.themeDefaults), sections };
   }

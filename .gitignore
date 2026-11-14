@@ -67,7 +67,7 @@ pnpm-debug.log*
 .stylelintcache
 
 # ---------------------------------------------------------------
-# Python (scripts/render_overview.py)
+# Python
 # ---------------------------------------------------------------
 __pycache__/
 *.py[cod]

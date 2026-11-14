@@ -1,71 +1,109 @@
-# Resume Pipeline
+<p align="center">
+  <img src="docs/assets/banner.svg" alt="Resume Tailor: tailored resumes and cover letters, grounded in your real experience" width="100%">
+</p>
 
-Resume Tailor is an open-source application being built in public. It turns a pasted job description and a reusable record of your experience into a tailored resume and cover letter.
+<p align="center">
+  <img src="https://img.shields.io/badge/status-building%20in%20public-0E7466?style=flat-square" alt="Status: building in public">
+  <img src="https://img.shields.io/badge/local--first-SQLite-1A2320?style=flat-square&logo=sqlite&logoColor=white" alt="Local-first with SQLite">
+  <img src="https://img.shields.io/badge/BYOK-Claude%20%C2%B7%20GPT%20%C2%B7%20Gemini-1A2320?style=flat-square" alt="Bring your own key: Claude, GPT, Gemini">
+  <img src="https://img.shields.io/badge/Next.js-TypeScript-1A2320?style=flat-square&logo=nextdotjs&logoColor=white" alt="Next.js and TypeScript">
+  <img src="https://img.shields.io/badge/PDF-Typst-239DAD?style=flat-square&logo=typst&logoColor=white" alt="PDF rendering with Typst">
+</p>
 
-- **Source and collaboration:** GitHub.
-- **Real application:** self-host locally, bring your own AI provider key (BYOK), and pay that provider directly.
-- **Public product demo:** a simulated, interactive experience hosted on Vercel, with sample data and no live AI calls.
-- **Business scope:** no SaaS offering, paid subscription, billing, or managed real-user backend.
+<p align="center"><b>Paste a job ad. Get a tailored, ATS-safe resume and cover letter, written only from facts you have actually recorded.</b></p>
 
-These are the agreed destinations, not a claim that publication or deployment is complete. This checkout currently contains documentation and a static mock; the real application is still to be implemented.
+<p align="center">
+  <img src="docs/assets/workspace.png" alt="Workspace: live resume preview, keyword and grounding checks, and a section inspector" width="100%">
+</p>
 
-## Files
+## 💡 The problem
 
-- [Current scope](docs/CURRENT_SCOPE.md): goals, supported flows, and mock limitations.
-- [MVP overview PDF](docs/Resume%20Tailor%20MVP%20Overview.pdf): current five-page summary of the agreed scope and delivery plan.
-- [Overview source](docs/MVP_OVERVIEW.md): editable source used to regenerate the PDF.
-- [Build specification](docs/BUILD_SPEC.md): proposed resume-tailoring MVP and its acceptance criteria.
-- [Interactive mock](mock/index.html): current interaction exploration with seeded demo data.
+AI resume writers are fast, but they **make things up**: inflated numbers, tools you've never used, generic filler. Recruiters notice, and so do interviewers.
 
-Open the mock locally:
+Resume Tailor treats your career history as a **knowledge base of facts**. Every generated bullet carries the ID of the fact it came from, and a local rules engine flags anything that doesn't trace back.
 
-```sh
-xdg-open mock/index.html
+## ✨ Highlights
+
+| | |
+|---|---|
+| 🔗 **Every claim traceable** | Bullets reference a stored highlight ID. Numbers or technologies that aren't in your record are flagged before you export. |
+| 🎯 **Surgical AI edits** | Rewrite one section with a plain instruction. The model returns RFC 6902 JSON Patch ops, checked against a path whitelist and schema, and shown as a word-level diff you accept or reject. |
+| ⚡ **Design is free** | Fonts, spacing and colour go straight to the renderer: no LLM call, no tokens, re-rendered in under 300 ms. |
+| 🔐 **Your key, your machine** | Bring your own Claude, GPT or Gemini key, encrypted with AES-GCM in the browser. Calls go browser → provider directly. Data lives in a local SQLite file. |
+| 🧾 **ATS-safe output** | Single-column Typst PDFs with selectable text in reading order, plus honest parse-safety checks. No made-up "ATS score". |
+| 🕓 **Nothing is lost** | Autosave, per-document revision history, restore and undo. |
+
+## 🧭 How it works
+
+```mermaid
+flowchart LR
+  A["📄 Your resume<br/>or manual entry"] --> B["✅ Review<br/>nothing saved unseen"]
+  B --> KB[("🗂️ Knowledge base<br/>facts with IDs")]
+  JD["📋 Job description"] --> BR["Job brief<br/>requirements + keywords"]
+  KB --> G["🤖 Generate<br/>LLM → JSON Patch"]
+  BR --> G
+  G --> V{"🛡️ Patch validator<br/>paths · schema · sources"}
+  V -->|valid| D["📝 Tailored resume<br/>+ cover letter"]
+  V -.->|rejected| G
+  D --> C["🔍 Rules engine<br/>grounding · keywords · phrases"]
+  C --> P["🖨️ Typst PDF"]
 ```
 
-The mock supports opening directly from the filesystem. AI generation and PDF/DOCX resume extraction are simulated; TXT uploads and pasted resume text use a basic local parser. The mock does not call AI providers. Review imported details before saving; unrecognised content and original text are retained. It is not a production service.
+Two ways in:
 
-## Guidance for contributors and implementing LLMs
+- **⚡ Quick generate**: paste a job ad and watch a five-stage pipeline (read → match → write → fit pages → check) produce finished PDFs in about 15 seconds. Gaps are flagged, never blocking.
+- **🎛️ Studio**: review the extracted brief, choose which experience to draw on, then edit section by section.
 
-Read [Current scope](docs/CURRENT_SCOPE.md) first, then [Build specification](docs/BUILD_SPEC.md), then inspect the mock. Current scope governs product/platform decisions; the build spec governs implementation within that scope; the mock guides interactions and visual details. The overview Markdown/PDF summarises those decisions without overriding the scope or build spec. The superseded October PDF is retained in Git history.
+<p align="center">
+  <img src="docs/assets/quick-generate.png" alt="Quick generate result: keyword coverage, gaps, findings and both documents ready to download" width="90%">
+</p>
 
-Keep real local operation and the public demo distinct. The local app needs real provider integration and persistence. The Vercel demo uses simulated extraction/generation, browser-local state, and sample fixtures; manual edits, layout changes, and history can remain genuinely interactive. It must not request real provider keys or imply that simulated results are real AI output. See the build spec's public-demo acceptance criteria before deployment.
+## 🧰 Tech stack
 
-The chosen Vercel host does not require moving the real app's SQLite database or API handlers into the cloud. Do not add cloud infrastructure, auth, billing, scraping, or background services solely for the demo.
+| Layer | Choice |
+|---|---|
+| App | Next.js (App Router), TypeScript strict, Tailwind CSS v4, shadcn/ui |
+| Data | SQLite via libSQL, Drizzle ORM, Zod validation everywhere |
+| AI | Vercel AI SDK, called client-side with structured outputs (Anthropic, OpenAI, Gemini) |
+| Editing | fast-json-patch, Zustand, dnd-kit |
+| Rendering | Typst compiled to WASM in a Web Worker |
+| Testing | Vitest, Testing Library, Playwright with a deterministic mock provider |
 
-## Scope and documentation
+## 📍 Status
 
-The mock now focuses on one workflow: enter background manually or import a resume → review the knowledge base → create an application from a pasted job description → use Quick generate or Studio → edit and export. The dashboard lists saved application documents.
+> 🚧 **Design complete, implementation in progress.** The product is fully specified and prototyped. The production app is being built in public, milestone by milestone.
 
-Job scraping, discovery, schedulers, career maps, experiments, listing-trust checks, outreach, and application-stage tracking have been removed. Volunteer work and additional sections are supported in onboarding, knowledge-base editing, and document generation. The original resume text is retained as reference material and excluded from automatic document selection.
+- [x] Product and build specification ([`docs/SPEC.md`](docs/SPEC.md))
+- [x] Interactive mock covering every flow, with simulated AI ([`mock/`](mock/))
+- [ ] Scaffold, schemas and SQLite (M0–M1)
+- [ ] Typst rendering spike (M2)
+- [ ] Knowledge base, onboarding and resume import (M3)
+- [ ] Provider connections, Studio, Workspace and checks (M4–M7)
+- [ ] History, export, Quick generate and backup (M8–M10)
+- [ ] Open-source release and public Vercel demo (M11)
 
-When a product behavior changes, update its relevant Markdown documentation in the same commit, or explicitly record that it remains an experiment. Update `docs/MVP_OVERVIEW.md` and regenerate its PDF when overview-level decisions change. Git records changes; it does not automatically reconcile the mock and specification.
+## 🚀 Try the mock
 
-## Publication and demo plan
-
-The public repository will contain source, documentation, tests and reproducible setup instructions. The Vercel demo initially serves only `mock/`; it needs no backend, database or live provider credentials. Automated checks should precede production demo deployment. The exact repository URL, Vercel project, domain and open-source license are not yet selected/configured here. A custom domain is optional.
-
-Publishing/deploying is a separate task: documentation updates do not create a repository, configure a remote, or deploy the demo. Before calling the release open source, choose and add its distribution license. Keep public fixtures synthetic; do not commit real resumes, provider keys, or personal databases.
-
-## Local version control
-
-This project uses local Git tracking. Review and commit a change with:
-
-```sh
-git status
-git diff
-git add <changed-files>
-git commit -m "Describe the product change"
-```
-
-Credentials, personal runtime data, dependencies, and generated output are excluded through `.gitignore`. The mock's browser-stored state is separate from the tracked source files.
-
-## Regenerate the overview PDF
-
-From the repository root, with Python 3 and ReportLab 4.5.1 installed:
+No install and no API key. It runs straight from the file system:
 
 ```sh
-python scripts/render_overview.py
+git clone https://github.com/Suman196pokhrel/instant-resume.git
+cd instant-resume
+xdg-open mock/index.html   # macOS: open mock/index.html
 ```
 
-The script uses standard PDF fonts and no network access. Review the rendered pages and commit the Markdown source and generated PDF together. The previous October edition is available in Git history.
+Uses synthetic sample data. AI responses are simulated, and **Demo controls** in the sidebar show the empty, error and gap states.
+
+## 📂 Repository
+
+```
+docs/SPEC.md   single source of truth: scope, architecture, schemas, flows, tests
+mock/          static interactive demo (HTML, CSS, vanilla JS)
+AGENTS.md      entry point for AI coding agents
+```
+
+## 🤝 Contributing
+
+Read [`docs/SPEC.md`](docs/SPEC.md) first. It defines what to build, in what order, and when it's done. Keep fixtures synthetic, and update the spec and mock alongside any behaviour change.
+
+<sub>No licence has been chosen yet; one will be added before the first release.</sub>
