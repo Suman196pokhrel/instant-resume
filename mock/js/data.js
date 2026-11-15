@@ -291,9 +291,9 @@ Full working rights in Australia are required.`,
   ];
 
   const providers = [
-    { id: 'anthropic', name: 'Anthropic', prefix: 'sk-ant-', models: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5'] },
-    { id: 'openai', name: 'OpenAI', prefix: 'sk-', models: ['gpt-5.2', 'gpt-5.2-mini'] },
-    { id: 'gemini', name: 'Gemini', prefix: 'AIza', models: ['gemini-3-pro', 'gemini-3-flash'] },
+    { id: 'anthropic', name: 'Anthropic', prefix: 'sk-ant-', keyUrl: 'https://console.anthropic.com/settings/keys', models: ['claude-sonnet-5-5', 'claude-opus-5-5', 'claude-haiku-5-5'] },
+    { id: 'openai', name: 'OpenAI', prefix: 'sk-', keyUrl: 'https://platform.openai.com/api-keys', models: ['gpt-5.2', 'gpt-5.2-mini'] },
+    { id: 'gemini', name: 'Gemini', prefix: 'AIza', keyUrl: 'https://aistudio.google.com/apikey', models: ['gemini-3-pro', 'gemini-3-flash'] },
   ];
 
   // A real product would keep this list in the rules engine config.

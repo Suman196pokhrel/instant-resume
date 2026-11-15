@@ -63,6 +63,8 @@ Two ways in:
 
 The first release runs only where you put it: your own computer, or a private server you control. There is no hosted platform, no account and no Instant Resume API in between. You bring your own Claude, GPT or Gemini key and pay your provider directly, and your data stays in a SQLite file on that machine. The public website will only be a simulated demo.
 
+By default the app only accepts connections from the computer it runs on. To reach it from your laptop or phone, run it on your own server with `APP_PASSWORD` set and HTTPS in front: every page then asks for that password, and the app refuses to start on a network address without one. There are no accounts. Safest of all is a private network such as Tailscale, so the app is never public.
+
 ## Tech stack
 
 | Layer | Choice |

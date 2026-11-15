@@ -42,6 +42,21 @@ function downloadFile(name, text, type = 'application/json') {
   setTimeout(() => { URL.revokeObjectURL(a.href); a.remove(); }, 500);
 }
 
+// Clipboard with a fallback for file:// and older browsers
+async function copyText(text, label = 'Text') {
+  try {
+    await navigator.clipboard.writeText(text);
+  } catch (e) {
+    const ta = document.createElement('textarea');
+    ta.value = text; ta.setAttribute('readonly', ''); ta.style.position = 'fixed'; ta.style.opacity = '0';
+    document.body.appendChild(ta); ta.select();
+    const ok = document.execCommand('copy');
+    ta.remove();
+    if (!ok) return toast("Couldn't copy. Select the text and copy it yourself.", { kind: 'error' });
+  }
+  toast(`${label} copied as plain text`);
+}
+
 /* ---------- Icons (inline SVG, stroke style) ---------- */
 const ICON_PATHS = {
   grid: '<rect x="3" y="3" width="7" height="7" rx="1.5"/><rect x="14" y="3" width="7" height="7" rx="1.5"/><rect x="3" y="14" width="7" height="7" rx="1.5"/><rect x="14" y="14" width="7" height="7" rx="1.5"/>',
@@ -91,6 +106,7 @@ const ICON_PATHS = {
   info: '<circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/>',
   arrowRight: '<path d="M5 12h14M13 6l6 6-6 6"/>',
   send: '<path d="m22 2-11 11M22 2l-7 20-4-9-9-4z"/>',
+  lock: '<rect x="4" y="11" width="16" height="10" rx="2"/><path d="M8 11V7a4 4 0 0 1 8 0v4"/>',
 };
 function icon(name, size = 16) {
   return `<svg class="ic" width="${size}" height="${size}" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${ICON_PATHS[name] || ''}</svg>`;
@@ -240,6 +256,7 @@ function seedState() {
     const jd = MOCK.jds.find((j) => j.id === s.jd);
     const p = Docs.createProject(kb, jd.text, clone(jd.brief), Docs.suggestSelection(kb, jd.brief), s.edited);
     if (s.tweak === 'harbourline') Docs.applyDemoFlaws(p);
+    p.sample = true; // seeded demo data; the setup checklist ignores these
     return p;
   });
   return {
@@ -372,7 +389,7 @@ function shell(content, { route, title, actions = '', compact = false, flush = f
       </nav>
       <div class="sidebar-foot">
         <button class="nav-item demo-btn" data-demo title="Demo controls">${icon('flask', 18)}<span>Demo controls</span></button>
-        <div class="local-note"><span class="dot-ok"></span><span>Stored on this device</span></div>
+        <div class="local-note"><span class="dot-ok"></span><span>${Store.state.demo.passwordLock ? 'Stored on your server' : 'Stored on this device'}</span></div>
       </div>
     </aside>
     <div class="main">
@@ -401,6 +418,7 @@ function openDemoControls() {
       <label class="switch-row"><input type="checkbox" id="dc-fail" ${d.failGeneration ? 'checked' : ''}><span><strong>Fail the next generation</strong><br><span class="muted small">The next run stops partway with a provider error, so you can try Retry.</span></span></label>
       <div class="switch-row"><span><label for="dc-scenario"><strong>Quick generate scenario</strong></label><br><span class="muted small">Same as adding ?mock=… to the URL. The URL wins if both are set.</span>
         <select id="dc-scenario" class="dc-select">${['happy', 'gaps', 'findings', 'error-stage-1', 'error-stage-2', 'error-stage-3', 'error-stage-4', 'error-stage-5'].map((v) => `<option ${(d.quickScenario || 'happy') === v ? 'selected' : ''}>${v}</option>`).join('')}</select></span></div>
+      <label class="switch-row"><input type="checkbox" id="dc-lock" ${d.passwordLock ? 'checked' : ''}><span><strong>Simulate a password-protected server</strong><br><span class="muted small">As if APP_PASSWORD were set: every page asks to unlock first. The mock password is <code>${MOCK_PASSWORD}</code>.</span></span></label>
       <label class="switch-row"><input type="checkbox" id="dc-noconn" ${Object.keys(Store.state.connections).length === 0 ? 'checked' : ''}><span><strong>Remove all connections</strong><br><span class="muted small">See what happens with no API key.</span></span></label>
       <hr>
       <button class="btn btn-ghost" id="dc-onb">${icon('book')} Restart onboarding from step 1</button>
@@ -410,6 +428,7 @@ function openDemoControls() {
       $('#dc-empty', root).onchange = (e) => { d.emptyDashboard = e.target.checked; Store.save(); Router.refresh(); };
       $('#dc-fail', root).onchange = (e) => { d.failGeneration = e.target.checked; Store.save(); };
       $('#dc-scenario', root).onchange = (e) => { d.quickScenario = e.target.value; Store.save(); };
+      $('#dc-lock', root).onchange = (e) => { d.passwordLock = e.target.checked; Access.lock(); Store.saveNow(); close(); Router.refresh(); };
       $('#dc-noconn', root).onchange = (e) => {
         if (e.target.checked) { Store.state._savedConnections = Store.state.connections; Store.state.connections = {}; }
         else { Store.state.connections = Store.state._savedConnections || seedState().connections; }
@@ -420,6 +439,28 @@ function openDemoControls() {
     },
   });
 }
+
+/* ---------- Access (single-user lock, simulated) ----------
+   The real app checks an HttpOnly session cookie in request middleware (SPEC §4.1). The mock keeps the
+   "session" in sessionStorage and only gates pages when Demo controls → "password-protected server" is on. */
+const MOCK_PASSWORD = 'instant-demo';
+const Access = {
+  locked() { return !!Store.state.demo.passwordLock && !this.session(); },
+  session() { try { return sessionStorage.getItem('ir-session') === '1'; } catch (e) { return false; } },
+  unlock() { try { sessionStorage.setItem('ir-session', '1'); sessionStorage.removeItem('ir-attempts'); } catch (e) { /* ignore */ } },
+  lock() { try { sessionStorage.removeItem('ir-session'); } catch (e) { /* ignore */ } },
+  // Failed attempts: 5 within a minute locks the form for the rest of that minute
+  attempts() { try { return JSON.parse(sessionStorage.getItem('ir-attempts')) || { n: 0, since: 0, until: 0 }; } catch (e) { return { n: 0, since: 0, until: 0 }; } },
+  fail() {
+    const now = Date.now();
+    let a = this.attempts();
+    if (now - a.since > 60000) a = { n: 0, since: now, until: 0 };
+    a.n += 1;
+    if (a.n >= 5) a.until = now + 60000;
+    try { sessionStorage.setItem('ir-attempts', JSON.stringify(a)); } catch (e) { /* ignore */ }
+    return a;
+  },
+};
 
 /* ---------- Router ---------- */
 const Views = {};
@@ -433,7 +474,8 @@ const Router = {
   refresh() {
     if (Router.cleanup) { try { Router.cleanup(); } catch (e) { console.error(e); } Router.cleanup = null; }
     const { name, params } = Router.parse();
-    const view = Views[name] || Views.dashboard;
+    // Every page sits behind the lock when it's on; the URL is kept so unlocking lands where you were going
+    const view = Access.locked() ? Views.unlock : (Views[name] || Views.dashboard);
     const root = $('#app');
     $('#modal-root').innerHTML = '';
     const result = view(root, params);

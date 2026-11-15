@@ -128,8 +128,45 @@ function readHighlights(root, prev = []) {
     if (!text) return null;
     const id = r.dataset.hlId || uid('hl');
     const old = prev.find((h) => h.id === id);
-    return { id, text, metric: $('[name="hl-metric"]', r).value.trim(), skills: old ? old.skills : Docs.matchedKeywords(text, MOCK.jds.flatMap((j) => j.brief.keywords)) };
+    return { id, text, metric: $('[name="hl-metric"]', r).value.trim(), skills: old ? old.skills : Docs.matchedKeywords(text, MOCK.jds.flatMap((j) => j.brief.keywords)), ...(old && old.evidenceFor ? { evidenceFor: old.evidenceFor } : {}) };
   }).filter(Boolean);
+}
+
+/* ---------- Add evidence for a gap (from Quick generate results and Workspace checks) ----------
+   Saves one highlight on an existing role, volunteer role or portfolio item. The keyword is tagged on the
+   highlight so the next generation can match it. Nothing is invented: the user writes the fact. */
+function openAddEvidence({ requirement, keyword, onSaved }) {
+  const kb = Store.state.kb;
+  const groups = [['roles', 'Experience', (e) => `${e.title}, ${e.company}`], ['volunteering', 'Volunteer work', (e) => `${e.title}, ${e.company}`], ['portfolio', 'Portfolio', (e) => e.name]];
+  const owners = groups.flatMap(([k]) => kb[k]);
+  if (!owners.length) {
+    openModal({ title: 'Add to your knowledge base', body: `<p>Add a role, volunteer role or portfolio item first. Highlights belong to one of those.</p>`, actions: [{ label: 'Cancel' }, { label: 'Open knowledge base', kind: 'btn-primary', fn: () => { location.hash = '#/kb/roles'; } }] });
+    return;
+  }
+  openModal({
+    title: 'Add to your knowledge base',
+    body: `
+      <p>The job asks for <strong>${esc(requirement)}</strong>.</p>
+      <div class="callout">${icon('info', 16)}<div>Only add it if it's true. It's saved as a highlight, so every future resume can use it.</div></div>
+      <form class="kb-form form-grid" novalidate>
+        <div class="field field-wide"><label for="ev-owner">Add it to</label><select id="ev-owner" name="owner">${groups.map(([k, label, name]) => kb[k].length ? `<optgroup label="${label}">${kb[k].map((e) => `<option value="${e.id}">${esc(name(e))}</option>`).join('')}</optgroup>` : '').join('')}</select></div>
+        <div class="field field-wide" data-field="text"><label for="ev-text">What you did and the result</label><textarea id="ev-text" name="text" rows="3" placeholder="What you did, where, and what changed because of it. Include numbers if you have them."></textarea><div class="field-error" hidden></div></div>
+        <div class="field field-wide"><label for="ev-metric">Metric <span class="optional">optional</span></label><input id="ev-metric" name="metric" placeholder="e.g. 40 to 8 minutes"></div>
+      </form>`,
+    actions: [{ label: 'Cancel' }, { label: 'Save to knowledge base', kind: 'btn-primary', fn: (r) => {
+      const text = $('[name="text"]', r).value.trim();
+      const wrap = $('[data-field="text"]', r);
+      if (!text) { wrap.classList.add('has-error'); $('.field-error', wrap).hidden = false; $('.field-error', wrap).textContent = 'Describe what you did'; $('textarea', wrap).focus(); return false; }
+      const owner = owners.find((e) => e.id === $('[name="owner"]', r).value);
+      const skills = Array.from(new Set([keyword, ...Docs.matchedKeywords(text, MOCK.jds.flatMap((j) => j.brief.keywords))]));
+      owner.highlights = owner.highlights || [];
+      owner.highlights.push({ id: uid('hl'), text, metric: $('[name="metric"]', r).value.trim(), skills, evidenceFor: requirement });
+      Store.save();
+      const label = owner.name || `${owner.title}, ${owner.company}`;
+      toast(`Added to ${label}`);
+      onSaved && onSaved(label);
+    } }],
+  });
 }
 
 /* ---------- Dashboard ---------- */
@@ -139,13 +176,35 @@ function monogram(name) {
   return `<span class="monogram" style="--h:${h}">${esc(name.charAt(0))}</span>`;
 }
 
+// First-run checklist: key → background → first application. Hidden once all done or dismissed.
+function setupChecklistHtml(st) {
+  const steps = [
+    { done: Object.keys(st.connections).length > 0, title: 'Connect your AI provider', detail: 'Paste an API key from Anthropic, OpenAI or Gemini. You pay your provider directly.', href: '#/settings', cta: 'Add a key' },
+    { done: !st.sampleKb, title: 'Add your background', detail: 'Import your resume and review what was found. About 2 minutes.', href: '#/import', cta: 'Import resume', alt: '<a href="#/onboarding/manual">or enter it manually</a>' },
+    { done: st.projects.some((p) => !p.sample), title: 'Make your first application', detail: 'Paste a job ad and get a tailored resume and cover letter in about 15 seconds.', href: '#/new/quick', cta: 'Quick generate' },
+  ];
+  const n = steps.filter((s) => s.done).length;
+  if (n === steps.length || st.dismissedOnboardingBanner) return '';
+  const next = steps.findIndex((s) => !s.done);
+  return `<section class="setup" aria-labelledby="setup-h">
+    <div class="setup-head"><div><h2 id="setup-h">Get set up</h2><span class="muted small">${n} of ${steps.length} done. This demo starts with sample data.</span></div>
+      <button class="icon-btn" data-dismiss-banner aria-label="Dismiss setup checklist">${icon('x')}</button></div>
+    <ol class="setup-steps">${steps.map((s, i) => `
+      <li class="${s.done ? 'done' : ''}">
+        <span class="step-num" aria-hidden="true">${s.done ? icon('check', 12) : i + 1}</span>
+        <span class="setup-text"><strong>${s.title}</strong><span class="sr-only">${s.done ? ' (done)' : ''}</span><span class="muted small">${s.detail}</span></span>
+        ${s.done ? '' : `<span class="setup-act"><a class="btn btn-sm ${i === next ? 'btn-primary' : 'btn-ghost'}" href="${s.href}">${s.cta}</a>${s.alt ? `<span class="small">${s.alt}</span>` : ''}</span>`}
+      </li>`).join('')}</ol>
+  </section>`;
+}
+
 Views.dashboard = function (root) {
   const st = Store.state;
   let query = '';
   function render() {
     const projects = (st.demo.emptyDashboard ? [] : st.projects).filter(p => (p.company + ' ' + p.role).toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt-a.updatedAt);
     root.innerHTML = shell(`
-      ${!st.dismissedOnboardingBanner ? `<div class="banner">${icon('book',18)}<div><strong>Start with your own background.</strong> This demo currently includes sample data. Upload a resume or enter your details.</div><a class="btn btn-ghost" href="#/onboarding">Set up knowledge base</a><button class="icon-btn" data-dismiss-banner aria-label="Dismiss">${icon('x')}</button></div>` : ''}
+      ${setupChecklistHtml(st)}
       <div class="page-head"><div><h1>Applications</h1><p class="muted">One job description, a tailored resume and a cover letter. Everything saves automatically.</p></div><div class="search"><input type="search" data-search aria-label="Search applications" placeholder="Search company or role" value="${esc(query)}"></div></div>
       ${!projects.length && !query ? `<div class="empty-state"><span class="empty-icon">${icon('file',24)}</span><h3>No applications yet</h3><p class="muted">An application holds the job description, your tailored resume and your cover letter for one job.</p><a class="btn btn-primary" href="#/new">${icon('plus')} New application</a></div>` : `
       <div class="card-grid">${projects.map(p => `<article class="project-card"><div class="pc-top">${monogram(p.company)}<button class="icon-btn" data-menu="${p.id}" aria-label="More for ${esc(p.company)}">${icon('dots')}</button></div><a class="pc-role" href="#/project/${p.id}">${esc(p.role)}</a><div class="pc-company">${esc(p.company)}</div><div class="muted pc-loc">${esc(p.location)}</div><div class="pc-foot muted small">Edited ${timeAgo(p.updatedAt)}</div></article>`).join('')}<a class="project-card project-card-new" href="#/new">${icon('plus')} New application</a></div>
@@ -301,6 +360,76 @@ Views.kb = function (root, params) {
   if (add) add.onclick = () => openEditor({}, true);
 };
 
+/* ---------- Unlock (password-protected server, SPEC §4.1) ---------- */
+Views.unlock = function (root) {
+  if (!Access.locked()) { location.hash = '#/dashboard'; return; }
+  root.innerHTML = `
+    <div class="unlock">
+      <form class="unlock-card" novalidate>
+        <span class="brand-mark unlock-mark" aria-hidden="true">${icon('lock', 20)}</span>
+        <h1>Unlock Instant Resume</h1>
+        <p class="muted">Enter the password to continue.</p>
+        <div class="field" data-field="pw">
+          <label for="unlock-pw">Password</label>
+          <div class="input-row"><input id="unlock-pw" type="password" autocomplete="current-password" data-pw><button class="btn btn-ghost btn-sm" type="button" data-reveal>Show</button></div>
+          <div class="field-error" role="alert" hidden></div>
+        </div>
+        <button class="btn btn-primary btn-block" type="submit" data-unlock>Unlock</button>
+        <p class="muted small unlock-mock">${icon('flask', 13)} Mock: the password is <code>${MOCK_PASSWORD}</code>. Turn the lock off in Demo controls.</p>
+      </form>
+    </div>`;
+  const form = $('form', root), pw = $('[data-pw]', root), btn = $('[data-unlock]', root);
+  const err = $('[data-field="pw"] .field-error', root);
+  const show = (msg) => { err.textContent = msg; err.hidden = !msg; $('[data-field="pw"]', root).classList.toggle('has-error', !!msg); };
+  let tick = null;
+  const cooldown = () => {
+    const left = Math.ceil((Access.attempts().until - Date.now()) / 1000);
+    btn.disabled = left > 0;
+    if (left > 0) show(`Too many attempts. Try again in ${left} ${left === 1 ? 'second' : 'seconds'}.`);
+    else { clearInterval(tick); tick = null; show(''); }
+  };
+  if (Access.attempts().until > Date.now()) { cooldown(); tick = setInterval(cooldown, 1000); }
+  $('[data-reveal]', root).onclick = (e) => { pw.type = pw.type === 'password' ? 'text' : 'password'; e.target.textContent = pw.type === 'password' ? 'Show' : 'Hide'; };
+  pw.oninput = () => { if (!tick) show(''); };
+  form.onsubmit = async (e) => {
+    e.preventDefault();
+    if (btn.disabled) return;
+    if (!pw.value) { show('Enter the password'); pw.focus(); return; }
+    btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-light"></span> Unlocking';
+    await sleep(500);
+    btn.innerHTML = 'Unlock';
+    if (pw.value === MOCK_PASSWORD) {
+      Access.unlock();
+      if (Router.parse().name === 'unlock') location.hash = '#/dashboard'; else Router.refresh();
+      toast('Unlocked on this device');
+      return;
+    }
+    btn.disabled = false;
+    pw.select();
+    if (Access.fail().until) { cooldown(); tick = setInterval(cooldown, 1000); } else show("That password isn't right.");
+  };
+  setTimeout(() => pw.focus(), 50);
+  return () => clearInterval(tick);
+};
+
+function accessSettingsHtml(st) {
+  const on = !!st.demo.passwordLock;
+  return `
+    <section class="settings-section">
+      <h2>Access</h2>
+      <div class="pref-list"><div class="pref">
+        <div>
+          <strong>${on ? 'Password lock is on' : 'Local only'}</strong> <span class="pill ${on ? 'pill-ok' : ''}">${icon(on ? 'lock' : 'shield', 12)} ${on ? 'Protected' : 'This computer only'}</span>
+          <div class="muted small access-text">${on
+            ? 'This copy runs on a server. Anyone who opens it needs the password. Each device stays unlocked for 30 days, or until you lock it.'
+            : 'Instant Resume only accepts connections from this computer, so no password is needed. To use it from another device, run it on your server with APP_PASSWORD set and HTTPS. A private network such as Tailscale is safer still.'}</div>
+          ${on ? '<div class="muted small access-text">To change the password, set a new <code>APP_PASSWORD</code> on the server and restart. That signs out every device.</div>' : ''}
+        </div>
+        ${on ? `<button class="btn btn-ghost btn-sm" data-lock-now>${icon('lock', 14)} Lock now</button>` : ''}
+      </div></div>
+    </section>`;
+}
+
 /* ---------- Settings ---------- */
 Views.settings = function (root) {
   const st = Store.state;
@@ -337,6 +466,15 @@ Views.settings = function (root) {
     <section class="settings-section">
       <h2>Connections</h2>
       <p class="muted">Bring your own API key. You pay your provider directly; switching models is one click from the top bar.</p>
+      <details class="key-guide">
+        <summary>${icon('key', 15)} How to get an API key</summary>
+        <ol>
+          <li>Sign in to your provider's developer site: ${MOCK.providers.map((p) => `<a href="${p.keyUrl}" target="_blank" rel="noopener noreferrer">${esc(p.name)} ${icon('external', 12)}</a>`).join(', ')}.</li>
+          <li>Create a new API key and copy all of it.</li>
+          <li>Paste it into that provider's card below and choose <strong>Test and save</strong>.</li>
+        </ol>
+        <p class="muted small">API usage is billed by the provider, separately from chat subscriptions. Some providers offer a free tier; check their current pricing. One application usually uses a few thousand tokens.</p>
+      </details>
       <div class="conn-grid">${MOCK.providers.map(card).join('')}</div>
     </section>
     ${quickSettingsHtml()}
@@ -354,8 +492,11 @@ Views.settings = function (root) {
       <p class="muted">Everything lives in a database file on this machine. Export a backup regularly; API keys are left out.</p>
       <div class="row-gap"><button class="btn btn-ghost" data-export>${icon('download')} Export backup</button><button class="btn btn-ghost" data-import>${icon('upload')} Import backup</button></div>
     </section>
+    ${accessSettingsHtml(st)}
   `, { route: 'settings', title: '' });
   bindShell(root);
+  const lockNow = $('[data-lock-now]', root);
+  if (lockNow) lockNow.onclick = () => { Access.lock(); Router.refresh(); toast('Locked. Enter the password to continue.'); };
 
   $('[data-export]', root).onclick = exportBackup;
   $('[data-import]', root).onclick = () => importBackup(() => Router.refresh());

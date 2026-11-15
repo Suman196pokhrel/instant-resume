@@ -71,9 +71,10 @@ const Docs = (function () {
   /* ---------- Generation ---------- */
   function scoreHighlight(h, kws) { return matchedKeywords(h.text + ' ' + (h.skills || []).join(' '), kws).length; }
 
-  function pickBullets(entry, kws, n) {
+  // Evidence the user added for one of this job's must-haves always wins a place
+  function pickBullets(entry, kws, n, mustHaves = []) {
     return (entry.highlights || [])
-      .map((h, i) => ({ h, i, s: scoreHighlight(h, kws) }))
+      .map((h, i) => ({ h, i, s: scoreHighlight(h, kws) + (mustHaves.includes(h.evidenceFor) ? 100 : 0) }))
       .sort((a, b) => b.s - a.s || a.i - b.i)
       .slice(0, n)
       .map(({ h }) => ({ id: uid('b'), text: h.text, source: h.id }));
@@ -93,7 +94,7 @@ const Docs = (function () {
       { id: uid('s'), kind: 'summary', title: SECTION_TITLES.summary, hidden: false, text: buildSummary(kb, brief) },
       {
         id: uid('s'), kind: 'experience', title: SECTION_TITLES.experience, hidden: false,
-        items: roles.map((r, i) => ({ id: uid('i'), ref: r.id, heading: r.title, sub: r.company, meta: [r.location, [r.start,r.end].filter(Boolean).join(' to ')].filter(Boolean).join(' | '), bullets: pickBullets(r, kws, [4, 3, 2][i] || 2) })),
+        items: roles.map((r, i) => ({ id: uid('i'), ref: r.id, heading: r.title, sub: r.company, meta: [r.location, [r.start,r.end].filter(Boolean).join(' to ')].filter(Boolean).join(' | '), bullets: pickBullets(r, kws, [4, 3, 2][i] || 2, brief.requirements) })),
       },
       {
         id: uid('s'), kind: 'skills', title: SECTION_TITLES.skills, hidden: false,
@@ -104,7 +105,7 @@ const Docs = (function () {
       },
       {
         id: uid('s'), kind: 'portfolio', title: SECTION_TITLES.portfolio, hidden: false,
-        items: kb.portfolio.filter(sel).map((p) => ({ id: uid('i'), ref: p.id, heading: p.name, sub: p.summary, meta: p.link, bullets: pickBullets(p, kws, 1) })),
+        items: kb.portfolio.filter(sel).map((p) => ({ id: uid('i'), ref: p.id, heading: p.name, sub: p.summary, meta: p.link, bullets: pickBullets(p, kws, 1, brief.requirements) })),
       },
       {
         id: uid('s'), kind: 'education', title: SECTION_TITLES.education, hidden: false,
@@ -114,7 +115,7 @@ const Docs = (function () {
         id: uid('s'), kind: 'credentials', title: SECTION_TITLES.credentials, hidden: false,
         items: kb.credentials.filter(sel).map((c) => ({ id: uid('i'), ref: c.id, heading: c.title, sub: c.issuer, meta: c.year })),
       },
-      ...((kb.volunteering || []).filter(sel).length ? [{id:uid('s'),kind:'experience',title:'Volunteer work',hidden:false,items:kb.volunteering.filter(sel).map(r=>({id:uid('i'),ref:r.id,heading:r.title,sub:r.company,meta:[r.start,r.end].filter(Boolean).join(' to '),bullets:pickBullets(r,kws,3)}))}] : []),
+      ...((kb.volunteering || []).filter(sel).length ? [{id:uid('s'),kind:'experience',title:'Volunteer work',hidden:false,items:kb.volunteering.filter(sel).map(r=>({id:uid('i'),ref:r.id,heading:r.title,sub:r.company,meta:[r.start,r.end].filter(Boolean).join(' to '),bullets:pickBullets(r, kws, 3, brief.requirements)}))}] : []),
       ...(kb.additional || []).filter(sel).map(e=>({id:uid('s'),kind:'additional',title:e.title,hidden:false,items:[{id:uid('i'),ref:e.id,heading:e.title,line:e.notes}]})),
       {
         id: uid('s'), kind: 'referees', title: SECTION_TITLES.referees, hidden: false,
@@ -124,10 +125,17 @@ const Docs = (function () {
     return { kind: 'resume', theme: clone(MOCK.themeDefaults), sections };
   }
 
-  function generateCoverLetter(kb, brief) {
+  // The user's notes for one application, used as a fact they supplied (mock: quoted as a sentence; the real LLM weaves it in)
+  function notesSentence(notes) {
+    const t = String(notes || '').trim().replace(/\s+/g, ' ');
+    return t ? t.charAt(0).toUpperCase() + t.slice(1) + (/[.!?]$/.test(t) ? '' : '.') : '';
+  }
+
+  function generateCoverLetter(kb, brief, notes = '') {
     const evidence = [...kb.roles, ...(kb.volunteering || []), ...kb.portfolio].flatMap(e => (e.highlights || []).map(h => h.text)).slice(0,2);
     const paras = [
       {title:'Opening',text:`I'm applying for the ${brief.title} role at ${brief.company}.`},
+      ...(notesSentence(notes) ? [{title:'Motivation',text:notesSentence(notes)}] : []),
       {title:'Evidence',text:evidence.join(' ') || 'Add relevant achievements to your knowledge base to build this paragraph.'},
       {title:'Fit',text:kbSkillList(kb).length ? `My recorded skills include ${kbSkillList(kb).slice(0,5).join(', ')}.` : 'Review the job requirements and add supporting experience.'},
       {title:'Close',text:[RIGHTS_PHRASE[kb.workRights.status], 'Thank you for considering my application.'].filter(Boolean).join('. ')},
@@ -140,15 +148,15 @@ const Docs = (function () {
     };
   }
 
-  function createProject(kb, jdText, brief, selected, ts = Date.now()) {
+  function createProject(kb, jdText, brief, selected, ts = Date.now(), notes = '') {
     const resume = generateResume(kb, brief, selected);
-    const coverLetter = generateCoverLetter(kb, brief);
+    const coverLetter = generateCoverLetter(kb, brief, notes);
     const rev = (doc) => [{ id: uid('r'), ts, kind: 'generation', label: 'Generated from job brief', snapshot: clone(doc) }];
     return {
       id: uid('p'), schemaVersion: 1,
       company: brief.company, role: brief.title, location: brief.location,
       createdAt: ts, updatedAt: ts,
-      jdText, brief, selected,
+      jdText, brief, selected, notes,
       docs: { resume, coverLetter },
       revisions: { resume: rev(resume), coverLetter: rev(coverLetter) },
     };
@@ -234,6 +242,28 @@ const Docs = (function () {
     return (s.items || []).map((it) => [it.heading, it.sub, it.meta, it.line, ...(it.bullets || []).map((b) => b.text)].filter(Boolean).join(' ')).join(' ');
   }
 
+  /* ---------- Plain text (for job portal text boxes; no LLM) ---------- */
+  function sectionCopyText(s) {
+    if (s.text != null) return s.text;
+    const items = s.items || [];
+    if (s.kind === 'skills') return items.map((it) => `${it.heading}: ${it.line}`).join('\n');
+    return items.map((it) => [
+      it.heading === s.title ? '' : [it.heading, it.sub].filter(Boolean).join(', ') + (it.meta ? ` (${it.meta})` : ''),
+      it.line, ...(it.bullets || []).map((b) => '• ' + b.text),
+    ].filter(Boolean).join('\n')).join(items.some((it) => it.bullets && it.bullets.length) ? '\n\n' : '\n');
+  }
+
+  function plainText(doc, kb, brief) {
+    const c = kb.contact;
+    const visible = doc.sections.filter((s) => !s.hidden);
+    const head = [c.name, [c.location, c.phone, c.email, c.linkedin, c.github].filter(Boolean).join(' | ')];
+    if (doc.kind === 'coverLetter') {
+      return [...head, '', `Re: ${brief.title}`, '', `Dear ${doc.recipient.name},`, '', ...visible.map((s) => s.text + '\n'), 'Kind regards,', c.name].join('\n');
+    }
+    if (Store.state.prefs.spelling === 'en-AU' && kb.workRights.status) head.push(kb.workRights.status);
+    return [...head, ...visible.map((s) => `\n${s.title.toUpperCase()}\n${sectionCopyText(s)}`)].join('\n');
+  }
+
   /* ---------- Checks (rules engine, no LLM) ---------- */
   const NUM_RE = /\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?/g;
 
@@ -243,7 +273,7 @@ const Docs = (function () {
     const fullText = visible.map(sectionPlainText).join(' ');
     const kws = project.brief.keywords;
     const matched = matchedKeywords(fullText, kws);
-    const kbText = kbAllText(kb);
+    const kbText = kbAllText(kb) + ' ' + (project.notes || ''); // notes count as facts the user supplied
     const missing = kws.filter((k) => !matched.includes(k)).map((k) => ({ keyword: k, inKb: kwMatch(kbText, k) }));
     const findings = [];
     const known = Array.from(new Set([...kbSkillList(kb), ...kws, 'Kubernetes', 'Java', 'Rust', 'Kafka', 'Angular', 'Vue']));
@@ -465,7 +495,7 @@ const Docs = (function () {
   return {
     FONT_STACKS, SECTION_TITLES, allHighlights, findHighlight, entryText, matchedKeywords, kwMatch, kbAllText,
     suggestSelection, createProject, generateResume, generateCoverLetter, applyDemoFlaws,
-    renderResume, renderCoverLetter, sectionPlainText, runChecks,
+    renderResume, renderCoverLetter, sectionPlainText, sectionCopyText, plainText, runChecks,
     extractBrief, rewriteSection, estimateTokens, sectionDiffHtml, fileName,
   };
 })();

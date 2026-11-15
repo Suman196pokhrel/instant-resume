@@ -60,6 +60,9 @@ function studioSetupView(root) {
         <div class="sample-row"><span class="muted small">Try a sample ad:</span>${MOCK.jds.map((j) => `<button class="chip chip-btn" data-sample="${j.id}">${esc(j.label)}</button>`).join('')}</div>
         <textarea class="jd-input" placeholder="Senior Frontend Engineer&#10;Company, Sydney NSW&#10;&#10;What you'll do…" data-jd>${esc(nd.jdText)}</textarea>
         <div class="field-error" data-jd-err hidden></div>
+        <div class="field notes-field"><label for="st-notes">Notes for this application <span class="optional">optional</span></label>
+          <textarea id="st-notes" rows="2" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(nd.notes || '')}</textarea>
+          <span class="muted small">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</span></div>
         <div class="new-foot">
           <span class="muted small" data-count>${nd.jdText.length.toLocaleString()} characters</span>
           <button class="btn btn-primary" data-extract ${hasConn() ? '' : 'disabled'}>${icon('spark')} Extract requirements</button>
@@ -68,6 +71,7 @@ function studioSetupView(root) {
     const ta = $('[data-jd]', root);
     ta.oninput = () => { nd.jdText = ta.value; $('[data-count]', root).textContent = ta.value.length.toLocaleString() + ' characters'; $('[data-jd-err]', root).hidden = true; Store.save(); };
     $$('[data-sample]', root).forEach((b) => (b.onclick = () => { ta.value = MOCK.jds.find((j) => j.id === b.dataset.sample).text; ta.oninput(); }));
+    $('[data-notes]', root).oninput = (e) => { nd.notes = e.target.value; Store.save(); };
     $('[data-extract]', root).onclick = async () => {
       if (nd.jdText.trim().length < 80) {
         const e = $('[data-jd-err]', root); e.hidden = false; e.textContent = 'That looks too short to be a full job description. Paste the whole ad, including requirements.';
@@ -233,7 +237,7 @@ function studioSetupView(root) {
     }
     clearInterval(timer);
     if (!alive) return;
-    const p = Docs.createProject(st.kb, nd.jdText, clone(nd.brief), nd.selected);
+    const p = Docs.createProject(st.kb, nd.jdText, clone(nd.brief), nd.selected, Date.now(), nd.notes || '');
     st.projects.push(p);
     st.newDraft = null;
     Store.saveNow();

@@ -92,6 +92,7 @@ Views.project = function (root, params) {
           <div class="ws-bar-right">
             <span class="save-pill saved ws-doc-only" data-save>${icon('check', 13)} Saved</span>
             <button class="icon-btn ws-doc-only" data-undo aria-label="Undo">${icon('undo', 16)}</button>
+            <button class="icon-btn ws-doc-only" data-copy-doc aria-label="Copy as plain text" data-tip="Copy as plain text, for job sites that ask you to paste">${icon('copy', 16)}</button>
             <button class="btn btn-ghost btn-sm ws-doc-only" data-history>${icon('history', 15)} History</button>
             <button class="btn btn-primary btn-sm ws-doc-only" data-export>${icon('download', 15)} Export PDF</button>
             ${modelPickerHtml()}
@@ -154,6 +155,7 @@ Views.project = function (root, params) {
     $$('[data-left]', root).forEach((b) => (b.onclick = () => { ui.left = b.dataset.left; renderLeft(); }));
     $$('[data-tab]', root).forEach((b) => (b.onclick = () => { ui.tab = b.dataset.tab; renderInspector(); }));
     $('[data-undo]', root).onclick = doUndo;
+    $('[data-copy-doc]', root).onclick = () => copyText(Docs.plainText(doc(), st.kb, p.brief), kindLabel(ui.kind));
     $('[data-history]', root).onclick = openHistory;
     $('[data-close-drawer]', root).onclick = closeHistory;
     $('[data-export]', root).onclick = openExport;
@@ -287,9 +289,13 @@ Views.project = function (root, params) {
         <div class="lp-block"><div class="lp-label">Keywords in this ${kindLabel(ui.kind).toLowerCase()}</div>
           <div class="chips">${b.keywords.map((k) => `<span class="chip ${ch.matched.includes(k) ? 'chip-ok' : 'chip-missing'}">${ch.matched.includes(k) ? icon('check', 12) : ''}${esc(k)}</span>`).join('')}</div></div>
         <div class="lp-block"><div class="lp-label">Requirements</div><ul class="req-list">${b.requirements.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>
+        <div class="lp-block"><label class="lp-label" for="ws-notes">Your notes</label>
+          <textarea id="ws-notes" class="lp-notes" rows="3" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(p.notes || '')}</textarea>
+          <p class="muted small">Used as a fact you supplied. Changes apply the next time you regenerate or rewrite.</p></div>
         <details class="lp-block jd-details"><summary>Job description</summary><pre class="jd-text">${esc(p.jdText)}</pre></details>
         <div class="lp-block"><button class="btn btn-ghost btn-sm btn-block" data-regen>${icon('spark', 14)} Regenerate both documents</button></div>`;
       $('[data-regen]', body).onclick = regenerate;
+      $('[data-notes]', body).oninput = (e) => { p.notes = e.target.value; p.updatedAt = Date.now(); setSaveState('saving'); settle(); };
       return;
     }
 
@@ -301,7 +307,7 @@ Views.project = function (root, params) {
         <div class="lp-label">Job keyword match</div>
         <div class="kw-meter"><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span><strong>${ch.matched.length}</strong> of ${p.brief.keywords.length}</span></div>
         ${ch.missing.length ? `<ul class="missing-list">${ch.missing.map((m) => `<li><span class="chip chip-missing">${esc(m.keyword)}</span>
-          ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}">In your knowledge base. Emphasise it</button>` : '<span class="muted small">Not in your knowledge base</span>'}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
+          ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}">In your knowledge base. Emphasise it</button>` : `<span class="muted small">Not in your knowledge base.</span><button class="link-btn" data-add-kw="${esc(m.keyword)}">${icon('plus', 12)} Add it</button>`}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
       </div>
       ${groups.map(([t, label]) => {
         const fs = ch.findings.filter((f) => f.type === t);
@@ -315,6 +321,7 @@ Views.project = function (root, params) {
         <p class="muted small">There's no universal "ATS score". These checks cover whether job sites can read the file; keyword match is shown above, separately.</p>
       </div>`;
     $$('[data-goto-section]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.gotoSection)));
+    $$('[data-add-kw]', body).forEach((b) => (b.onclick = () => openAddEvidence({ requirement: b.dataset.addKw, keyword: b.dataset.addKw, onSaved: () => renderLeft() })));
     $$('[data-emph]', body).forEach((b) => (b.onclick = () => {
       const target = doc().sections.find((s) => s.kind === 'experience') || doc().sections[0];
       ui.instructionDraft = 'Emphasise ' + b.dataset.emph;
@@ -356,7 +363,8 @@ Views.project = function (root, params) {
     }
     const isLetter = s.kind === 'paragraph';
     body.innerHTML = `
-      <button class="link-btn back-link" data-all>${icon('chevLeft', 14)} All ${isLetter ? 'paragraphs' : 'sections'}</button>
+      <div class="insp-top"><button class="link-btn back-link" data-all>${icon('chevLeft', 14)} All ${isLetter ? 'paragraphs' : 'sections'}</button>
+        <button class="link-btn" data-copy-sec>${icon('copy', 13)} Copy text</button></div>
       <div class="field"><label for="sec-title">${isLetter ? 'Paragraph' : 'Section heading'}</label><input id="sec-title" data-sec-title value="${esc(s.title)}" ${isLetter ? 'readonly' : ''}></div>
       <div class="instruction" data-instr-area></div>
       <div class="manual">
@@ -364,6 +372,7 @@ Views.project = function (root, params) {
         <div data-manual></div>
       </div>`;
     $('[data-all]', body).onclick = () => { ui.selected = null; ui.pending = null; renderPreview(); renderInspector(); };
+    $('[data-copy-sec]', body).onclick = () => copyText(Docs.sectionCopyText(s), s.title);
     const ti = $('[data-sec-title]', body);
     ti.oninput = () => { pushUndo('Edited heading', 'title-' + s.id); s.title = ti.value; renderPreview(); commit('edit', `Edited ${s.title} heading`, 'title-' + s.id); renderLeft(); };
     renderInstruction(s);
@@ -675,7 +684,7 @@ Views.project = function (root, params) {
         toast('Regenerating with ' + st.activeModel.model + '…');
         await sleep(3200);
         if (!alive) return;
-        const fresh = Docs.createProject(st.kb, p.jdText, p.brief, p.selected);
+        const fresh = Docs.createProject(st.kb, p.jdText, p.brief, p.selected, Date.now(), p.notes || '');
         ['resume', 'coverLetter'].forEach((k) => {
           undo[k].push({ label: 'Regenerate', snapshot: clone(p.docs[k]) });
           fresh.docs[k].theme = p.docs[k].theme;

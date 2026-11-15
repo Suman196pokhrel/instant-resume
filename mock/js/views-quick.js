@@ -54,7 +54,10 @@ function applyQuickPrefs(p, prefs) {
            progress {value 0..1}, brief, match, draft, pages, checks, done, error */
 const PIPELINE_CANCELLED = Symbol('cancelled');
 
-function createMockPipeline({ jdText, scenario, prefs }) {
+// Gaps the "gaps" scenario adds: [requirement, keyword]. A gap clears once the KB has evidence for its keyword.
+const SCENARIO_GAPS = [['Payments or financial services experience', 'Payments'], ['Kubernetes in production', 'Kubernetes']];
+
+function createMockPipeline({ jdText, notes = '', scenario, prefs }) {
   const st = Store.state;
   const kb = st.kb;
   const stages = quickStages(prefs);
@@ -98,9 +101,9 @@ function createMockPipeline({ jdText, scenario, prefs }) {
       brief.seniority = brief.seniority || inferSeniority(brief.title);
       ctx.gaps = [];
       if (scenario === 'gaps') {
-        ctx.gaps = ['Payments or financial services experience', 'Kubernetes in production'];
-        brief.requirements = brief.requirements.slice(0, 4).concat(ctx.gaps);
-        brief.keywords = brief.keywords.concat(['Payments', 'Kubernetes']);
+        brief.requirements = brief.requirements.slice(0, 4).concat(SCENARIO_GAPS.map(([r]) => r));
+        brief.keywords = brief.keywords.concat(SCENARIO_GAPS.map(([, k]) => k));
+        ctx.gaps = SCENARIO_GAPS.filter(([, k]) => !Docs.kwMatch(Docs.kbAllText(kb), k)).map(([r]) => r); // notes can't fill a gap: bullets need KB highlights
       }
       ctx.brief = brief;
       emit('brief', brief);
@@ -123,7 +126,7 @@ function createMockPipeline({ jdText, scenario, prefs }) {
         : { note: `${matched.length} entries and ${skills.length} skills match` };
     },
     async write(i, ms) {
-      const p = Docs.createProject(kb, jdText, clone(ctx.brief), ctx.selected);
+      const p = Docs.createProject(kb, jdText, clone(ctx.brief), ctx.selected, Date.now(), notes);
       applyQuickPrefs(p, prefs);
       if (scenario === 'findings') Docs.applyDemoFlaws(p);
       ctx.project = p;
@@ -217,7 +220,7 @@ const FINDING_LINE = {
 function quickView(root) {
   const st = Store.state;
   const prefs = quickPrefs();
-  if (!st.quickDraft) st.quickDraft = { jdText: '' };
+  if (!st.quickDraft) st.quickDraft = { jdText: '', notes: '' };
   const qd = st.quickDraft;
   let pipeline = null;
   let timer = null;
@@ -252,6 +255,9 @@ function quickView(root) {
         ${!hasConn() ? `<div class="callout callout-warn">${icon('key', 16)}<div><strong>No API key connected.</strong> Generation runs on your own provider account. <a href="#/settings">Add a key in Settings</a></div></div>` : ''}
         <textarea class="jd-input" data-jd aria-label="Job description" placeholder="Paste the whole job ad here, including the requirements">${esc(qd.jdText)}</textarea>
         <div class="field-error" data-err hidden></div>
+        <div class="field notes-field"><label for="qg-notes">Notes for this application <span class="optional">optional</span></label>
+          <textarea id="qg-notes" rows="2" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(qd.notes || '')}</textarea>
+          <span class="muted small">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</span></div>
         <div class="qg-input-foot">
           <span class="muted small" data-count></span>
           <div class="row-gap">
@@ -273,6 +279,7 @@ function quickView(root) {
       Store.save();
     };
     ta.oninput = sync;
+    $('[data-notes]', root).oninput = (e) => { qd.notes = e.target.value; Store.save(); };
     sync();
     $('[data-sample]', root).onclick = () => { qd.jobId = null; ta.value = MOCK.jds.find((j) => j.id === 'jd-mintleaf').text; sync(); ta.focus(); };
     go.onclick = () => {
@@ -449,7 +456,7 @@ function quickView(root) {
   }
 
   function start() {
-    pipeline = createMockPipeline({ jdText: qd.jdText, scenario: quickScenario(), prefs });
+    pipeline = createMockPipeline({ jdText: qd.jdText, notes: qd.notes || '', scenario: quickScenario(), prefs });
     renderProgress(pipeline.stages);
     bindPipeline(pipeline);
     startedAt = performance.now();
@@ -482,7 +489,7 @@ function quickView(root) {
     const names = { resume: Docs.fileName(st.kb, 'resume', p.company), coverLetter: Docs.fileName(st.kb, 'coverLetter', p.company) };
     const pages = { resume: prefs.pages, coverLetter: 1 };
     const issues = [
-      ...summary.gaps.map((g) => ({ kind: 'gap', title: g, detail: "Nothing in your knowledge base backs this up. Add it if it's true, then regenerate." })),
+      ...summary.gaps.map((g) => ({ kind: 'gap', title: g, keyword: (SCENARIO_GAPS.find(([r]) => r === g) || [g, g])[1], detail: "Nothing in your knowledge base backs this up. Add it if it's true, then regenerate." })),
       ...summary.findings.map((f) => ({ kind: 'finding', title: f.title, detail: `${f.doc}. ${FINDING_LINE[f.type] || f.detail}` })),
     ];
     const stat = (n, word, warn, extra = '') => `
@@ -516,17 +523,18 @@ function quickView(root) {
             </div>
             <figcaption>
               <span class="qg-doc-meta"><strong>${label[k]}</strong><code>${esc(names[k])}</code></span>
-              <button class="btn btn-ghost btn-sm" data-dl="${k}" aria-label="Download ${label[k].toLowerCase()}">${icon('download', 14)} Download</button>
+              <span class="row-gap"><button class="btn btn-ghost btn-sm" data-copy="${k}" aria-label="Copy ${label[k].toLowerCase()} as plain text">${icon('copy', 14)} Copy text</button><button class="btn btn-ghost btn-sm" data-dl="${k}" aria-label="Download ${label[k].toLowerCase()}">${icon('download', 14)} Download</button></span>
             </figcaption>
           </figure>`).join('')}
         </div>
         ${issues.length ? `
           <details class="qg-issues" open>
             <summary><span>${plural(issues.length, 'item', 'items')} to review before you send</span><span class="muted small">Downloads aren't blocked</span></summary>
-            <ul>${issues.map((it) => `
-              <li class="qg-issue qg-issue-${it.kind}">
+            <ul>${issues.map((it, i) => `
+              <li class="qg-issue qg-issue-${it.kind}" data-issue="${i}">
                 <span class="qg-issue-ic">${icon('alert', 14)}</span>
                 <span><span class="qg-issue-tag">${it.kind === 'gap' ? 'Gap' : 'Finding'}</span> <strong>${esc(it.title)}</strong><span class="qg-issue-detail">${esc(it.detail)}</span></span>
+                ${it.kind === 'gap' ? `<button class="btn btn-ghost btn-sm qg-issue-act" data-add-gap="${i}">${icon('plus', 14)} Add to knowledge base</button>` : ''}
               </li>`).join('')}</ul>
             <p class="muted small qg-issues-foot">Fix findings in <a href="#/project/${p.id}">Studio</a>, or add missing experience to your <a href="#/kb/roles">knowledge base</a> and regenerate.</p>
           </details>` : `<div class="qg-clean">${icon('check', 15)} No gaps or findings. Ready to send.</div>`}
@@ -544,7 +552,21 @@ function quickView(root) {
     };
     $('[data-dl-all]', root).onclick = (e) => download(e.currentTarget, kinds);
     $$('[data-dl]', root).forEach((b) => (b.onclick = () => download(b, [b.dataset.dl])));
-    $('[data-regen]', root).onclick = () => { replaceProjectId = p.id; start(); };
+    const regen = () => { replaceProjectId = p.id; start(); };
+    $('[data-regen]', root).onclick = regen;
+    $$('[data-copy]', root).forEach((b) => (b.onclick = () => copyText(Docs.plainText(p.docs[b.dataset.copy], st.kb, p.brief), label[b.dataset.copy])));
+    $$('[data-add-gap]', root).forEach((b) => (b.onclick = () => {
+      const it = issues[+b.dataset.addGap];
+      openAddEvidence({ requirement: it.title, keyword: it.keyword, onSaved: (owner) => {
+        const row = $(`[data-issue="${b.dataset.addGap}"]`, root);
+        row.classList.add('is-resolved');
+        $('.qg-issue-tag', row).textContent = 'Added';
+        $('.qg-issue-detail', row).textContent = `Saved to ${owner}. Regenerate to use it.`;
+        b.outerHTML = `<button class="btn btn-primary btn-sm qg-issue-act" data-regen-gap>${icon('undo', 14)} Regenerate</button>`;
+        $('[data-regen-gap]', row).onclick = regen;
+        $('[data-regen-gap]', row).focus();
+      } });
+    }));
   }
 
   renderInput();

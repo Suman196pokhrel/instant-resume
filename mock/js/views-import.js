@@ -62,6 +62,7 @@ Views.import = function(root) {
       <div class="page-head"><div><h1>Import your resume</h1><p class="muted">Bring your background into the knowledge base, then review it before saving.</p></div></div>
       <section class="panel new-panel">
         <label class="import-drop" for="resume-file">${icon('upload',28)}<strong>Choose an existing resume</strong><span class="muted">PDF, Word (.docx), or plain text (.txt) · up to 10 MB</span><input id="resume-file" type="file" accept=".pdf,.docx,.txt" aria-describedby="import-limit"></label>
+        <p class="small import-tip">${icon('info',13)} No resume handy? Use your LinkedIn profile's <strong>Save to PDF</strong> option and import that file.</p>
         <p id="import-limit" class="muted small">Mock: PDF and Word uploads demonstrate extraction using clearly labelled sample details. TXT files and pasted text use a basic local parser. No files or API keys are sent anywhere.</p>
         <p data-file class="small" aria-live="polite">${esc(draft.fileName)}</p>
         <div class="field"><label for="resume-text">Or paste your resume text</label><textarea id="resume-text" rows="12" placeholder="Your name and contact details&#10;&#10;EXPERIENCE&#10;Role | Organisation&#10;What you did…&#10;&#10;VOLUNTEER WORK&#10;…">${esc(draft.text)}</textarea></div>

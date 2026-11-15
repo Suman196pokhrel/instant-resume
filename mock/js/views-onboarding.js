@@ -20,7 +20,7 @@ function emptyDraft() {
 
 Views.onboarding = function (root, params = []) {
   if (params[0] !== 'manual' && !Store.state.onboarding.visited && !Store.state.onboarding.imported) {
-    root.innerHTML = shell(`<div class="new-wrap"><div class="page-head"><div><h1>Build your knowledge base</h1><p class="muted">Start from your existing resume or enter your background yourself.</p></div></div><div class="choice-grid"><a class="choice choice-primary" href="#/import"><span class="choice-ic">${icon('upload',24)}</span><h2>Import an existing resume</h2><p>Bring in your contact details, experience, volunteer work, education and other sections. Review everything before saving.</p><span class="btn btn-primary">Upload resume</span></a><a class="choice" href="#/onboarding/manual"><span class="choice-ic">${icon('pencil',24)}</span><h2>Enter details manually</h2><p>Work through the guided fields at your own pace. Optional sections can be skipped.</p><span class="btn btn-ghost">Start manually</span></a></div><p class="muted small">Open source, self-hosted, with your own AI provider key. This mock makes no provider calls.</p></div>`,{route:'kb',title:'Set up your background'});
+    root.innerHTML = shell(`<div class="new-wrap"><div class="page-head"><div><h1>Build your knowledge base</h1><p class="muted">Start from your existing resume or enter your background yourself.</p></div></div><div class="choice-grid"><a class="choice choice-primary" href="#/import"><span class="choice-top"><span class="choice-ic">${icon('upload',24)}</span><span class="pill pill-ok">Recommended · about 2 minutes</span></span><h2>Import an existing resume</h2><p>Bring in your contact details, experience, volunteer work, education and other sections. Review everything before saving. A LinkedIn profile saved as a PDF works too.</p><span class="btn btn-primary">Upload resume</span></a><a class="choice" href="#/onboarding/manual"><span class="choice-ic">${icon('pencil',24)}</span><h2>Enter details manually</h2><p>Work through the guided fields at your own pace. Optional sections can be skipped.</p><span class="btn btn-ghost">Start manually</span></a></div><p class="muted small">Source-available and self-hosted, with your own AI provider key. This mock makes no provider calls.</p></div>`,{route:'kb',title:'Set up your background'});
     bindShell(root); return;
   }
   const st = Store.state;
@@ -194,7 +194,6 @@ Views.onboarding = function (root, params = []) {
       d[k].forEach((e) => { if (!st.kb[k].some((x) => x.id === e.id)) { st.kb[k].push(e); added++; } });
     });
     st.onboarding = { step: 0, draft: null, visited: false };
-    st.dismissedOnboardingBanner = true;
     st.sampleKb = false;
     Store.saveNow();
     root.innerHTML = `

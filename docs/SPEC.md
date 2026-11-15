@@ -119,7 +119,7 @@ Visitors explore sample career information and sample job descriptions, choose Q
 - A visible notice on every screen: **"Interactive demo · Sample data · AI responses are simulated"** (implemented in the mock).
 - Generation, extraction and AI rewrite proposals may use fixtures or deterministic transformations. Manual edits, history, local saving and rendering stay genuinely interactive; there is no need to prebuild every edited document.
 - Uploaded content stays in the browser. Make that distinction from real provider processing explicit.
-- **Before public deployment (not yet done):** disable real API-key collection and live-provider paths, make reset easy to find, explain browser-local storage, keep personal uploads optional with a sample-first path, and link to the source repository and local setup once they exist. Never label the mock a fully implemented AI product.
+- **Before public deployment (not yet done):** disable real API-key collection and live-provider paths (including the Settings "How to get an API key" guide, which must point to local setup instead of asking visitors to paste a key), make reset easy to find, explain browser-local storage, keep personal uploads optional with a sample-first path, and link to the source repository and local setup once they exist. Never label the mock a fully implemented AI product.
 
 Delivery rules: §3.1. Release checks: §18.5. Acceptance: §20.
 
@@ -186,7 +186,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Source and collaboration | Public GitHub repository; build in public |
 | Public demo host | Vercel; static simulated demo, no provider secrets or database |
 | Framework | Next.js (App Router), TypeScript strict mode |
-| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts, so a self-hosted instance must be reachable only by its owner and served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
+| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts: by default it only accepts connections from the same computer, and a self-hosted instance must use the password lock (§4.1) and be served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
 | Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
@@ -263,6 +263,27 @@ Request boundaries:
 
 Security: set a strict Content-Security-Policy in `next.config` headers: `connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com`; `script-src 'self' 'wasm-unsafe-eval'`; no third-party scripts. Pin dependency versions.
 
+### 4.1 Access (single-user lock)
+
+The real app has one user per install and no accounts. The KB holds personal details, including referees' contact details, so nobody else may reach it. API keys are not at risk on the server (they never leave the browser that stored them); everything else is. Two modes:
+
+| Mode | When | Behaviour |
+|---|---|---|
+| **Local only** (default) | `APP_PASSWORD` unset | `pnpm dev` and `pnpm start` listen on `HOST`, default `127.0.0.1`, so only this computer can connect. No password, no unlock screen. |
+| **Password lock** | `APP_PASSWORD` set | For a private server reached from other devices. Every page and every `/api/*` route needs a session; pages redirect to `/unlock`, API calls get `401 {"error":"locked"}`. |
+
+Rules:
+
+- **Unsafe setups refuse to start.** A startup check (Next.js `instrumentation.ts`) exits with a clear message if `HOST` isn't a loopback address and `APP_PASSWORD` is unset, or if `APP_PASSWORD` is shorter than 12 characters.
+- **Password check:** hash `APP_PASSWORD` with scrypt at startup and compare with `timingSafeEqual`. Never log it or send it back to the client.
+- **Session:** on success, set the cookie `ir_session` (`HttpOnly`, `Secure`, `SameSite=Strict`, `Path=/`, `Max-Age` 30 days). Its value is an expiry time signed with HMAC-SHA-256. The signing key is derived from a random secret stored at `./data/session-secret` (created on first start, never committed or backed up) together with the password hash, so changing `APP_PASSWORD` signs out every device. Stateless, so there's no sessions table.
+- **Gate:** the request middleware (`middleware.ts`; newer Next.js versions call it `proxy.ts`, so check the installed version) checks the cookie on every request except `/unlock`, `POST /api/unlock` and static assets.
+- **Rate limit:** 5 failed attempts per client address within a minute → `429` and "Too many attempts. Try again in a minute." An in-memory counter is enough for one server process.
+- **Cross-site requests:** besides `SameSite=Strict`, state-changing API requests must carry an `Origin` header matching the app's own origin, or get `403`.
+- **HTTPS is required in password mode.** The `Secure` cookie and the browser's key storage both need it. Recommend a reverse proxy with TLS, or better, a private network (Tailscale, WireGuard, Cloudflare Access) so the app is never public at all.
+- **No accounts, sign-up, profile or password reset.** Resetting means setting a new `APP_PASSWORD` and restarting, which only the server's owner can do. Each device adds its own API key, because keys never leave the browser that stored them.
+- The public demo is static and needs none of this; the mock simulates it behind a Demo controls switch (§23.2).
+
 ---
 
 ## 5. Project structure
@@ -305,7 +326,7 @@ instant-resume/
   drizzle.config.ts  vitest.config.ts  playwright.config.ts
 ```
 
-Scripts: `dev`, `build`, `start`, `db:migrate`, `db:seed` (loads the sample KB from section 17), `test`, `test:e2e`, `lint`, `typecheck`.
+Scripts: `dev`, `build`, `start` (`dev` and `start` bind to `HOST`, default `127.0.0.1`; see §4.1), `db:migrate`, `db:seed` (loads the sample KB from section 17), `test`, `test:e2e`, `lint`, `typecheck`.
 
 ---
 
@@ -321,7 +342,7 @@ WorkRights   { id: 'kb-rights'; status: WorkRightsStatus; noticePeriod?; notes? 
 WorkRightsStatus = 'Australian citizen' | 'Permanent resident' | 'New Zealand citizen'
                  | 'Temporary visa with full work rights' | 'Temporary visa with limited work rights'
                  | 'Requires sponsorship'
-Highlight    { id; text; metric?; skills: string[] }        // skills: tags for matching
+Highlight    { id; text; metric?; skills: string[]; evidenceFor?: string }  // skills: tags for matching; evidenceFor: the job requirement it was added for (14.3)
 Role         { id; title; company; location?; start; end; highlights: Highlight[] }  // start/end free text "Mar 2022", "Present"
 PortfolioItem{ id; name; summary; link?; highlights: Highlight[] }
 Education    { id; degree; institution; year?; notes? }
@@ -397,7 +418,8 @@ Theme presets (Quick generate default theme):
 
 ```ts
 Project  { id; schemaVersion; company; role; location; jdText; brief: JobBrief; selected: string[] /* KB entry IDs */;
-           source: 'studio' | 'quick'; coverLetterOff?: boolean; gaps?: string[]; createdAt; updatedAt }
+           source: 'studio' | 'quick'; coverLetterOff?: boolean; gaps?: string[];
+           notes?: string /* the user's notes for this application: motivation, emphasis, referral */; createdAt; updatedAt }
 Revision { id; documentId; ts; kind: 'generation'|'rewrite'|'edit'|'adjustment'|'structure'|'restore';
            label: string; coalesceKey?: string; snapshot: Document }
 ```
@@ -430,17 +452,19 @@ Defaults: A4, en-AU, quick = { classic, 2, true, Professional }.
 | Table | Columns |
 |---|---|
 | `kb_entries` | `id` PK, `type` ('contact'\|'workRights'\|'role'\|'portfolio'\|'education'\|'skills'\|'credential'\|'referee'|'volunteering'|'additional'), `position` int, `data` JSON text, `schema_version`, `updated_at` |
-| `projects` | `id` PK, `company`, `role`, `location`, `jd_text`, `brief` JSON, `selected` JSON, `source`, `cover_letter_off` bool, `gaps` JSON, `schema_version`, `created_at`, `updated_at` |
+| `projects` | `id` PK, `company`, `role`, `location`, `jd_text`, `brief` JSON, `selected` JSON, `source`, `cover_letter_off` bool, `gaps` JSON, `notes` text, `schema_version`, `created_at`, `updated_at` |
 | `documents` | `id` PK, `project_id` FK cascade, `kind`, `content` JSON (sections, recipient), `theme` JSON, `updated_at` |
 | `revisions` | `id` PK, `document_id` FK cascade, `ts`, `kind`, `label`, `coalesce_key`, `snapshot` JSON |
 | `settings` | `key` PK, `value` JSON |
 
 Validate every JSON column with the Zod schema on read and on write. Reject invalid writes with HTTP 422 and a readable message.
 
-### 7.2 Route handlers (all JSON; local only)
+### 7.2 Route handlers (all JSON; behind the §4.1 access check when a password is set)
 
 | Method and path | Purpose |
 |---|---|
+| `POST /api/unlock` | Password mode only: `{ password }` → sets `ir_session`; `401` wrong password, `429` rate limited |
+| `POST /api/lock` | Clears `ir_session` ("Lock now") |
 | `GET /api/kb` | Whole knowledge base |
 | `PUT /api/kb/contact`, `PUT /api/kb/work-rights` | Replace single entries |
 | `POST /api/kb/:type` | Add entry (type: roles, volunteering, portfolio, education, skills, credentials, referees, additional) |
@@ -511,7 +535,7 @@ Four tailoring calls, plus a resume-import extraction call described in 14.1a. E
 
 Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. (The Studio path uses `suggestedEntryIds` to pre-tick entries and shows "Matches React, TypeScript…" reasons computed locally from keyword overlap.)
 
-**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. The LLM receives the skeleton (with JSON paths), the brief, the selected entries with highlight IDs, prefs (tone, spelling) and returns:
+**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. The LLM receives the skeleton (with JSON paths), the brief, the selected entries with highlight IDs, the project's `notes` (if any), prefs (tone, spelling) and returns:
 
 ```ts
 { resumeOps: Operation[]; coverLetterOps: Operation[] }   // RFC 6902
@@ -543,6 +567,8 @@ Token estimate shown under the Instruction box: `Sends only this section, about 
 
 - Use only facts in the provided KB entries. Never invent employers, dates, numbers, skills or tools. Numbers in bullets must appear in the source highlight.
 - Each bullet comes from exactly one highlight and keeps its `source` ID. Light rephrasing to foreground job keywords is allowed; adding unsupported claims is not.
+- **Notes for this application** are facts the user supplied for one job (why they want it, what to emphasise, who referred them). Use them for the cover letter's motivation and for emphasis in the summary. Never turn them into bullets: bullets still need a KB highlight. Notes can't close a gap.
+- A highlight whose `evidenceFor` matches one of the brief's requirements was added to answer that gap, so include it as a bullet under its entry.
 - Spelling per prefs (Australian by default: optimise, colour, organisation).
 - Plain, specific, active voice. Avoid the banned-phrase list (section 10.2) and generic filler.
 - Summary: 2–3 sentences: years of experience and focus, one or two proof points from highlights, what they'd bring to {team} at {company}.
@@ -651,7 +677,7 @@ For each visible bullet:
 
 Skills section: each skill must exist in the KB skills (case-insensitive): `Skill "{x}" isn't in your knowledge base` / `Every claim needs a stored fact. Add the skill to your knowledge base or remove it here.`
 
-Summary and paragraphs: every number must appear somewhere in the KB text (ignore 4-digit years and spelled-out numbers).
+Summary and paragraphs: every number must appear somewhere in the KB text or the application's notes (ignore 4-digit years and spelled-out numbers).
 
 ### 10.4 Parse safety (shown separately, never as a score)
 
@@ -786,6 +812,7 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | Route | Screen | Shell |
 |---|---|---|
 | `/` | Redirect: onboarding not complete and KB empty → `/onboarding`; else `/dashboard` | none |
+| `/unlock` | Password mode only (§4.1). Every other route redirects here without a session, keeping the requested URL to return to | none (centred card) |
 | `/onboarding` | Choose manual entry or resume import, then review | Chooser in the app shell; the wizard and review are full screen with their own top bar |
 | `/import` | Resume upload/pasted text and extraction review | App shell |
 | `/dashboard` | Applications | App shell |
@@ -808,7 +835,7 @@ flowchart LR
   onb -->|finish| new["/new"]
   dash -->|card| ws["/projects/[id]"]
   dash -->|New application| new
-  dash -->|"banner: Continue onboarding"| onb
+  dash -->|"setup checklist: Import resume"| imp["/import"]
   new --> quick["/new/quick"]
   quick -->|"result: Open in Studio"| ws
   quick -->|"Regenerate (stays)"| quick
@@ -820,7 +847,11 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 
 ### 13.1 Dashboard
 
-- Optional banner (if onboarding is incomplete and not dismissed): "Finish setting up your knowledge base" with a "Continue onboarding" action and a dismiss button. The public demo, which starts with sample data, instead shows "Start with your own background. This demo currently includes sample data. Upload a resume or enter your details." with "Set up knowledge base" and a dismiss button; saving onboarding also dismisses it.
+- **Setup checklist** ("Get set up", "{n} of 3 done"), shown above the page head until all three steps are done or the user dismisses it (×, stored as `dismissedOnboardingBanner`). Each row has a numbered circle (accent check when done), a bold title, a muted one-line detail and, while not done, one action. The first unfinished step's action is primary; the others are secondary.
+  1. **Connect your AI provider**: "Paste an API key from Anthropic, OpenAI or Gemini. You pay your provider directly." Done when any connection exists. Action "Add a key" (→ Settings).
+  2. **Add your background**: "Import your resume and review what was found. About 2 minutes." Done when the KB holds the user's own details (onboarding or import saved). Action "Import resume" (→ `/import`), plus the link "or enter it manually".
+  3. **Make your first application**: "Paste a job ad and get a tailored resume and cover letter in about 15 seconds." Done when an application exists (seeded demo applications don't count). Action "Quick generate".
+  The public demo, which starts with sample data, adds "This demo starts with sample data." to the count line.
 - Page head: h1 "Applications", sub "One job description, a tailored resume and a cover letter. Everything saves automatically." Search box on the right ("Search company or role"; filters cards live).
 - Top bar action: primary "New application" (+ icon).
 - Card: monogram, role (15.5px/600), company, location (muted), footer "Edited {time ago}". A ⋯ button opens a popover menu with Open, Duplicate (adds " (copy)" to the role) and Delete (shows the toast "Application deleted" with Undo).
@@ -839,10 +870,16 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 ### 13.3 Settings
 
 Sections, in order:
-1. **Connections:** "Bring your own API key. You pay your provider directly; switching models is one click from the top bar." Provider cards (section 8.2).
+1. **Connections:** "Bring your own API key. You pay your provider directly; switching models is one click from the top bar." A collapsed **"How to get an API key"** guide: sign in to the provider's developer site (links to each provider's API key page, opening in a new tab), create a key and copy all of it, paste it into that provider's card and choose Test and save. Footnote: "API usage is billed by the provider, separately from chat subscriptions. Some providers offer a free tier; check their current pricing. One application usually uses a few thousand tokens." Then the provider cards (section 8.2).
 2. **Quick generate defaults:** "Used when you go straight from a job description to finished documents." Default theme (select: Classic, Modern, Compact), Page budget (segmented: 1 page or 2 pages; "The resume is trimmed to fit"), Cover letter (switch; "Write one alongside the resume"), Cover letter tone (select: Professional, Warm, Concise; disabled when the cover letter is off; "You can change it per paragraph in Studio").
 3. **Preferences:** Paper size (A4 or Letter), Spelling and conventions (Australian or US; "Australian adds work rights and referees to resumes").
 4. **Your data:** "Everything lives in a database file on this machine. Export a backup regularly; API keys are left out." Export backup and Import backup.
+5. **Access** (§4.1), one row:
+   - Local only: "Local only" with the pill "This computer only" and "Instant Resume only accepts connections from this computer, so no password is needed. To use it from another device, run it on your server with APP_PASSWORD set and HTTPS. A private network such as Tailscale is safer still."
+   - Password lock: "Password lock is on" with the pill "Protected", "This copy runs on a server. Anyone who opens it needs the password. Each device stays unlocked for 30 days, or until you lock it." and "To change the password, set a new `APP_PASSWORD` on the server and restart. That signs out every device." A secondary "Lock now" button calls `POST /api/lock` and shows the unlock screen with the toast "Locked. Enter the password to continue."
+   In password mode the sidebar footer reads "Stored on your server" instead of "Stored on this device".
+
+**Unlock screen** (`/unlock`): a centred card with a lock mark, h1 "Unlock Instant Resume", "Enter the password to continue.", a Password field (`autocomplete="current-password"`, Show/Hide) and a full-width primary "Unlock" (Enter submits; shows "Unlocking" with a spinner). Errors under the field (`role="alert"`): empty "Enter the password"; wrong "That password isn't right." (the field text is selected for retyping); rate limited "Too many attempts. Try again in {n} seconds." with a live countdown and the button disabled. On success: return to the requested URL (or `/dashboard`) with the toast "Unlocked on this device". The screen is seen by anyone who reaches the server, so it reveals nothing about the setup: no hints about how the password is configured or reset, no environment variable names, no server details, and no sign-up, account or reset links. Recovery instructions belong in the README and in Settings → Access, which only an unlocked user sees.
 
 Every preference change saves immediately, with the toast "Preference saved".
 
@@ -894,7 +931,7 @@ Behaviour:
 
 ### 14.1a Resume import and review
 
-Entry points: onboarding chooser and Knowledge base → Import resume. Accept PDF, DOCX and TXT up to 10 MB, or pasted text. Show unsupported-file, empty-file and read-failure states without modifying the saved KB.
+Entry points: onboarding chooser and Knowledge base → Import resume. The onboarding chooser marks import as the primary card with the pill "Recommended · about 2 minutes" and notes that a LinkedIn profile saved as a PDF works too; manual entry is the secondary card. The import screen shows the tip "No resume handy? Use your LinkedIn profile's **Save to PDF** option and import that file." (This is ordinary file import, not a LinkedIn integration; see §21.) Accept PDF, DOCX and TXT up to 10 MB, or pasted text. Show unsupported-file, empty-file and read-failure states without modifying the saved KB.
 
 Production goal: extract contact details, work history, volunteer work, projects, education, skills, credentials, referees, and any other sections through the user's configured provider. Explain provider data transfer before extraction. Do not infer work rights or invent missing fields. Preserve unmatched content as Additional sections and retain original text as reference-only material.
 
@@ -912,7 +949,7 @@ Below: "You can open anything made with Quick generate in Studio later."
 
 ### 14.3 Quick generate (automated flow)
 
-**Input screen.** h1 "Paste a job description", sub "You'll get a tailored resume and cover letter, written only from facts in your knowledge base." (drop "and cover letter" when it's off). If there's no connection: a warn callout "No API key connected. Generation runs on your own provider account. Add a key in Settings". Large textarea (min-height 300px) with the character count "1,234 characters". Buttons: "Use sample job description" (dev and demo only) and primary "Generate" (spark icon), **disabled until the text is non-empty and a connection exists**. Under 80 characters on submit: "That looks too short to be a full job description. Paste the whole ad, including the requirements." Notes: "⚡ Uses your knowledge base and default theme. You can tweak everything afterwards." and "Defaults: Classic theme, 2 pages, cover letter on (professional tone). Change defaults" (links to Settings). The JD draft persists across navigation.
+**Input screen.** h1 "Paste a job description", sub "You'll get a tailored resume and cover letter, written only from facts in your knowledge base." (drop "and cover letter" when it's off). If there's no connection: a warn callout "No API key connected. Generation runs on your own provider account. Add a key in Settings". Large textarea (min-height 300px) with the character count "1,234 characters". Below it, an optional **"Notes for this application"** textarea (2 rows, placeholder "Why you want this job, what to emphasise, who referred you", help "Used as a fact you supplied, mostly in the cover letter. Nothing else is added."), saved on the project as `notes` (§8.4). Buttons: "Use sample job description" (dev and demo only) and primary "Generate" (spark icon), **disabled until the text is non-empty and a connection exists**. Under 80 characters on submit: "That looks too short to be a full job description. Paste the whole ad, including the requirements." Notes: "⚡ Uses your knowledge base and default theme. You can tweak everything afterwards." and "Defaults: Classic theme, 2 pages, cover letter on (professional tone). Change defaults" (links to Settings). The JD draft persists across navigation.
 
 **Pipeline** (`lib/generate/pipeline.ts`): an event emitter. The UI only listens to events, so the mock and real implementations are interchangeable.
 
@@ -965,9 +1002,9 @@ The project is saved (`POST /api/projects`, `source: 'quick'`, `gaps`) only afte
 **Result screen** (focus moves to the h1, which has `tabindex=-1`; announce "Your documents are ready"):
 - Head: h1 "Your documents are ready" (or "Your resume is ready"); sub "{role} at {company}. Generated in {s}s with {model}." Actions on the right: tertiary link "↺ Regenerate", secondary "Open in Studio" (→ `/projects/[id]`), primary "Download both" (or "Download resume").
 - Summary row: three tiles, each with an icon and text: "{coverage}% keyword coverage" (warn below 60%), "{n} gaps", "{n} findings" (warn tile when greater than 0).
-- Thumbnails side by side: the first page rendered at about 34% scale in a 300px-tall sunken frame, with a "{n} pages" badge. Caption: "Resume" or "Cover letter", the file name in monospace, and its own "Download" button.
+- Thumbnails side by side: the first page rendered at about 34% scale in a 300px-tall sunken frame, with a "{n} pages" badge. Caption: "Resume" or "Cover letter", the file name in monospace, a "Copy text" button (plain text for job sites that ask you to paste; toast "{Document} copied as plain text") and its own "Download" button.
 - Issues: a collapsible card (open by default) titled "{n} items to review before you send", with "Downloads aren't blocked" on the right. Each row has an alert icon, a tag ("Gap" in amber or "Finding" in red), a bold title and a one-line explanation:
-  - Gap: "Nothing in your knowledge base backs this up. Add it if it's true, then regenerate."
+  - Gap: "Nothing in your knowledge base backs this up. Add it if it's true, then regenerate." The row has an **"Add to knowledge base"** button that opens the Add evidence dialog: "The job asks for **{requirement}**.", the note "Only add it if it's true. It's saved as a highlight, so every future resume can use it.", an "Add it to" select (roles, volunteer roles and portfolio items, grouped), "What you did and the result" (required: "Describe what you did") and an optional Metric. Saving adds a highlight to that entry with the requirement's keyword in `skills` and the requirement in `evidenceFor`, then shows the toast "Added to {entry}". The row turns accent with the tag "Added", the detail "Saved to {entry}. Regenerate to use it." and a focused primary "Regenerate" button. Regenerating re-runs the match, so the gap clears and the new highlight appears as a bullet (§8.4). If the KB has no roles, volunteer roles or portfolio items, the dialog explains that and links to the Knowledge base.
   - Banned phrase: "{Doc}. Reads as generic or AI-written. Reword it in Studio."
   - Grounding: "{Doc}. Not backed by a fact in your knowledge base. Fix it in Studio or add the fact."
   - Coverage: "{keywords} from the job brief don't appear in the resume."
@@ -982,7 +1019,7 @@ Settings used: theme preset, page budget (1 page also hides Portfolio, Certifica
 
 A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries → 4 Generate. The draft persists across navigation.
 
-1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
+1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count, then the same optional "Notes for this application" field as Quick generate. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
 2. **Job brief:** "Job brief" / "Extracted from the ad. Fix anything that's wrong; keywords drive tailoring and checks." A pill "✦ Extracted by {model}". Editable Role, Company, Location and Team (optional). Two columns: Requirements list (and Nice to have); Keywords as removable chips (teal with ✓ when the KB supports them, dashed grey otherwise; help text "Teal keywords are backed by your knowledge base. Grey ones aren't, so they can't be claimed."), plus "Add a keyword". A work-rights callout if the ad states a requirement: "{ad requirement}. Your knowledge base says: {status}." Buttons: "Edit job description" and "Choose entries".
 3. **Choose entries:** "Choose what to draw on" / "Suggestions are based on keyword matches. Only ticked entries can appear in the documents." A counter pill "{n} of {total} selected". Grouped checkbox rows (Experience, Portfolio, Education, Certifications and awards, Referees), each with the entry name, "Matches React, TypeScript…" (up to 5) or "No keyword matches", and a "Suggested" pill. At least one non-reference KB entry is required: "Select at least one knowledge base entry". Include volunteer roles and additional sections; original resume text is reference-only. Footer: "Runs on {model}, about 6,000 tokens" and primary "✦ Generate resume and cover letter".
 4. **Generate:** h1 "Generating for {company}", "Using {model}. Only facts from the entries you chose can be used." Six stages with icons and times, where "on device" tags mark the non-LLM steps: Matching knowledge base entries to the brief (on device), Drafting the resume, Drafting the cover letter, Validating the response (done note "{n} operations, all valid"), Running checks (on device), Rendering the PDF preview (on device). An elapsed counter. A ghost page on the right whose lines grow as sections draft. On failure: the stage turns red and a callout reads "Generation stopped while drafting the cover letter." / "{Provider} returned {code}: {message}. Nothing was saved, and your job description, brief and selections are kept." with Retry, Switch model (opens the picker) and Back to entries. On success: save the project and go to the Workspace, with the toast "Generated in {s}s. Review the checks before you export." (or "No issues found.").
@@ -996,18 +1033,19 @@ State: a Zustand store per project holding `{ kind, selectedSectionId, inspector
 - Document tabs: Resume | Cover letter (segmented). Switching keeps each document's own state.
 - Save pill: "Saving" with a small spinner, then "✓ Saved".
 - Undo icon button, with the tooltip "Undo: {label}" or "Nothing to undo". Ctrl/Cmd+Z does the same when focus isn't in a text field.
+- Copy icon button (tooltip "Copy as plain text, for job sites that ask you to paste"): copies the current document as plain text (name, contact line, work rights for Australian conventions, then each visible section with an upper-case heading and "•" bullets; the cover letter adds the greeting and sign-off). No LLM call.
 - "History", primary "Export PDF", model picker.
 
-**Job panel (left), Job tab:** role, company, location; "Keywords in this {document}" chips (✓ matched, dashed missing); Requirements; a collapsible "Job description" showing the full JD (pre-wrap, scrollable); "✦ Regenerate both documents" opens a dialog: "This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on {model}. Your current versions stay in history, so you can restore them. For small changes, rewriting one section is quicker and cheaper." with Cancel and Regenerate. Regeneration keeps each document's theme, adds a revision, and pushes an undo step.
+**Job panel (left), Job tab:** role, company, location; "Keywords in this {document}" chips (✓ matched, dashed missing); Requirements; "Your notes" (the project's `notes`, editable and autosaved; help "Used as a fact you supplied. Changes apply the next time you regenerate or rewrite."); a collapsible "Job description" showing the full JD (pre-wrap, scrollable); "✦ Regenerate both documents" opens a dialog: "This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on {model}. Your current versions stay in history, so you can restore them. For small changes, rewriting one section is quicker and cheaper." with Cancel and Regenerate. Regeneration keeps each document's theme, adds a revision, and pushes an undo step.
 
-**Checks tab** (the count badge shows the number of findings, warn colour): "⚡ Checks run on this device after every change. No LLM call." Then Job keyword match (bar plus "{m} of {n}") with the missing keywords and their actions (10.1); "Claims not found in your knowledge base" (count) with finding buttons; "Banned phrases" (count) with "None found." in green when empty; "Parse safety" list plus the no-ATS-score note. Each finding is a button (warn or danger tinted) with a title, a detail and "Go to {section}". Clicking one selects that section in the Content tab, scrolls the preview to it and flashes it.
+**Checks tab** (the count badge shows the number of findings, warn colour): "⚡ Checks run on this device after every change. No LLM call." Then Job keyword match (bar plus "{m} of {n}") with the missing keywords and their actions (10.1). A missing keyword that's in the KB offers "In your knowledge base. Emphasise it"; one that isn't shows "Not in your knowledge base." with "+ Add it", which opens the Add evidence dialog (14.3) for that keyword and refreshes the checks on save; "Claims not found in your knowledge base" (count) with finding buttons; "Banned phrases" (count) with "None found." in green when empty; "Parse safety" list plus the no-ATS-score note. Each finding is a button (warn or danger tinted) with a title, a detail and "Go to {section}". Clicking one selects that section in the Content tab, scrolls the preview to it and flashes it.
 
 **Preview (centre):** the bar holds the job panel toggle, zoom (− / "125% fit" / +, range 40–160%, Fit by default) and the render status. The sheet sits on a sunken background with a page-break line every 297mm. Sections have a hover outline (accent-line), a selected outline (2px accent), a proposed state and a rewriting state. Viewing a revision shows a dark banner pinned at the top: "Viewing the revision from {time}: {label}" with "Restore this version" and "Back to current". While a revision is shown, the inspector is locked behind a white overlay: "You're viewing an older revision. Restore it or go back to the current version to edit."
 
 **Inspector, Content tab:**
 - With no section selected: "Choose a section, or click it in the preview. You can edit text yourself or give an instruction to rewrite just that section." and a list of section rows (title, text preview, "Hidden" if hidden, chevron).
 - With a section selected:
-  - "‹ All sections" (or "All paragraphs").
+  - "‹ All sections" (or "All paragraphs"), with "Copy text" on the right (copies just this section as plain text).
   - Heading input (read-only for cover letter paragraphs).
   - **Instruction box:** "✦ Rewrite this section" with a textarea (placeholder "e.g. more concise, emphasise GraphQL"). Suggestion chips depend on the section kind:
     - summary: More concise, Emphasise {kw}, Stronger verbs
@@ -1153,6 +1191,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 | Key validation | Each prefix rule and error message; `sk-ant-` rejected as an OpenAI key; the article "an OpenAI" |
 | Revisions | Coalescing within 60 s per key; a new revision after 60 s; labels |
 | Undo stack | Push, pop and the cap at 50; burst grouping |
+| Access | The startup check rejects a non-loopback `HOST` without `APP_PASSWORD` and a password under 12 characters; the password compare is constant-time; a session cookie round-trips, an expired or tampered one is rejected, and one signed before a password change is rejected; the rate limiter allows 5 failures a minute and resets after it |
 
 ### 18.2 Component (`tests/component`, Testing Library + jsdom)
 
@@ -1168,7 +1207,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 
 ### 18.3 Route handlers (`tests/api`)
 
-CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes documents and revisions; backup export contains no `connections`, `key` or `apiKey` fields (deep scan); import round-trips the data unchanged; onboarding complete supports explicit merge and replace modes, preserves existing documents, retains existing contact/work-rights in merge mode and does not duplicate stable IDs.
+CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes documents and revisions; backup export contains no `connections`, `key` or `apiKey` fields (deep scan); import round-trips the data unchanged; onboarding complete supports explicit merge and replace modes, preserves existing documents, retains existing contact/work-rights in merge mode and does not duplicate stable IDs. With `APP_PASSWORD` set: every `/api/*` route returns `401` without a session; `POST /api/unlock` returns `401` for a wrong password and `429` after 5 failures; a state-changing request with a foreign `Origin` returns `403`; `POST /api/lock` clears the cookie. With it unset, no route asks for a session.
 
 ### 18.4 End-to-end (`tests/e2e`, Playwright, mock provider, seeded DB)
 
@@ -1184,6 +1223,10 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 10. **Export:** the dialog shows both file names and the PDF downloads; open the PDF with pdf.js in the test and assert the text is selectable and its order starts with the name.
 11. **Backup:** export a file, delete a project, import the file, and confirm the project is back.
 12. **Empty state:** with no applications, the dashed box shows "No applications yet" with a New application button.
+13. **Setup checklist:** a fresh install shows "0 of 3 done"; connecting a key, saving onboarding and generating one application tick each step, and the checklist disappears at 3 of 3. Dismiss hides it.
+14. **Gap to knowledge base:** Quick generate with `?mock=gaps` shows two gaps with "Add to knowledge base". Saving empty shows "Describe what you did"; saving a highlight resolves the row; Regenerate shows one gap, and the new highlight appears as a resume bullet with its `source` ID.
+15. **Notes and copy:** notes entered on the input reach the project and the cover letter, and number checks accept numbers from them. "Copy text" on the result, the Workspace bar and a section puts plain text on the clipboard (assert clipboard contents).
+16. **Password lock** (server started with `APP_PASSWORD`): `/kb/roles` shows the unlock screen; empty and wrong passwords show their errors; the 5th failure shows the countdown with Unlock disabled; the right password lands on `/kb/roles`; Settings → Access shows "Password lock is on", and Lock now returns to the unlock screen.
 
 ---
 
@@ -1205,8 +1248,8 @@ Do them in this order. Each ends with its tests green.
 
 | # | Milestone | Includes |
 |---|---|---|
-| M0 | Scaffold | Next.js, Tailwind v4, shadcn, fonts, tokens in `globals.css`, App shell, routes stubbed, Vitest and Playwright configured, CSP |
-| M1 | Schemas and DB | Zod schemas, Drizzle tables and migrations, route handlers, seed script, API tests |
+| M0 | Scaffold | Next.js, Tailwind v4, shadcn, fonts, tokens in `globals.css`, App shell, routes stubbed, Vitest and Playwright configured, CSP, `dev`/`start` bound to `127.0.0.1` with the §4.1 startup check |
+| M1 | Schemas and DB | Zod schemas, Drizzle tables and migrations, route handlers, seed script, API tests, access middleware with `/api/unlock` and `/api/lock` (§4.1; build it before any route handler goes in) |
 | M2 | Typst spike (de-risk early) | Worker, fonts, resume and letter templates rendering seed data; measure compile time (aim for under 300 ms re-render) and confirm PDF text order |
 | M3 | Knowledge base and onboarding | Manual/import chooser, wizard, KB screen, volunteer/additional fields, review and merge/replace |
 | M3a | Resume extraction | Real local PDF/DOCX/TXT input handling, provider extraction, unknown-content preservation and failure states; simulated equivalent for public demo |
@@ -1216,7 +1259,7 @@ Do them in this order. Each ends with its tests green.
 | M7 | Checks | Rules engine, Checks panel, finding navigation |
 | M8 | History and export | History drawer, restore, Export dialog, file naming |
 | M9 | Quick generate | Pipeline emitter, page fitting, the input, progress, error and result screens, Settings defaults |
-| M10 | Backup and polish | Backup export and import, empty states, responsive layout, reduced motion, accessibility pass, e2e suite complete |
+| M10 | Backup and polish | Backup export and import, unlock screen and Settings → Access, empty states, responsive layout, reduced motion, accessibility pass, e2e suite complete |
 | M11 | Public release and demo | GitHub publication/setup/contribution docs, CI, static Vercel demo with simulation boundary and public-demo checks passing |
 
 ---
@@ -1267,7 +1310,7 @@ Do them in this order. Each ends with its tests green.
 - Removed features (§21) have no screens, navigation links or active script dependencies.
 - Document editing, checks, history and export remain available.
 
-**Local application acceptance:** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm dev` (empty user KB); `pnpm db:seed` is optional synthetic demo data; a README documents setup, scripts, BYOK costs/data flow, the mock provider and scenarios. CI is deterministic/offline with mock providers; real integration behavior is separately verified and documented.
+**Local application acceptance:** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm dev` (empty user KB); `pnpm db:seed` is optional synthetic demo data; with `APP_PASSWORD` unset the server only accepts connections from the same computer, and with it set every page and API route requires a session (§4.1); a README documents setup, scripts, BYOK costs/data flow, the mock provider and scenarios. CI is deterministic/offline with mock providers; real integration behavior is separately verified and documented.
 
 **Public demo acceptance:** a Vercel-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
 
@@ -1279,7 +1322,7 @@ Do them in this order. Each ends with its tests green.
 
 **Removed and must not return:** job scraping and discovery, matching inbox, source connections, scheduled sweeps and schedulers, batch generation from discovered jobs, listing-trust scores, outreach and contact discovery, application-stage tracking (status tracker or kanban), career maps, hiring funnels, timing analytics and resume experiments.
 
-**Also out of scope:** paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is in scope); server sync, accounts or multiple devices; multi-column layouts; more than one resume and one cover letter template; DOCX or other export formats (DOCX *import* is in scope); LinkedIn profile integration; MCP or chat-app integrations; interview-style onboarding; dark mode.
+**Also out of scope:** paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is in scope); server sync between devices, user accounts, sign-up and password reset (the single-user password lock in §4.1 is in scope); multi-column layouts; more than one resume and one cover letter template; DOCX or other export formats (DOCX *import* is in scope); LinkedIn profile integration; MCP or chat-app integrations; interview-style onboarding; dark mode.
 
 ---
 
@@ -1326,7 +1369,7 @@ There is no package.json, build, lint or test yet. Run the mock with `xdg-open m
 - `docs.js`: `Docs` builds documents from the KB, renders them as HTML (stand-in for Typst), runs the rules engine and the mock LLM (brief extraction, rewrites).
 - `views-*.js` register routes: `dashboard`, `kb`, `settings` (views-app; KB field schema in `KB_SCHEMA`, order in `KB_ORDER`), `onboarding`, `import` (`ResumeImport`), `new` (chooser, `#/new/studio`, and `#/new/quick` in views-quick with the mock pipeline emitter), `project` (Workspace).
 - The demo notice strip is static markup in `index.html`; its height is the `--demo-h` CSS variable used by sticky elements.
-- Mock-only extras: Demo controls (sidebar) and the `?mock=` scenario parameter (§17). In the real app put these behind a dev-only panel (`NODE_ENV=development`).
+- Mock-only extras: Demo controls (sidebar) and the `?mock=` scenario parameter (§17). The "Simulate a password-protected server" switch turns on `Access` in `core.js`: the router shows `Views.unlock` for every route until the fixture password `instant-demo` is entered, keeping the "session" in `sessionStorage` (the real app uses the §4.1 cookie). In the real app put these behind a dev-only panel (`NODE_ENV=development`).
 
 ### 23.3 Rules for every change
 
