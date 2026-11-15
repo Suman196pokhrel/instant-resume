@@ -59,6 +59,10 @@ Two ways in:
   <img src="docs/assets/quick-generate.png" alt="Quick generate result: keyword coverage, gaps, findings and both documents ready to download" width="90%">
 </p>
 
+## Local-first
+
+The first release runs only where you put it: your own computer, or a private server you control. There is no hosted platform, no account and no Instant Resume API in between. You bring your own Claude, GPT or Gemini key and pay your provider directly, and your data stays in a SQLite file on that machine. The public website will only be a simulated demo.
+
 ## Tech stack
 
 | Layer | Choice |
@@ -109,4 +113,4 @@ Read [`docs/SPEC.md`](docs/SPEC.md) first. It defines what to build, in what ord
 
 ## Licence
 
-Source-available under the [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, clone, modify and share for personal and other noncommercial purposes. **Commercial use, including selling or offering it as a paid service, requires a separate commercial licence**: open an issue or contact [@Suman196pokhrel](https://github.com/Suman196pokhrel).
+Source-available under the [PolyForm Noncommercial 1.0.0](LICENSE). Free to use, clone, modify and share for personal and other noncommercial purposes. Using it to prepare your own resume and job applications counts as personal use. **Commercial use, including selling copies or modified versions or offering it as a paid service, requires a separate commercial licence**: open an issue or contact [@Suman196pokhrel](https://github.com/Suman196pokhrel).

@@ -42,7 +42,8 @@
 
 **Instant Resume** is a source-available, locally hosted, bring-your-own-key (BYOK) web app. It turns a pasted job description into an ATS-friendly resume and cover letter, grounded only in facts the user entered once into a knowledge base. It solves one narrow problem: preparing tailored application documents from stored experience. It does not find jobs, submit applications or manage a hiring pipeline.
 
-- Runs on the user's machine (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
+- Runs on the user's own machine or a private server the user controls (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
+- **Local-first is the first-stage target.** There is no hosted platform and no Instant Resume API between the user and their AI provider. Any hosted offering would need an explicit revision of this spec first.
 - Source on a public GitHub repository, built in public.
 - Vercel hosts only a **simulated** public demo (§1.5).
 - No subscription, billing, accounts, managed real-user backend or live public AI service.
@@ -185,7 +186,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Source and collaboration | Public GitHub repository; build in public |
 | Public demo host | Vercel; static simulated demo, no provider secrets or database |
 | Framework | Next.js (App Router), TypeScript strict mode |
-| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`). The real app runs locally; Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
+| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts, so a self-hosted instance must be reachable only by its owner and served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
 | Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
@@ -212,7 +213,7 @@ Layout: **single column only** for ATS safety. **One** resume template and **one
 ### 3.1 GitHub and Vercel delivery requirements
 
 - GitHub is the source/collaboration destination. Publish code, versioned docs, synthetic fixtures, tests and reproducible local setup.
-- Licence: **PolyForm Noncommercial 1.0.0** (`LICENSE`, with the owner's `Required Notice:` line). Free for personal and other noncommercial use, modification and redistribution; commercial use requires a separate paid licence from the owner. Call the project "source-available", never "open source" (the licence is not OSI-approved). Do not change the licence without the owner.
+- Licence: **PolyForm Noncommercial 1.0.0** (`LICENSE`, with the owner's `Required Notice:` line). Free for personal and other noncommercial use, modification and redistribution; preparing one's own resume and job applications counts as personal use. Commercial use, including selling copies or modified versions, requires a separate paid licence from the owner. Call the project "source-available", never "open source" (the licence is not OSI-approved). Do not change the licence without the owner.
 - Initial Vercel deployment serves **only `mock/`** as static HTML/CSS/JavaScript. Keep docs, local data, key stores and development configuration out of the deployment artifact. No Next.js route handlers, database service or live LLM functions are needed for this static artifact.
 - Use a Git-connected deployment workflow with checks before production promotion; preview deployments can support review. Do not deploy every change directly to the public demo without validating it.
 - If the mock is later replaced by a demo build of the real UI, provide a separate static/demo target with mock provider and browser persistence adapters. A runtime toggle alone must not enable live providers on the public deployment. Never deploy the full local server under the assumption that setting one mock-provider flag removes its database/API dependencies.

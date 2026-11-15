@@ -1,6 +1,6 @@
 # Agent guide
 
-Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first, bring-your-own-key app that turns a pasted job description plus a stored knowledge base into a tailored resume and cover letter.
+Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first (own machine or private server; no hosted platform), bring-your-own-key app that turns a pasted job description plus a stored knowledge base into a tailored resume and cover letter.
 
 ## Read this first
 
