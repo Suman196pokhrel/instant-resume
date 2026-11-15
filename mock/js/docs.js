@@ -294,18 +294,18 @@ const Docs = (function () {
         (it.bullets || []).forEach((b) => {
           const src = findHighlight(kb, b.source);
           if (!src) {
-            findings.push({ type: 'grounding', sectionId: s.id, title: 'Bullet has no source in your knowledge base', detail: `"${b.text.slice(0, 70)}…"` });
+            findings.push({ type: 'grounding', sectionId: s.id, bulletId: b.id, title: 'Bullet has no source in your knowledge base', detail: `"${b.text.slice(0, 70)}…"` });
             return;
           }
           const srcText = src.text + ' ' + (src.metric || '');
           (b.text.match(NUM_RE) || []).map((n) => n.trim()).forEach((n) => {
             if (!srcText.includes(n)) {
-              findings.push({ type: 'grounding', sectionId: s.id, title: `"${n}" doesn't match your knowledge base`, detail: `Under ${it.sub || it.heading}. Your knowledge base says: "${src.text}"` });
+              findings.push({ type: 'grounding', sectionId: s.id, bulletId: b.id, title: `"${n}" doesn't match your knowledge base`, detail: `Under ${it.sub || it.heading}. Your knowledge base says: "${src.text}"` });
             }
           });
           known.forEach((term) => {
             if (term.length > 2 && kwMatch(b.text, term) && !kwMatch(srcText + ' ' + (src.skills || []).join(' '), term) && !kwMatch(entryText(src.owner), term)) {
-              findings.push({ type: 'grounding', sectionId: s.id, title: `Mentions ${term}, which this role doesn't record`, detail: `Under ${it.sub || it.heading}. Add it to the role in your knowledge base if it's true.` });
+              findings.push({ type: 'grounding', sectionId: s.id, bulletId: b.id, title: `Mentions ${term}, which this role doesn't record`, detail: `Under ${it.sub || it.heading}. Add it to the role in your knowledge base if it's true.` });
             }
           });
         });

@@ -113,10 +113,12 @@ function icon(name, size = 16) {
 }
 
 /* ---------- Tooltips ----------
-   Any element with data-tip="text" (optional data-tip-title="Heading") gets a small popover on hover
-   after a short delay, and immediately on keyboard focus. It is linked with aria-describedby while shown. */
+   Any element with data-tip="text" (optional data-tip-title="Heading", data-tip-side="right") gets a small
+   popover. Hover shows it after 150 ms; once one is open, moving to the next shows it at once (300 ms warm
+   window). Keyboard focus shows it immediately. It never takes pointer events and hides on any press,
+   scroll or route change, so it can't block what's underneath. Linked with aria-describedby while shown. */
 const Tip = (function () {
-  let el = null, timer = 0, owner = null;
+  let el = null, timer = 0, owner = null, warmUntil = 0;
   function ensure() {
     if (el) return el;
     el = document.createElement('div');
@@ -134,38 +136,63 @@ const Tip = (function () {
     tip.hidden = false;
     tip.classList.remove('in');
     const r = t.getBoundingClientRect();
-    const tw = tip.offsetWidth, th = tip.offsetHeight;
-    const above = r.top - th - 8 > 4;
-    const left = Math.max(8, Math.min(window.innerWidth - tw - 8, r.left + r.width / 2 - tw / 2));
+    const tw = tip.offsetWidth, th = tip.offsetHeight, gap = 8;
+    let side = t.dataset.tipSide || (r.top - th - gap > 4 ? 'top' : 'bottom');
+    if (side === 'right' && r.right + gap + tw > innerWidth - 8) side = 'top';
+    let left, top;
+    if (side === 'right') { left = r.right + gap; top = Math.max(8, r.top + r.height / 2 - th / 2); tip.style.setProperty('--ay', (r.top + r.height / 2 - top) + 'px'); }
+    else {
+      left = Math.max(8, Math.min(innerWidth - tw - 8, r.left + r.width / 2 - tw / 2));
+      top = side === 'top' ? r.top - th - gap : r.bottom + gap;
+      tip.style.setProperty('--ax', (r.left + r.width / 2 - left) + 'px');
+    }
     tip.style.left = left + 'px';
-    tip.style.top = (above ? r.top - th - 8 : r.bottom + 8) + 'px';
-    tip.style.setProperty('--ax', (r.left + r.width / 2 - left) + 'px');
-    tip.dataset.side = above ? 'top' : 'bottom';
+    tip.style.top = top + 'px';
+    tip.dataset.side = side;
     requestAnimationFrame(() => tip.classList.add('in'));
     owner = t;
     t.setAttribute('aria-describedby', 'tip');
   }
-  function hide() {
+  function hide(cool) {
     clearTimeout(timer);
-    if (el) { el.hidden = true; el.classList.remove('in'); }
+    if (el && !el.hidden) { el.hidden = true; el.classList.remove('in'); if (!cool) warmUntil = performance.now() + 300; }
     if (owner) { owner.removeAttribute('aria-describedby'); owner = null; }
   }
+  const coolHide = () => { hide(true); warmUntil = 0; };
   document.addEventListener('pointerover', (e) => {
     if (e.pointerType === 'touch') return;
     const t = e.target.closest('[data-tip]');
     if (t === owner) return;
     hide();
-    if (t) timer = setTimeout(() => t.isConnected && show(t), 320);
+    if (!t) return;
+    if (performance.now() < warmUntil) show(t);
+    else timer = setTimeout(() => t.isConnected && t.matches(':hover') && show(t), 150);
   });
   document.addEventListener('pointerout', (e) => { const t = e.target.closest('[data-tip]'); if (t && !t.contains(e.relatedTarget)) hide(); });
   document.addEventListener('focusin', (e) => { const t = e.target.closest('[data-tip]'); hide(); if (t && t.matches(':focus-visible')) show(t); });
-  document.addEventListener('focusout', hide);
-  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') hide(); });
-  document.addEventListener('pointerdown', hide);
-  window.addEventListener('scroll', hide, true);
-  window.addEventListener('hashchange', hide);
-  return { hide };
+  document.addEventListener('focusout', () => hide());
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape') coolHide(); });
+  document.addEventListener('pointerdown', coolHide, true);
+  window.addEventListener('scroll', coolHide, true);
+  window.addEventListener('hashchange', coolHide);
+  // Call after replacing markup: hides the tooltip if its element is gone
+  const sweep = () => { if (owner && !owner.isConnected) coolHide(); };
+  return { hide: coolHide, sweep };
 })();
+
+/* ---------- View transitions ----------
+   Runs a DOM update inside document.startViewTransition so named parts (sections, rows, the step panel)
+   glide to their new place. `kind` sets html[data-vt] so CSS can pick a direction. Without support, or
+   with reduced motion, the update just runs. The update runs asynchronously when animated, so anything
+   that needs the new DOM (focus) belongs inside `update`; the returned promise settles after the motion. */
+function vt(update, kind = '') {
+  if (!document.startViewTransition || reducedMotion()) { update(); return Promise.resolve(); }
+  const html = document.documentElement;
+  html.dataset.vt = kind;
+  const t = document.startViewTransition(update);
+  t.ready.catch(() => {}); // a newer transition skipped this one; the update still ran
+  return t.finished.catch(() => {}).finally(() => { if (html.dataset.vt === kind) delete html.dataset.vt; });
+}
 
 // Small "i" that explains a term on hover or focus
 function infoTip(text, title) {
@@ -385,10 +412,10 @@ function shell(content, { route, title, actions = '', compact = false, flush = f
         <span class="brand-name">Instant Resume</span>
       </a>
       <nav class="nav">
-        ${nav.map((n) => `<a href="#/${n.r}" class="nav-item ${route === n.r ? 'active' : ''}" title="${n.label}">${icon(n.ic, 18)}<span>${n.label}</span></a>`).join('')}
+        ${nav.map((n) => `<a href="#/${n.r}" class="nav-item ${route === n.r ? 'active' : ''}" ${compact ? `data-tip="${n.label}" data-tip-side="right"` : ''}>${icon(n.ic, 18)}<span>${n.label}</span></a>`).join('')}
       </nav>
       <div class="sidebar-foot">
-        <button class="nav-item demo-btn" data-demo title="Demo controls">${icon('flask', 18)}<span>Demo controls</span></button>
+        <button class="nav-item demo-btn" data-demo ${compact ? 'data-tip="Demo controls" data-tip-side="right"' : ''}>${icon('flask', 18)}<span>Demo controls</span></button>
         <div class="local-note"><span class="dot-ok"></span><span>${Store.state.demo.passwordLock ? 'Stored on your server' : 'Stored on this device'}</span></div>
       </div>
     </aside>
@@ -472,15 +499,20 @@ const Router = {
     return { name, params: rest };
   },
   refresh() {
-    if (Router.cleanup) { try { Router.cleanup(); } catch (e) { console.error(e); } Router.cleanup = null; }
     const { name, params } = Router.parse();
     // Every page sits behind the lock when it's on; the URL is kept so unlocking lands where you were going
     const view = Access.locked() ? Views.unlock : (Views[name] || Views.dashboard);
     const root = $('#app');
     $('#modal-root').innerHTML = '';
-    const result = view(root, params);
-    if (typeof result === 'function') Router.cleanup = result;
-    window.scrollTo(0, 0);
+    // Cleanup runs right before the new view renders, so two quick refreshes can't skip one
+    const render = () => {
+      if (Router.cleanup) { try { Router.cleanup(); } catch (e) { console.error(e); } Router.cleanup = null; }
+      const result = view(root, params);
+      if (typeof result === 'function') Router.cleanup = result;
+      window.scrollTo(0, 0);
+    };
+    // First paint renders straight away; later navigations crossfade (the sidebar stays put)
+    if (Router.booted) vt(render, 'route'); else { Router.booted = true; render(); }
   },
 };
 window.addEventListener('hashchange', () => Router.refresh());

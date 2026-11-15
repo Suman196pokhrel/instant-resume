@@ -192,7 +192,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
 | Forms | React Hook Form + Zod resolver |
 | Editor state | Zustand (one store per open project; see 14.5) |
-| UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. No Framer Motion or animation libraries in app screens; CSS transitions only. |
+| UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. No Framer Motion or animation libraries in app screens: CSS transitions and keyframes, plus the browser's View Transitions API (`document.startViewTransition`) where section 12 says so. |
 | Drag and drop | dnd-kit (with keyboard sensor) |
 | LLM | Vercel AI SDK, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. Use `generateObject` with Zod schemas. |
 | Patching | `fast-json-patch` (RFC 6902) |
@@ -559,7 +559,7 @@ Allowed operations for generation:
 4. Every bullet's `source` exists in the KB and belongs to the item's `ref` entry (or, for generation, to a selected entry).
 5. IDs, `kind`, `hidden`, section order, theme and `recipient` are unchanged.
 
-Any failure rejects the whole patch: "The model returned changes we couldn't apply safely. Nothing was changed. Try again." The rewrite flow then shows the diff of the validated result. A rewrite that produces no change shows `No change suggested for "{instruction}". Try something more specific, like "more concise" or "emphasise {keyword}".`
+Any failure rejects the whole patch: "The model returned changes we couldn't apply safely. Nothing was changed. Try again." The rewrite flow then shows the diff of the validated result. A rewrite that produces no change shows `No change suggested for "{instruction}". Try a different instruction, like "{example}".`, where the example is the first of "emphasise {keyword}", "lead with metrics" and "more concise" that differs from the instruction just sent.
 
 Token estimate shown under the Instruction box: `Sends only this section, about {N} tokens` where N ≈ characters/4 of the section plus fixed overhead (~380). Generation shows "about 6,000 tokens".
 
@@ -660,7 +660,7 @@ Pure functions in `lib/checks/`, no LLM, run after every change (debounced 250 m
 
 ### 10.1 Keyword coverage
 
-Case-insensitive match of each brief keyword against the visible text of the document. Loose rules: hyphens equal spaces, and a trailing "s" is optional ("Design system" matches "design systems"). For each missing keyword, `inKb` is true if the KB text contains it. In the UI, missing keywords that are in the KB get the action "In your knowledge base. Emphasise it", which opens the Experience section with the instruction prefilled as "Emphasise {keyword}". Missing keywords not in the KB say "Not in your knowledge base". Quick generate adds a `coverage` finding when coverage is below 60% (owner to confirm the threshold).
+Case-insensitive match of each brief keyword against the visible text of the document. Loose rules: hyphens equal spaces, and a trailing "s" is optional ("Design system" matches "design systems"). For each missing keyword, `inKb` is true if the KB text contains it. In the UI, missing keywords that are in the KB get the action "✦ Emphasise" (tooltip "It's in your knowledge base. Ask for a rewrite that brings it forward."), which opens the Experience section with the instruction prefilled as "Emphasise {keyword}". Missing keywords not in the KB get "+ Add it" (tooltip "Not in your knowledge base yet. Add what you did, then it can be claimed."). Quick generate adds a `coverage` finding when coverage is below 60% (owner to confirm the threshold).
 
 ### 10.2 Banned phrases
 
@@ -741,7 +741,7 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 | Sidebar | 232px (compact 60px in the Workspace, icons only); sticky, full height, `--surface-2`, right border |
 | Top bar | 58px; title or breadcrumb on the left; actions and model picker on the right |
 | Content | max-width 1180px, padding 28px |
-| Workspace bar | 54px: breadcrumb and title (left), Document tabs (centre), save state, undo, History, Export PDF and model picker (right) |
+| Workspace bar | 54px: breadcrumb and title (left), Document tabs (centre); right: save state, then a quiet tool group (undo, copy, History) closed by a hairline divider, primary Export PDF, and the model picker showing the model id only |
 | Workspace columns | Job panel 290px · Preview flexible · Inspector 372px. Below 1180px: 270 · flex · 340, with the job panel closed by default and toggled from the preview bar. |
 | History drawer | 360px, slides over the right side, below the Workspace bar |
 | KB layout | 210px sub-nav + flexible list |
@@ -753,11 +753,15 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 
 ### 11.5 Components (shadcn mapping)
 
-- **Button:** primary (accent fill, white text), ghost (white, `--line-2` border), danger-ghost (transparent, red text, red-line border), icon button 30×30. Sizes: default 36px tall, small 30px. Pressed state: translateY(1px). Disabled: 50% opacity.
+- **Button:** primary (accent fill, white text), ghost (white, `--line-2` border), danger-ghost (transparent, red text, red-line border), icon button 30×30. Quiet (transparent, sunken on hover) for secondary actions in dense toolbars. Sizes: default 36px tall, small 30px. Pressed state: scale .97 (icon buttons .9), springing back on release (section 12). Primary buttons carry a faint inner highlight and a 1px accent shadow. Disabled: 50% opacity.
 - **Pill (Badge):** 12px/500, `--sunken` background; ok variant (accent-soft and accent-ink) and warn variant.
 - **Chip:** 12.5px, rounded. Variants: neutral (surface-2 with line border); ok (accent-soft with a check icon); missing (white, **dashed** border, muted); gap (warn-soft, warn-line, alert icon); and clickable suggestion chips that turn accent on hover. Removable chips have a small ×.
 - **Count badge:** 18px circle; warn variant.
-- **Segmented control:** sunken track with 3px padding; the active segment is white with a 1px shadow. Used for Document tabs, Job/Checks, paper size, spelling and page budget.
+- **Segmented control:** sunken track with 3px padding and equal-width options; a white thumb with a 1px shadow slides (spring) under the active option. Used for Document tabs, Job/Checks, paper size, spelling and page budget.
+- **Tabs (inspector):** equal-width tabs over a hairline; a 2px accent underline slides (spring) to the active tab.
+- **Tooltip:** ink background, light 12.5px text, optional bold title, 8px arrow, max-width 260px. Shows 150 ms after hover, or at once when another tooltip closed within the last 300 ms, and at once on keyboard focus. Enters with a 120 ms fade and scale from .97 towards its arrow; hides instantly on any press, scroll, Escape or route change. It never takes pointer events, so it can't block a click. Placed above (below if there's no room); the compact sidebar's tooltips sit to the right. Native `title` attributes are not used.
+- **Disclosure:** a summary row with a chevron that turns 90° (180 ms) and content that fades in. Used for the job description, parse safety and Studio notes.
+- **Checkbox (option rows):** 18px, 5px radius, accent fill with a white tick when checked; presses with a small spring (scale .86).
 - **Switch:** 38×22 track, accent when on, with an "On"/"Off" text label next to it.
 - **Callout:** icon plus text; default, warn and error variants.
 - **Banner:** accent-soft with an icon, text, action and dismiss.
@@ -766,8 +770,8 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 - **Toast:** ink background, light text, optional action in `#8FD6C6`, bottom centre; error variant in red. Auto-dismiss after 3.2 s, or 6 s with an action.
 - **Dialog:** 480px (720px wide variant), header with title and close ×, body, footer right-aligned (a destructive action sits far left).
 - **Model picker:** a 32px button with provider dot, muted provider name and model id, opening a 270px menu (see 8.2).
-- **Stepper:** pill steps with numbered circles: current = ink circle, done = accent circle with a check, pending = sunken.
-- **Range slider:** accent colour, with the label left and the value right (tabular numbers) above it.
+- **Stepper:** numbered circles joined by short lines: current = ink circle with a halo and a bold label, done = accent circle with a check and an accent-line connector, pending = sunken.
+- **Range slider:** a 4px track filled with accent up to the value, a 16px white thumb with an accent ring that grows slightly while dragged; label left and value right (tabular numbers) above it.
 - **Font option cards:** a three-column grid, each showing "Aa" in that font plus its name; the selected card has an accent border and inset ring.
 - **Swatches:** 30px circles; the selected one has a 2px surface gap and a 2px ring in its own colour; the last is a conic-gradient custom colour picker.
 
@@ -775,14 +779,22 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 
 ## 12. Motion and animation
 
-Rules: motion only answers a user action or shows progress. Durations 150–300 ms for UI transitions. No bounce, no confetti. **Respect `prefers-reduced-motion`**: set animation and transition durations to ~0 and swap states instantly (one global CSS rule, plus JS checks for smooth scrolling and artificial delays). Animation code stays scoped to the screens that use it. No animation libraries in app screens.
+Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 120 ms, `--t` 180 ms, `--t-slow` 280 ms, `--ease` `cubic-bezier(.22, 1, .36, 1)`, and `--spring` (480 ms, a CSS `linear()` curve with about 4% overshoot). The spring is only for small, discrete state changes: segmented thumbs and tab underlines, the switch knob, pressed buttons, checkboxes, menus, tooltips, toasts, the dialog panel and the proposal card. Large surfaces (drawer, sheet, page and step changes) and progress use `--ease` with no overshoot. No confetti, and nothing animates on load except a screen's one signature moment. Never animate on every render: anything re-rendered while typing (the preview, the job panel) only animates on a real state change. View transitions (`vt()` in the mock) run with clicks passing through (`::view-transition { pointer-events: none }`), so they never swallow input. **Respect `prefers-reduced-motion`**: set animation and transition durations to ~0 and swap states instantly (one global CSS rule, plus JS checks for smooth scrolling and artificial delays). Animation code stays scoped to the screens that use it. No animation libraries in app screens.
 
 | Element | Animation |
 |---|---|
-| Buttons, inputs, nav, cards | colour, border and shadow transitions, 150 ms |
-| Toast | in: opacity 0→1, translateY 8px→0, 200 ms; out the same in reverse |
-| Dialog | backdrop fade 180 ms; panel translateY 6px and scale .985→1, 180 ms |
-| Model picker menu | "pop": opacity 0, translateY −4px, scale .98 → normal, 140 ms ease-out |
+| Buttons, inputs, nav, cards | colour, border and shadow transitions, `--t`; press scale with `--spring`; project cards lift 1px on hover |
+| Segmented thumb, tab underline, switch knob | slide with `--spring` |
+| Tooltip | see 11.5: 150 ms delay (300 ms warm window), 120 ms fade and scale in, instant hide |
+| Page change | crossfade, 160 ms; the sidebar and demo strip stay still (view transition) |
+| Studio step change | the step panel slides 24px in the direction of travel (out 200 ms, in 280 ms) while the stepper stays put (view transition) |
+| Document switch (Resume ↔ Cover letter) | crossfade (view transition) |
+| Reorder or hide a section | the moved sections glide to their new place on the page and in the Structure list at the same time (view transition, `--t-slow`), then the moved section flashes |
+| Accepting a proposal | the section morphs from its proposed state to the final one, then flashes |
+| Checks keyword ring | draws from empty in 700 ms when the Checks tab opens (not on later re-renders) |
+| Toast | in: opacity 0→1 (`--t`), translateY 10px and scale .97 → normal with `--spring`; out the same in reverse |
+| Dialog | backdrop fade `--t`; panel translateY 8px and scale .97 → 1 with `--spring` |
+| Model picker menu, card menu | "pop": opacity 0, translateY −4px, scale .96 → normal with `--spring`, growing from the corner nearest the button |
 | Onboarding step change | card slides from +18px (next) or −18px (back) with fade, 280 ms `cubic-bezier(.3,.7,.3,1)` |
 | Progress bars | width transition 450 ms with the same easing (Quick generate overall bar: 300 ms linear, driven by progress events) |
 | Saved indicator (onboarding) | "✓ Saved" appears, holds, and fades out over 2.4 s |
@@ -793,10 +805,10 @@ Rules: motion only answers a user action or shows progress. Durations 150–300 
 | Preview after generation | sheet reveal: opacity 0, translateY 14px → normal, 600 ms |
 | Section flash (from a finding, after accept, after a reorder) | background `#FFF4C9` fading to transparent over 1.2 s, with smooth scroll into view |
 | Section being rewritten | 2px accent outline plus a moving shimmer overlay, 1.1 s loop |
-| Proposed change | dashed amber outline, `#FFFBF1` background, "Proposed" tag; the proposal card pops in (200 ms) |
+| Proposed change | dashed amber outline, `#FFFBF1` background, "Proposed" tag; the proposal card pops in with `--spring` |
 | Rewrite working strip | accent-soft strip "Rewriting with {model}" with a white sweep, 1.2 s loop |
 | Render status | text briefly flashes accent-ink (600 ms) after each render |
-| History drawer | translateX 105% → 0, 250 ms `cubic-bezier(.3,.7,.3,1)` |
+| History drawer | translateX 105% → 0, `--t-slow` `--ease`; hidden from focus when closed |
 | Structure drag | dragged row 40% opacity; 3px accent line above or below the drop target |
 | Onboarding complete | an SVG check: circle stroke draws in 600 ms, then the tick draws in 350 ms after a 500 ms delay |
 | Quick generate cards | `qgIn`: opacity 0, translateY 6px → normal, 250 ms, staggered 80 ms per card |
@@ -1019,9 +1031,9 @@ Settings used: theme preset, page budget (1 page also hides Portfolio, Certifica
 
 A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries → 4 Generate. The draft persists across navigation.
 
-1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count, then the same optional "Notes for this application" field as Quick generate. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
-2. **Job brief:** "Job brief" / "Extracted from the ad. Fix anything that's wrong; keywords drive tailoring and checks." A pill "✦ Extracted by {model}". Editable Role, Company, Location and Team (optional). Two columns: Requirements list (and Nice to have); Keywords as removable chips (teal with ✓ when the KB supports them, dashed grey otherwise; help text "Teal keywords are backed by your knowledge base. Grey ones aren't, so they can't be claimed."), plus "Add a keyword". A work-rights callout if the ad states a requirement: "{ad requirement}. Your knowledge base says: {status}." Buttons: "Edit job description" and "Choose entries".
-3. **Choose entries:** "Choose what to draw on" / "Suggestions are based on keyword matches. Only ticked entries can appear in the documents." A counter pill "{n} of {total} selected". Grouped checkbox rows (Experience, Portfolio, Education, Certifications and awards, Referees), each with the entry name, "Matches React, TypeScript…" (up to 5) or "No keyword matches", and a "Suggested" pill. At least one non-reference KB entry is required: "Select at least one knowledge base entry". Include volunteer roles and additional sections; original resume text is reference-only. Footer: "Runs on {model}, about 6,000 tokens" and primary "✦ Generate resume and cover letter".
+1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count, then the same optional "Notes for this application" field as Quick generate, folded into a disclosure that starts open only when there are notes. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
+2. **Job brief:** "Job brief" / "Extracted from the ad. Fix anything that's wrong; keywords drive tailoring and checks." A pill "✦ Extracted by {model}". Editable Role, Company, Location and Team (optional). Two columns: Requirements list (and Nice to have), each heading with a count; Keywords (with a count) as removable chips (teal with ✓ when the KB supports them, dashed grey otherwise) under a two-item legend "Backed by your knowledge base" / "Not backed, so it can't be claimed", plus "Add a keyword". A work-rights callout if the ad states a requirement: "{ad requirement}. Your knowledge base says: {status}." Buttons: "Edit job description" and "Choose entries".
+3. **Choose entries:** "Choose what to draw on" / "Suggestions are based on keyword matches. Only ticked entries can appear in the documents." Two pills: "Covers {m} of {n} keywords" (job keywords backed by the ticked entries plus the skills list; updates live; warn colour below half) and "{n} of {total} selected". Grouped checkbox rows (Experience, Portfolio, Education, Certifications and awards, Referees), each with the entry name, a small "• Suggested" marker, "Matches React, TypeScript…" (up to 5) or "No keyword matches", and, when it matches any, a small relevance bar (matched ÷ job keywords; tooltip "Matches {m} of {n} job keywords"). At least one non-reference KB entry is required: "Select at least one knowledge base entry". Include volunteer roles and additional sections; original resume text is reference-only. Footer (sticky to the bottom of the viewport): "Runs on {model}, about 6,000 tokens" and primary "✦ Generate resume and cover letter".
 4. **Generate:** h1 "Generating for {company}", "Using {model}. Only facts from the entries you chose can be used." Six stages with icons and times, where "on device" tags mark the non-LLM steps: Matching knowledge base entries to the brief (on device), Drafting the resume, Drafting the cover letter, Validating the response (done note "{n} operations, all valid"), Running checks (on device), Rendering the PDF preview (on device). An elapsed counter. A ghost page on the right whose lines grow as sections draft. On failure: the stage turns red and a callout reads "Generation stopped while drafting the cover letter." / "{Provider} returned {code}: {message}. Nothing was saved, and your job description, brief and selections are kept." with Retry, Switch model (opens the picker) and Back to entries. On success: save the project and go to the Workspace, with the toast "Generated in {s}s. Review the checks before you export." (or "No issues found.").
 
 ### 14.5 Workspace (`/projects/[id]`)
@@ -1032,39 +1044,39 @@ State: a Zustand store per project holding `{ kind, selectedSectionId, inspector
 - "‹ Applications / {role} at {company}" (the company part muted).
 - Document tabs: Resume | Cover letter (segmented). Switching keeps each document's own state.
 - Save pill: "Saving" with a small spinner, then "✓ Saved".
-- Undo icon button, with the tooltip "Undo: {label}" or "Nothing to undo". Ctrl/Cmd+Z does the same when focus isn't in a text field.
+- Undo icon button, with the tooltip "Undo: {label} (Ctrl+Z)" or "Nothing to undo". Ctrl/Cmd+Z does the same when focus isn't in a text field.
+- Undo, Copy and History sit together as a quiet tool group; Export PDF is the only filled button.
 - Copy icon button (tooltip "Copy as plain text, for job sites that ask you to paste"): copies the current document as plain text (name, contact line, work rights for Australian conventions, then each visible section with an upper-case heading and "•" bullets; the cover letter adds the greeting and sign-off). No LLM call.
-- "History", primary "Export PDF", model picker.
+- "History" (quiet button), primary "Export PDF", model picker (model id only; the provider shows as the dot colour and in the menu).
 
-**Job panel (left), Job tab:** role, company, location; "Keywords in this {document}" chips (✓ matched, dashed missing); Requirements; "Your notes" (the project's `notes`, editable and autosaved; help "Used as a fact you supplied. Changes apply the next time you regenerate or rewrite."); a collapsible "Job description" showing the full JD (pre-wrap, scrollable); "✦ Regenerate both documents" opens a dialog: "This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on {model}. Your current versions stay in history, so you can restore them. For small changes, rewriting one section is quicker and cheaper." with Cancel and Regenerate. Regeneration keeps each document's theme, adds a revision, and pushes an undo step.
+**Job panel (left), Job tab:** role as the heading, then company · location; Requirements with "{m} of {n} reflected", where each requirement is marked reflected (accent tick) when a job keyword it mentions appears in this document, not reflected (dashed ring), or unmarked (small dot) when it mentions no keyword (info tooltip explains); Keywords with "{m} of {n} in this {document}" and chips (✓ matched, dashed missing); "Your notes" (the project's `notes`, editable and autosaved; info tooltip "Used as a fact you supplied. Changes apply the next time you regenerate or rewrite."); a collapsible "Job description" showing the full JD (pre-wrap, scrollable); "✦ Regenerate both documents" (a quiet, full-width button at the foot of the panel) opens a dialog: "This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on {model}. Your current versions stay in history, so you can restore them. For small changes, rewriting one section is quicker and cheaper." with Cancel and Regenerate. Regeneration keeps each document's theme, adds a revision, and pushes an undo step.
 
-**Checks tab** (the count badge shows the number of findings, warn colour): "⚡ Checks run on this device after every change. No LLM call." Then Job keyword match (bar plus "{m} of {n}") with the missing keywords and their actions (10.1). A missing keyword that's in the KB offers "In your knowledge base. Emphasise it"; one that isn't shows "Not in your knowledge base." with "+ Add it", which opens the Add evidence dialog (14.3) for that keyword and refreshes the checks on save; "Claims not found in your knowledge base" (count) with finding buttons; "Banned phrases" (count) with "None found." in green when empty; "Parse safety" list plus the no-ATS-score note. Each finding is a button (warn or danger tinted) with a title, a detail and "Go to {section}". Clicking one selects that section in the Content tab, scrolls the preview to it and flashes it.
+**Checks tab** (the count badge shows the number of findings, warn colour): first a verdict: "{n} things to review" / "Select one to jump to it. You can still export." (warn) or "Nothing to fix" / "This {document} is ready to export." (accent). Then Job keyword match: a ring (draws in when the tab opens) with "{m} of {n}" / "keywords appear in this {document}", and the missing keywords as rows with their action on the right (10.1): "✦ Emphasise" when the keyword is in the KB (tooltip "It's in your knowledge base. Ask for a rewrite that brings it forward."), otherwise "+ Add it" (tooltip "Not in your knowledge base yet. Add what you did, then it can be claimed."), which opens the Add evidence dialog (14.3) for that keyword and refreshes the checks on save. "Claims not found in your knowledge base" and "Banned phrases" each show their count and finding buttons, or collapse to one green line ("Every claim traces to your knowledge base", "No banned phrases") when empty. "Parse safety · {m} of {n} pass" is a disclosure, open only when something fails, holding the list and the no-ATS-score note. Footer: "⚡ Checks run on this device after every change. No LLM call." Each finding is a button (warn or danger tinted) with a title, a detail and "Go to {section}". Clicking one selects that section in the Content tab, scrolls the preview to it and flashes it.
 
-**Preview (centre):** the bar holds the job panel toggle, zoom (− / "125% fit" / +, range 40–160%, Fit by default) and the render status. The sheet sits on a sunken background with a page-break line every 297mm. Sections have a hover outline (accent-line), a selected outline (2px accent), a proposed state and a rewriting state. Viewing a revision shows a dark banner pinned at the top: "Viewing the revision from {time}: {label}" with "Restore this version" and "Back to current". While a revision is shown, the inspector is locked behind a white overlay: "You're viewing an older revision. Restore it or go back to the current version to edit."
+**Preview (centre):** the bar holds the job panel toggle, zoom (− / "125% fit" / +, range 40–160%, Fit by default) and the render status. The sheet sits on a sunken background with a page-break line every 297mm. Sections have a hover outline (accent-line), a selected outline (2px accent), a proposed state and a rewriting state. In the selected resume section, hovering a bullet tints it and shows a tooltip with the knowledge base fact it was written from ("From your knowledge base" + the highlight text), or, in amber, "Differs from your knowledge base" (a grounding finding points at that bullet; the source text is still shown) or "No source found". Preview-bar buttons use tooltips ("Show or hide the job panel", "Zoom out", "Fit to width", "Zoom in"). Viewing a revision shows a dark banner pinned at the top: "Viewing the revision from {time}: {label}" with "Restore this version" and "Back to current". While a revision is shown, the inspector is locked behind a white overlay: "You're viewing an older revision. Restore it or go back to the current version to edit."
 
 **Inspector, Content tab:**
-- With no section selected: "Choose a section, or click it in the preview. You can edit text yourself or give an instruction to rewrite just that section." and a list of section rows (title, text preview, "Hidden" if hidden, chevron).
+- With no section selected: heading "Sections" ("Paragraphs" for the cover letter), "Pick one to rewrite it with AI or edit it by hand. You can also click it in the preview.", and one hairline-separated list of rows (title, a "Hidden" pill if hidden, a one-line text preview, a chevron that nudges right on hover).
 - With a section selected:
-  - "‹ All sections" (or "All paragraphs"), with "Copy text" on the right (copies just this section as plain text).
-  - Heading input (read-only for cover letter paragraphs).
-  - **Instruction box:** "✦ Rewrite this section" with a textarea (placeholder "e.g. more concise, emphasise GraphQL"). Suggestion chips depend on the section kind:
+  - A header row: a back icon button (tooltip "All sections" or "All paragraphs"), the section title, and a copy icon button (tooltip "Copy this section as plain text"; copies just this section).
+  - **Instruction box** (the raised card, the visual focus of this view): "✦ Rewrite this section" with a textarea (placeholder "e.g. more concise, emphasise GraphQL"). Suggestion chips depend on the section kind:
     - summary: More concise, Emphasise {kw}, Stronger verbs
     - experience/portfolio: More concise, Emphasise {kw}, Lead with metrics, Stronger verbs
     - skills: Emphasise {kw}, Emphasise {kw2}
     - paragraph: More concise, More formal, Warmer tone, Emphasise {kw}
     - {kw} is the first missing keyword that's in the KB, otherwise the first brief keyword.
-  - Instruction box footer: "Sends only this section, about {N} tokens" and a "Rewrite" button. Ctrl/Cmd+Enter submits. Clicking a chip fills the instruction and submits.
+  - The textarea and its footer ("Sends only this section, about {N} tokens" and a "Rewrite" button with the tooltip "Ctrl+Enter") share one bordered composer that takes the accent focus ring; the suggestion chips sit under it. Ctrl/Cmd+Enter submits. Clicking a chip fills the instruction and submits.
   - While working, the button shows a spinner and "Rewriting", the strip reads "Rewriting with {model}", the preview section shimmers, and the inputs are disabled.
   - **Proposal card** (replaces the instruction box):
-    - Header: "Proposed change" with the quoted instruction.
+    - Header: ✦ "Proposed change" with the quoted instruction.
     - A word-level diff. Deleted words appear struck through in red; inserted words appear in green. Bullet rows can carry tags: "moved up", "from knowledge base" (a new bullet sourced from a highlight) and "removed".
     - Warnings as callouts, for example: "Kubernetes isn't in your knowledge base. If you accept, checks will flag it as an unsupported claim."
-    - A collapsible "{n} patch operations, validated" showing the JSON ops (dark code block).
-    - Accept and Reject buttons.
+    - Accept and Reject as an equal-width pair.
+    - Last, a collapsible "{n} patch operations, validated" showing the JSON ops (dark code block).
     - While pending, the preview shows the proposed version with the "Proposed" styling.
     - Accept applies the change, pushes an undo step, adds a revision `Rewrote {title}: "{instruction}"`, flashes the section, and shows the toast "Change applied to {title}" with Undo.
     - Reject restores the original and shows the toast "Change rejected. Nothing was applied."
-  - **Edit by hand:** "Updates the preview as you type". Text sections get an auto-growing textarea. Item sections show, per item, the heading, sub and meta inputs, a `line` textarea, and bullet textareas with a remove (×) button each. Edits update the preview immediately, autosave and coalesce revisions. Undo steps group bursts of typing (1.5 s idle).
+  - **Edit by hand** (secondary, below the instruction box): "Updates the preview as you type". Resume sections start with the "Section heading" input (cover letter paragraphs have none). Text sections get an auto-growing textarea. Item sections show, per item, the heading, sub and meta inputs, a `line` textarea, and bullet textareas with a remove (×) button each. Edits update the preview immediately, autosave and coalesce revisions. Undo steps group bursts of typing (1.5 s idle).
 
 **Inspector, Structure tab:** "Drag to reorder, or focus a row and press Alt with the up or down arrow. Hidden sections stay in the document." Rows: grip, title, a "Hidden" pill (strikethrough and dashed when hidden), up, down, and eye/eye-off. Reordering with dnd-kit (pointer and keyboard sensors) flashes the moved section and announces "{title} moved to position {n}" via aria-live. Revisions: "Moved {title} up/down", "Hid {title}", "Showed {title}".
 
@@ -1218,14 +1230,14 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 5. **Cancel:** Cancel mid-run returns to the input with the text intact and no new project.
 6. **Studio:** setup → brief edits (remove a keyword) → entries → generate → Workspace loads with the preview.
 7. **Workspace editing:** hand edit updates the preview; rewrite "Emphasise Mentoring" → diff with a "from knowledge base" tag → Accept → Undo; reorder with the keyboard; hide Referees (gone from the preview, still listed); a design slider change shows "Rendered in … ms" and makes no LLM request (assert via a network or adapter spy).
-8. **Checks:** a seeded flawed project shows the three findings; clicking one focuses the Experience section; the "Emphasise it" action prefills the instruction.
+8. **Checks:** a seeded flawed project shows the three findings; clicking one focuses the Experience section; the "Emphasise" action prefills the instruction.
 9. **History:** preview an old revision (the inspector is locked), restore it, and confirm a new revision is added.
 10. **Export:** the dialog shows both file names and the PDF downloads; open the PDF with pdf.js in the test and assert the text is selectable and its order starts with the name.
 11. **Backup:** export a file, delete a project, import the file, and confirm the project is back.
 12. **Empty state:** with no applications, the dashed box shows "No applications yet" with a New application button.
 13. **Setup checklist:** a fresh install shows "0 of 3 done"; connecting a key, saving onboarding and generating one application tick each step, and the checklist disappears at 3 of 3. Dismiss hides it.
 14. **Gap to knowledge base:** Quick generate with `?mock=gaps` shows two gaps with "Add to knowledge base". Saving empty shows "Describe what you did"; saving a highlight resolves the row; Regenerate shows one gap, and the new highlight appears as a resume bullet with its `source` ID.
-15. **Notes and copy:** notes entered on the input reach the project and the cover letter, and number checks accept numbers from them. "Copy text" on the result, the Workspace bar and a section puts plain text on the clipboard (assert clipboard contents).
+15. **Notes and copy:** notes entered on the input reach the project and the cover letter, and number checks accept numbers from them. "Copy text" on the result, and the copy icon buttons on the Workspace bar and a selected section, put plain text on the clipboard (assert clipboard contents).
 16. **Password lock** (server started with `APP_PASSWORD`): `/kb/roles` shows the unlock screen; empty and wrong passwords show their errors; the 5th failure shows the countdown with Unlock disabled; the right password lands on `/kb/roles`; Settings → Access shows "Password lock is on", and Lock now returns to the unlock screen.
 
 ---
@@ -1363,7 +1375,7 @@ There is no package.json, build, lint or test yet. Run the mock with `xdg-open m
 
 - Plain classic `<script>` tags, not ES modules, so it works over `file://`. Load order in `index.html` matters: `data.js` → `core.js` → `docs.js` → `views-*.js` → `main.js`. All files share one global scope.
 - `data.js`: `window.MOCK` holds the seed KB (persona "Jordan Whitlock", §17), sample JDs and their briefs, providers, banned phrases, theme defaults and presets.
-- `core.js`: helpers (`$`, `$$`, `esc`, `uid`, `clone`), icons, tooltips (`data-tip`), toasts, modals, model picker, app shell and Demo controls, plus:
+- `core.js`: helpers (`$`, `$$`, `esc`, `uid`, `clone`), icons, tooltips (`data-tip`, `data-tip-title`, `data-tip-side`), `vt(update, kind)` (runs a DOM update as a view transition; `kind` sets `html[data-vt]` for direction-aware CSS, and it falls back to a plain update without support or with reduced motion), toasts, modals, model picker, app shell and Demo controls, plus:
   - `Store`: all state, persisted to `localStorage` under `instant-resume-mock-v1`. Call `Store.save()` (debounced) after changes; `Store.reset()` reseeds; `normalizeKnowledgeBase()` fills missing KB arrays on load.
   - `Router`: hash router. `#/<name>/<params…>` dispatches to `Views[name](root, params)`; a view may return a cleanup function.
 - `docs.js`: `Docs` builds documents from the KB, renders them as HTML (stand-in for Typst), runs the rules engine and the mock LLM (brief extraction, rewrites).

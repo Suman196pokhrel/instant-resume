@@ -73,7 +73,7 @@ Views.project = function (root, params) {
     if (!b) return;
     const u = undo[ui.kind][undo[ui.kind].length - 1];
     b.disabled = !u;
-    b.title = u ? 'Undo: ' + u.label : 'Nothing to undo';
+    b.dataset.tip = u ? `Undo: ${u.label} (Ctrl+Z)` : 'Nothing to undo';
   }
 
   /* ---------- Layout ---------- */
@@ -84,17 +84,19 @@ Views.project = function (root, params) {
           <div class="ws-bar-left">
             <a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a>
             <span class="crumb-sep">/</span>
-            <span class="ws-title" title="${esc(p.role)} at ${esc(p.company)}">${esc(p.role)} <span class="muted">at ${esc(p.company)}</span></span>
+            <span class="ws-title" data-tip="${esc(p.role)} at ${esc(p.company)}">${esc(p.role)} <span class="muted">at ${esc(p.company)}</span></span>
           </div>
           <div class="doc-tabs" role="tablist" aria-label="Document">
             ${['resume', 'coverLetter'].map((k) => `<button role="tab" aria-selected="${ui.kind === k}" class="${ui.kind === k ? 'on' : ''}" data-kind="${k}">${kindLabel(k)}</button>`).join('')}
           </div>
           <div class="ws-bar-right">
-            <span class="save-pill saved ws-doc-only" data-save>${icon('check', 13)} Saved</span>
-            <button class="icon-btn ws-doc-only" data-undo aria-label="Undo">${icon('undo', 16)}</button>
-            <button class="icon-btn ws-doc-only" data-copy-doc aria-label="Copy as plain text" data-tip="Copy as plain text, for job sites that ask you to paste">${icon('copy', 16)}</button>
-            <button class="btn btn-ghost btn-sm ws-doc-only" data-history>${icon('history', 15)} History</button>
-            <button class="btn btn-primary btn-sm ws-doc-only" data-export>${icon('download', 15)} Export PDF</button>
+            <span class="save-pill saved" data-save>${icon('check', 13)} Saved</span>
+            <div class="tool-cluster">
+              <button class="icon-btn" data-undo aria-label="Undo">${icon('undo', 16)}</button>
+              <button class="icon-btn" data-copy-doc aria-label="Copy as plain text" data-tip="Copy as plain text, for job sites that ask you to paste">${icon('copy', 16)}</button>
+              <button class="btn btn-quiet btn-sm" data-history>${icon('history', 15)} History</button>
+            </div>
+            <button class="btn btn-primary btn-sm" data-export>${icon('download', 15)} Export PDF</button>
             ${modelPickerHtml()}
           </div>
         </div>
@@ -108,11 +110,11 @@ Views.project = function (root, params) {
           </aside>
           <section class="ws-preview" aria-label="Preview">
             <div class="preview-bar">
-              <button class="icon-btn" data-toggle-left aria-label="Toggle job panel" title="Toggle job panel">${icon('panel', 16)}</button>
+              <button class="icon-btn" data-toggle-left aria-label="Toggle job panel" data-tip="Show or hide the job panel">${icon('panel', 16)}</button>
               <div class="zoom">
-                <button class="icon-btn" data-zoom="-" aria-label="Zoom out">−</button>
-                <button class="zoom-val" data-zoom="fit" title="Fit to width"></button>
-                <button class="icon-btn" data-zoom="+" aria-label="Zoom in">+</button>
+                <button class="icon-btn" data-zoom="-" aria-label="Zoom out" data-tip="Zoom out">−</button>
+                <button class="zoom-val" data-zoom="fit" data-tip="Fit to width"></button>
+                <button class="icon-btn" data-zoom="+" aria-label="Zoom in" data-tip="Zoom in">+</button>
               </div>
               <span class="render-status muted small" data-render-status></span>
             </div>
@@ -132,7 +134,7 @@ Views.project = function (root, params) {
             <div class="insp-lock" data-insp-lock hidden><p>You're viewing an older revision. Restore it or go back to the current version to edit.</p></div>
           </aside>
         </div>
-        <div class="drawer" data-drawer aria-hidden="true">
+        <div class="drawer" data-drawer aria-hidden="true" role="dialog" aria-label="History">
           <div class="drawer-head"><h2>History</h2><button class="icon-btn" data-close-drawer aria-label="Close history">${icon('x')}</button></div>
           <p class="muted small drawer-sub">Every change to the ${kindLabel(ui.kind).toLowerCase()} is saved here automatically.</p>
           <ol class="rev-list" data-revs></ol>
@@ -149,10 +151,12 @@ Views.project = function (root, params) {
       if (ui.kind === b.dataset.kind) return;
       ui.kind = b.dataset.kind; ui.selected = null; ui.pending = null; ui.viewing = null;
       $$('[data-kind]', root).forEach((x) => { x.classList.toggle('on', x === b); x.setAttribute('aria-selected', x === b); });
-      renderPreview(); renderInspector(); renderLeft(); updateUndoBtn();
-      if ($('.drawer.open', root)) renderHistory();
+      vt(() => {
+        renderPreview(); renderInspector(); renderLeft(); updateUndoBtn();
+        if ($('.drawer.open', root)) renderHistory();
+      }, 'doc');
     }));
-    $$('[data-left]', root).forEach((b) => (b.onclick = () => { ui.left = b.dataset.left; renderLeft(); }));
+    $$('[data-left]', root).forEach((b) => (b.onclick = () => { if (ui.left === b.dataset.left) return; ui.left = b.dataset.left; renderLeft({ enter: true }); }));
     $$('[data-tab]', root).forEach((b) => (b.onclick = () => { ui.tab = b.dataset.tab; renderInspector(); }));
     $('[data-undo]', root).onclick = doUndo;
     $('[data-copy-doc]', root).onclick = () => copyText(Docs.plainText(doc(), st.kb, p.brief), kindLabel(ui.kind));
@@ -235,13 +239,16 @@ Views.project = function (root, params) {
     }
     sheet.className = 'sheet paper-' + st.prefs.paper.toLowerCase() + (sheet.classList.contains('reveal') ? ' reveal' : '');
     sheet.innerHTML = ui.kind === 'resume' ? Docs.renderResume(shown, st.kb) : Docs.renderCoverLetter(shown, st.kb, p.brief);
+    // Each section glides to its new place when the order or visibility changes (see vt in core.js)
+    $$('[data-section-id]', sheet).forEach((el) => (el.style.viewTransitionName = 'ds-' + el.dataset.sectionId));
     if (ui.selected && !ui.viewing) {
       const el = $(`[data-section-id="${ui.selected}"]`, sheet);
-      if (el) el.classList.add('is-selected');
+      if (el) { el.classList.add('is-selected'); traceBullets(el, shown.sections.find((x) => x.id === ui.selected)); }
     }
     if (ui.pending && !ui.viewing) { const el = $(`[data-section-id="${ui.pending.sectionId}"]`, sheet); if (el) el.classList.add('is-proposed'); }
     if (ui.busy) { const el = $(`[data-section-id="${ui.selected}"]`, sheet); if (el) el.classList.add('is-rewriting'); }
     applyZoom();
+    Tip.sweep();
     // Pretend compile time: real DOM time plus a little, as Typst WASM would add
     const ms = Math.max(4, Math.round(performance.now() - t0 + 6 + Math.random() * 8));
     ui.lastRenderMs = ms;
@@ -256,6 +263,22 @@ Views.project = function (root, params) {
       $('[data-restore]', banner).onclick = () => restoreRevision(ui.viewing);
       $('[data-current]', banner).onclick = () => { ui.viewing = null; renderPreview(); lockInspector(false); renderHistory(); };
     } else banner.hidden = true;
+  }
+
+  // In the selected section, hovering a bullet shows the knowledge base fact it was written from
+  function traceBullets(el, s) {
+    if (!s || !s.items) return;
+    const bullets = s.items.flatMap((it) => it.bullets || []);
+    // Bullets that Checks flags get the amber state, so the tooltip never contradicts a finding
+    const flagged = new Set(Docs.runChecks(p, ui.kind, st.kb).findings.map((f) => f.bulletId).filter(Boolean));
+    $$('li[data-bullet-id]', el).forEach((li) => {
+      const b = bullets.find((x) => x.id === li.dataset.bulletId);
+      const hl = b && Docs.findHighlight(st.kb, b.source);
+      li.classList.add('traced');
+      if (!hl || flagged.has(b.id)) li.classList.add('untraced');
+      li.dataset.tipTitle = !hl ? 'No source found' : flagged.has(b.id) ? 'Differs from your knowledge base' : 'From your knowledge base';
+      li.dataset.tip = hl ? hl.text : "This bullet doesn't trace to a fact in your knowledge base. Checks flag it.";
+    });
   }
 
   function flashSection(id) {
@@ -273,53 +296,77 @@ Views.project = function (root, params) {
   }
 
   /* ---------- Left panel: job + checks ---------- */
-  function renderLeft() {
+  function ring(pct, enter) {
+    const c = +(2 * Math.PI * 15).toFixed(2);
+    return `<svg class="ring ${enter ? 'ring-enter' : ''}" viewBox="0 0 36 36" width="44" height="44" aria-hidden="true" style="--c:${c}">
+      <circle cx="18" cy="18" r="15" class="ring-track"/><circle cx="18" cy="18" r="15" class="ring-fill" stroke-dasharray="${c}" stroke-dashoffset="${(c * (1 - pct / 100)).toFixed(2)}"/></svg>`;
+  }
+
+  function renderLeft({ enter = false } = {}) {
     const body = $('[data-left-body]', root);
     if (!body) return;
-    $$('[data-left]', root).forEach((b) => b.classList.toggle('on', b.dataset.left === ui.left));
+    $$('[data-left]', root).forEach((b) => { b.classList.toggle('on', b.dataset.left === ui.left); b.setAttribute('aria-selected', b.dataset.left === ui.left); });
+    body.classList.toggle('lp-enter', enter);
     const ch = Docs.runChecks(p, ui.kind, st.kb);
     const cc = $('[data-check-count]', root);
     cc.textContent = ch.findings.length || '';
     cc.classList.toggle('count-warn', ch.findings.length > 0);
+    const kindName = kindLabel(ui.kind).toLowerCase();
 
     if (ui.left === 'job') {
       const b = p.brief;
+      // A requirement is "reflected" when a job keyword it mentions appears in this document
+      const reqs = b.requirements.map((r) => {
+        const kws = b.keywords.filter((k) => Docs.kwMatch(r, k));
+        return { r, state: !kws.length ? 'none' : kws.some((k) => ch.matched.includes(k)) ? 'ok' : 'miss' };
+      });
+      const tracked = reqs.filter((x) => x.state !== 'none').length;
       body.innerHTML = `
-        <div class="job-head"><h3>${esc(b.title)}</h3><div>${esc(b.company)}</div><div class="muted small">${esc(b.location)}</div></div>
-        <div class="lp-block"><div class="lp-label">Keywords in this ${kindLabel(ui.kind).toLowerCase()}</div>
-          <div class="chips">${b.keywords.map((k) => `<span class="chip ${ch.matched.includes(k) ? 'chip-ok' : 'chip-missing'}">${ch.matched.includes(k) ? icon('check', 12) : ''}${esc(k)}</span>`).join('')}</div></div>
-        <div class="lp-block"><div class="lp-label">Requirements</div><ul class="req-list">${b.requirements.map((r) => `<li>${esc(r)}</li>`).join('')}</ul></div>
-        <div class="lp-block"><label class="lp-label" for="ws-notes">Your notes</label>
-          <textarea id="ws-notes" class="lp-notes" rows="3" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(p.notes || '')}</textarea>
-          <p class="muted small">Used as a fact you supplied. Changes apply the next time you regenerate or rewrite.</p></div>
-        <details class="lp-block jd-details"><summary>Job description</summary><pre class="jd-text">${esc(p.jdText)}</pre></details>
-        <div class="lp-block"><button class="btn btn-ghost btn-sm btn-block" data-regen>${icon('spark', 14)} Regenerate both documents</button></div>`;
+        <div class="job-head"><h3>${esc(b.title)}</h3><div class="job-meta">${esc(b.company)}<span class="dotsep"></span>${esc(b.location)}</div></div>
+        <section class="lp-block">
+          <div class="lp-label">Requirements <span class="lp-count">${reqs.filter((x) => x.state === 'ok').length} of ${tracked} reflected</span>${infoTip(`A requirement is reflected when a job keyword it mentions appears in this ${kindName}. Ones without keywords have no mark.`)}</div>
+          <ul class="req-check">${reqs.map((x) => `<li class="rq-${x.state}"><span class="rq-mark">${x.state === 'ok' ? icon('check', 10) : ''}</span><span>${esc(x.r)}</span></li>`).join('')}</ul>
+        </section>
+        <section class="lp-block">
+          <div class="lp-label">Keywords <span class="lp-count">${ch.matched.length} of ${b.keywords.length} in this ${kindName}</span></div>
+          <div class="chips chips-tight">${b.keywords.map((k) => `<span class="chip ${ch.matched.includes(k) ? 'chip-ok' : 'chip-missing'}">${ch.matched.includes(k) ? icon('check', 11) : ''}${esc(k)}</span>`).join('')}</div>
+        </section>
+        <section class="lp-block">
+          <div class="lp-label"><label for="ws-notes">Your notes</label>${infoTip('Used as a fact you supplied. Changes apply the next time you regenerate or rewrite.')}</div>
+          <textarea id="ws-notes" class="lp-notes" rows="2" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(p.notes || '')}</textarea>
+        </section>
+        <details class="lp-block disclosure jd-details"><summary>Job description</summary><pre class="jd-text">${esc(p.jdText)}</pre></details>
+        <div class="lp-end"><button class="btn btn-quiet btn-sm" data-regen>${icon('spark', 14)} Regenerate both documents</button></div>`;
       $('[data-regen]', body).onclick = regenerate;
       $('[data-notes]', body).oninput = (e) => { p.notes = e.target.value; p.updatedAt = Date.now(); setSaveState('saving'); settle(); };
       return;
     }
 
-    const groups = [['grounding', 'Claims not found in your knowledge base'], ['banned', 'Banned phrases']];
+    const groups = [['grounding', 'Claims not found in your knowledge base', 'Every claim traces to your knowledge base'], ['banned', 'Banned phrases', 'No banned phrases']];
     const pct = Math.round((ch.matched.length / Math.max(1, p.brief.keywords.length)) * 100);
+    const n = ch.findings.length;
+    const parseOk = ch.parse.filter((x) => x.ok).length;
     body.innerHTML = `
-      <p class="muted small checks-note">${icon('zap', 12)} Checks run on this device after every change. No LLM call.</p>
-      <div class="lp-block">
+      <div class="verdict ${n ? 'verdict-warn' : 'verdict-ok'}">${icon(n ? 'alert' : 'check', 16)}<div><strong>${n ? `${n} ${n === 1 ? 'thing' : 'things'} to review` : 'Nothing to fix'}</strong><span>${n ? 'Select one to jump to it. You can still export.' : `This ${kindName} is ready to export.`}</span></div></div>
+      <section class="lp-block">
         <div class="lp-label">Job keyword match</div>
-        <div class="kw-meter"><div class="bar"><div class="bar-fill" style="width:${pct}%"></div></div><span><strong>${ch.matched.length}</strong> of ${p.brief.keywords.length}</span></div>
+        <div class="kw-ring">${ring(pct, enter)}<div><strong>${ch.matched.length} of ${p.brief.keywords.length}</strong><span class="muted small">keywords appear in this ${kindName}</span></div></div>
         ${ch.missing.length ? `<ul class="missing-list">${ch.missing.map((m) => `<li><span class="chip chip-missing">${esc(m.keyword)}</span>
-          ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}">In your knowledge base. Emphasise it</button>` : `<span class="muted small">Not in your knowledge base.</span><button class="link-btn" data-add-kw="${esc(m.keyword)}">${icon('plus', 12)} Add it</button>`}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
-      </div>
-      ${groups.map(([t, label]) => {
+          ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}" data-tip="It's in your knowledge base. Ask for a rewrite that brings it forward.">${icon('spark', 12)} Emphasise</button>` : `<button class="link-btn" data-add-kw="${esc(m.keyword)}" data-tip="Not in your knowledge base yet. Add what you did, then it can be claimed.">${icon('plus', 12)} Add it</button>`}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
+      </section>
+      ${groups.map(([t, label, clean]) => {
         const fs = ch.findings.filter((f) => f.type === t);
-        return `<div class="lp-block"><div class="lp-label">${label} <span class="count ${fs.length ? 'count-warn' : ''}">${fs.length}</span></div>
-          ${fs.length ? fs.map((f) => `<button class="finding finding-${t}" data-goto-section="${f.sectionId}">
-            <span class="finding-title">${icon('alert', 13)} ${esc(f.title)}</span><span class="finding-detail">${esc(f.detail)}</span><span class="finding-go">Go to ${esc((section(f.sectionId) || {}).title || 'section')}</span></button>`).join('') : '<p class="small ok-text">None found.</p>'}
-        </div>`;
+        if (!fs.length) return `<div class="ok-row">${icon('check', 13)} ${clean}</div>`;
+        return `<section class="lp-block"><div class="lp-label">${label} <span class="count count-warn">${fs.length}</span></div>
+          ${fs.map((f) => `<button class="finding finding-${t}" data-goto-section="${f.sectionId}">
+            <span class="finding-title">${icon('alert', 13)} ${esc(f.title)}</span><span class="finding-detail">${esc(f.detail)}</span><span class="finding-go">Go to ${esc((section(f.sectionId) || {}).title || 'section')} ${icon('arrowRight', 12)}</span></button>`).join('')}
+        </section>`;
       }).join('')}
-      <div class="lp-block"><div class="lp-label">Parse safety</div>
+      <details class="lp-block disclosure" ${parseOk === ch.parse.length ? '' : 'open'}><summary>Parse safety <span class="lp-count">${parseOk} of ${ch.parse.length} pass</span></summary>
         <ul class="parse-list">${ch.parse.map((x) => `<li class="${x.ok ? 'ok' : 'bad'}">${icon(x.ok ? 'check' : 'alert', 13)} ${esc(x.label)}${!x.ok && x.hint ? `<div class="muted small">${esc(x.hint)}</div>` : ''}</li>`).join('')}</ul>
         <p class="muted small">There's no universal "ATS score". These checks cover whether job sites can read the file; keyword match is shown above, separately.</p>
-      </div>`;
+      </details>
+      <p class="lp-foot">${icon('zap', 12)} Checks run on this device after every change. No LLM call.</p>`;
     $$('[data-goto-section]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.gotoSection)));
     $$('[data-add-kw]', body).forEach((b) => (b.onclick = () => openAddEvidence({ requirement: b.dataset.addKw, keyword: b.dataset.addKw, onSaved: () => renderLeft() })));
     $$('[data-emph]', body).forEach((b) => (b.onclick = () => {
@@ -355,26 +402,29 @@ Views.project = function (root, params) {
     const s = ui.selected && section(ui.selected);
     if (!s) {
       body.innerHTML = `
-        <p class="muted small insp-hint">Choose a section, or click it in the preview. You can edit text yourself or give an instruction to rewrite just that section.</p>
+        <div class="insp-intro"><h3>${ui.kind === 'resume' ? 'Sections' : 'Paragraphs'}</h3><p class="muted small">Pick one to rewrite it with AI or edit it by hand. You can also click it in the preview.</p></div>
         <div class="section-list">${doc().sections.map((x) => `<button class="section-row ${x.hidden ? 'is-hidden' : ''}" data-pick="${x.id}">
-          <span class="sr-title">${esc(x.title)}</span><span class="muted small">${x.hidden ? 'Hidden' : esc(Docs.sectionPlainText(x).slice(0, 60))}…</span>${icon('chevRight', 15)}</button>`).join('')}</div>`;
+          <span class="sr-title">${esc(x.title)}${x.hidden ? `<span class="pill">Hidden</span>` : ''}</span><span class="sr-sub">${esc(Docs.sectionPlainText(x).slice(0, 80))}</span>${icon('chevRight', 15)}</button>`).join('')}</div>`;
       $$('[data-pick]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.pick)));
       return;
     }
     const isLetter = s.kind === 'paragraph';
     body.innerHTML = `
-      <div class="insp-top"><button class="link-btn back-link" data-all>${icon('chevLeft', 14)} All ${isLetter ? 'paragraphs' : 'sections'}</button>
-        <button class="link-btn" data-copy-sec>${icon('copy', 13)} Copy text</button></div>
-      <div class="field"><label for="sec-title">${isLetter ? 'Paragraph' : 'Section heading'}</label><input id="sec-title" data-sec-title value="${esc(s.title)}" ${isLetter ? 'readonly' : ''}></div>
+      <div class="insp-top">
+        <button class="icon-btn" data-all aria-label="All ${isLetter ? 'paragraphs' : 'sections'}" data-tip="All ${isLetter ? 'paragraphs' : 'sections'}">${icon('chevLeft', 16)}</button>
+        <h3 class="insp-title" data-insp-title>${esc(s.title)}</h3>
+        <button class="icon-btn" data-copy-sec aria-label="Copy text" data-tip="Copy this ${isLetter ? 'paragraph' : 'section'} as plain text">${icon('copy', 15)}</button>
+      </div>
       <div class="instruction" data-instr-area></div>
       <div class="manual">
-        <div class="manual-head"><strong>Edit by hand</strong><span class="muted small">Updates the preview as you type</span></div>
+        <div class="manual-head"><span class="sub-label">Edit by hand</span><span class="muted small">Updates the preview as you type</span></div>
+        ${isLetter ? '' : `<div class="field"><label for="sec-title">Section heading</label><input id="sec-title" data-sec-title value="${esc(s.title)}"></div>`}
         <div data-manual></div>
       </div>`;
     $('[data-all]', body).onclick = () => { ui.selected = null; ui.pending = null; renderPreview(); renderInspector(); };
     $('[data-copy-sec]', body).onclick = () => copyText(Docs.sectionCopyText(s), s.title);
     const ti = $('[data-sec-title]', body);
-    ti.oninput = () => { pushUndo('Edited heading', 'title-' + s.id); s.title = ti.value; renderPreview(); commit('edit', `Edited ${s.title} heading`, 'title-' + s.id); renderLeft(); };
+    if (ti) ti.oninput = () => { pushUndo('Edited heading', 'title-' + s.id); s.title = ti.value; $('[data-insp-title]', body).textContent = ti.value; renderPreview(); commit('edit', `Edited ${s.title} heading`, 'title-' + s.id); renderLeft(); };
     renderInstruction(s);
     renderManual(s);
   }
@@ -386,11 +436,11 @@ Views.project = function (root, params) {
       const pd = ui.pending;
       area.innerHTML = `
         <div class="proposal">
-          <div class="proposal-head"><strong>Proposed change</strong><span class="muted small">"${esc(pd.instruction)}"</span></div>
+          <div class="proposal-head">${icon('spark', 14)}<div><strong>Proposed change</strong><span class="muted small">"${esc(pd.instruction)}"</span></div></div>
           <div class="diff">${Docs.sectionDiffHtml(pd.before, pd.after)}</div>
           ${pd.warnings.map((w) => `<div class="callout callout-warn small">${icon('alert', 14)}<div>${esc(w)}</div></div>`).join('')}
+          <div class="proposal-actions"><button class="btn btn-primary btn-sm" data-accept>${icon('check', 14)} Accept</button><button class="btn btn-ghost btn-sm" data-reject>Reject</button></div>
           <details class="patch"><summary>${pd.ops.length} patch ${pd.ops.length === 1 ? 'operation' : 'operations'}, validated</summary><pre>${esc(JSON.stringify(pd.ops, null, 2))}</pre></details>
-          <div class="row-gap"><button class="btn btn-primary btn-sm" data-accept>${icon('check', 14)} Accept</button><button class="btn btn-ghost btn-sm" data-reject>Reject</button></div>
         </div>`;
       $('[data-accept]', area).onclick = acceptPending;
       $('[data-reject]', area).onclick = () => { ui.pending = null; renderPreview(); renderInspector(); toast('Change rejected. Nothing was applied.'); };
@@ -399,12 +449,14 @@ Views.project = function (root, params) {
     const tokens = Docs.estimateTokens(s);
     area.innerHTML = `
       <label for="instr" class="instr-label">${icon('spark', 14)} Rewrite this ${s.kind === 'paragraph' ? 'paragraph' : 'section'}</label>
-      <textarea id="instr" rows="2" data-instruction placeholder="e.g. more concise, emphasise GraphQL" ${ui.busy ? 'disabled' : ''}>${esc(ui.instructionDraft)}</textarea>
-      <div class="chips instr-chips">${suggestionsFor(s).map((c) => `<button class="chip chip-btn" data-suggest="${esc(c)}" ${ui.busy ? 'disabled' : ''}>${esc(c)}</button>`).join('')}</div>
-      <div class="instr-foot">
-        <span class="muted small">Sends only this ${s.kind === 'paragraph' ? 'paragraph' : 'section'}, about ${tokens.toLocaleString()} tokens</span>
-        <button class="btn btn-primary btn-sm" data-rewrite ${ui.busy ? 'disabled' : ''}>${ui.busy ? '<span class="spinner spinner-light"></span> Rewriting' : 'Rewrite'}</button>
+      <div class="composer ${ui.busy ? 'is-busy' : ''}">
+        <textarea id="instr" rows="2" data-instruction placeholder="e.g. more concise, emphasise GraphQL" ${ui.busy ? 'disabled' : ''}>${esc(ui.instructionDraft)}</textarea>
+        <div class="instr-foot">
+          <span class="muted small">Sends only this ${s.kind === 'paragraph' ? 'paragraph' : 'section'}, about ${tokens.toLocaleString()} tokens</span>
+          <button class="btn btn-primary btn-sm" data-rewrite data-tip="Ctrl+Enter" ${ui.busy ? 'disabled' : ''}>${ui.busy ? '<span class="spinner spinner-light"></span> Rewriting' : 'Rewrite'}</button>
+        </div>
       </div>
+      <div class="chips instr-chips">${suggestionsFor(s).map((c) => `<button class="chip chip-btn" data-suggest="${esc(c)}" ${ui.busy ? 'disabled' : ''}>${esc(c)}</button>`).join('')}</div>
       ${ui.busy ? `<div class="working-strip"><span>Rewriting with ${esc(st.activeModel.model)}</span><div class="shimmer"></div></div>` : ''}
       <div class="field-error" data-instr-err hidden></div>`;
     const ta = $('[data-instruction]', area);
@@ -431,7 +483,9 @@ Views.project = function (root, params) {
     if (!res.changed) {
       renderInstruction(s); renderPreview();
       const e = $('[data-instr-err]', root); e.hidden = false;
-      e.textContent = `No change suggested for "${instruction}". Try something more specific, like "more concise" or "emphasise ${p.brief.keywords[0]}".`;
+      // Suggest an instruction other than the one that just did nothing
+      const other = ['emphasise ' + p.brief.keywords[0], 'lead with metrics', 'more concise'].find((x) => x.toLowerCase() !== instruction.toLowerCase());
+      e.textContent = `No change suggested for "${instruction}". Try a different instruction, like "${other}".`;
       return;
     }
     const idx = doc().sections.indexOf(s);
@@ -462,8 +516,7 @@ Views.project = function (root, params) {
     doc().sections[i] = pd.after;
     ui.pending = null; ui.instructionDraft = '';
     commit('rewrite', `Rewrote ${pd.before.title}: "${pd.instruction}"`);
-    renderPreview(); renderInspector(); renderLeft();
-    flashSection(pd.sectionId);
+    vt(() => { renderPreview(); renderInspector(); renderLeft(); }, 'accept').then(() => flashSection(pd.sectionId));
     toast('Change applied to ' + pd.before.title, { action: { label: 'Undo', fn: doUndo } });
   }
 
@@ -509,7 +562,7 @@ Views.project = function (root, params) {
     body.innerHTML = `
       <p class="muted small insp-hint">Drag to reorder, or focus a row and press Alt with the up or down arrow. Hidden sections stay in the document.</p>
       <ol class="struct-list" data-struct>${secs.map((s, i) => `
-        <li class="struct-row ${s.hidden ? 'is-hidden' : ''}" draggable="true" data-id="${s.id}" tabindex="0" aria-label="${esc(s.title)}, position ${i + 1} of ${secs.length}${s.hidden ? ', hidden' : ''}">
+        <li class="struct-row ${s.hidden ? 'is-hidden' : ''}" draggable="true" data-id="${s.id}" tabindex="0" style="view-transition-name:sr-${s.id}" aria-label="${esc(s.title)}, position ${i + 1} of ${secs.length}${s.hidden ? ', hidden' : ''}">
           <span class="grip">${icon('grip', 15)}</span>
           <span class="struct-title">${esc(s.title)}${s.hidden ? '<span class="pill">Hidden</span>' : ''}</span>
           <button class="icon-btn" data-move="-1" aria-label="Move up" ${i === 0 ? 'disabled' : ''}>${icon('up', 15)}</button>
@@ -525,10 +578,11 @@ Views.project = function (root, params) {
       pushUndo('Reorder sections');
       const [s] = secs.splice(i, 1); secs.splice(j, 0, s);
       commit('structure', `Moved ${s.title} ${delta < 0 ? 'up' : 'down'}`);
-      renderPreview(); renderStructure(body);
-      $('[data-live]', body).textContent = `${s.title} moved to position ${j + 1}`;
-      if (focus) $(`[data-id="${id}"]`, body).focus();
-      flashSection(id);
+      vt(() => {
+        renderPreview(); renderStructure(body);
+        $('[data-live]', body).textContent = `${s.title} moved to position ${j + 1}`;
+        if (focus) $(`[data-id="${id}"]`, body).focus();
+      }, 'reorder').then(() => flashSection(id));
     };
     $$('.struct-row', list).forEach((row) => {
       const id = row.dataset.id;
@@ -538,7 +592,7 @@ Views.project = function (root, params) {
         pushUndo((s.hidden ? 'Show ' : 'Hide ') + s.title);
         s.hidden = !s.hidden;
         commit('structure', `${s.hidden ? 'Hid' : 'Showed'} ${s.title}`);
-        renderPreview(); renderStructure(body); renderLeft();
+        vt(() => { renderPreview(); renderStructure(body); renderLeft(); }, 'reorder');
       };
       row.onkeydown = (e) => { if (e.altKey && (e.key === 'ArrowUp' || e.key === 'ArrowDown')) { e.preventDefault(); move(id, e.key === 'ArrowUp' ? -1 : 1, true); } };
       row.ondragstart = (e) => { e.dataTransfer.effectAllowed = 'move'; e.dataTransfer.setData('text/plain', id); row.classList.add('dragging'); };
@@ -562,8 +616,7 @@ Views.project = function (root, params) {
         if (!above) ti += 1;
         secs.splice(ti, 0, s);
         commit('structure', `Moved ${s.title}`);
-        renderPreview(); renderStructure(body);
-        flashSection(from);
+        vt(() => { renderPreview(); renderStructure(body); }, 'reorder').then(() => flashSection(from));
       };
     });
   }
@@ -574,7 +627,7 @@ Views.project = function (root, params) {
     const slider = (k, label, min, max, step, unit) => `
       <div class="slider-field">
         <div class="slider-top"><label for="d-${k}">${label}</label><output data-out="${k}">${t[k]}${unit}</output></div>
-        <input type="range" id="d-${k}" data-theme-key="${k}" min="${min}" max="${max}" step="${step}" value="${t[k]}" data-unit="${unit}">
+        <input type="range" id="d-${k}" data-theme-key="${k}" min="${min}" max="${max}" step="${step}" value="${t[k]}" data-unit="${unit}" style="--p:${((t[k] - min) / (max - min)) * 100}%">
       </div>`;
     body.innerHTML = `
       <div class="instant-note">${icon('zap', 14)}<div><strong>Instant, and free.</strong> Design changes go straight to the renderer. No LLM call, no tokens.</div></div>
@@ -621,6 +674,7 @@ Views.project = function (root, params) {
       const k = r.dataset.themeKey;
       pushUndo('Design adjustment', 'design-' + k);
       t[k] = +r.value;
+      r.style.setProperty('--p', ((r.value - r.min) / (r.max - r.min)) * 100 + '%');
       $(`[data-out="${k}"]`, body).textContent = r.value + r.dataset.unit;
       changed(k);
     }));

@@ -45,7 +45,7 @@ function studioSetupView(root) {
   function frame(inner) {
     root.innerHTML = shell(`
       <div class="new-wrap">
-        <ol class="stepper">${STEPS.map(([k, l], i) => `<li class="${i === stepIdx() ? 'current' : ''} ${i < stepIdx() ? 'done' : ''}"><span class="step-num">${i < stepIdx() ? icon('check', 12) : i + 1}</span>${l}</li>`).join('')}</ol>
+        <ol class="stepper">${STEPS.map(([k, l], i) => `<li class="${i === stepIdx() ? 'current' : ''} ${i < stepIdx() ? 'done' : ''}" ${i === stepIdx() ? 'aria-current="step"' : ''}><span class="step-num">${i < stepIdx() ? icon('check', 12) : i + 1}</span>${l}</li>`).join('')}</ol>
         ${inner}
       </div>`, { route: 'dashboard', title: `<a class="crumb" href="#/dashboard">${icon('chevLeft', 15)} Applications</a><span class="crumb-sep">/</span><a class="crumb" href="#/new">New application</a><span class="crumb-sep">/</span><span>Studio</span>` });
     bindShell(root);
@@ -60,9 +60,10 @@ function studioSetupView(root) {
         <div class="sample-row"><span class="muted small">Try a sample ad:</span>${MOCK.jds.map((j) => `<button class="chip chip-btn" data-sample="${j.id}">${esc(j.label)}</button>`).join('')}</div>
         <textarea class="jd-input" placeholder="Senior Frontend Engineer&#10;Company, Sydney NSW&#10;&#10;What you'll do…" data-jd>${esc(nd.jdText)}</textarea>
         <div class="field-error" data-jd-err hidden></div>
-        <div class="field notes-field"><label for="st-notes">Notes for this application <span class="optional">optional</span></label>
+        <details class="disclosure notes-disclosure" ${nd.notes ? 'open' : ''}><summary>Notes for this application <span class="optional">optional</span></summary>
+          <div class="field notes-field"><label for="st-notes" class="sr-only">Notes for this application</label>
           <textarea id="st-notes" rows="2" data-notes placeholder="Why you want this job, what to emphasise, who referred you">${esc(nd.notes || '')}</textarea>
-          <span class="muted small">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</span></div>
+          <span class="muted small">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</span></div></details>
         <div class="new-foot">
           <span class="muted small" data-count>${nd.jdText.length.toLocaleString()} characters</span>
           <button class="btn btn-primary" data-extract ${hasConn() ? '' : 'disabled'}>${icon('spark')} Extract requirements</button>
@@ -77,12 +78,12 @@ function studioSetupView(root) {
         const e = $('[data-jd-err]', root); e.hidden = false; e.textContent = 'That looks too short to be a full job description. Paste the whole ad, including requirements.';
         return;
       }
-      nd.stage = 'extracting'; renderExtracting();
+      nd.stage = 'extracting'; vt(renderExtracting, 'forward');
       await sleep(1700);
       if (!alive) return;
       nd.brief = Docs.extractBrief(nd.jdText);
       nd.selected = Docs.suggestSelection(st.kb, nd.brief);
-      nd.stage = 'brief'; Store.save(); renderBrief();
+      nd.stage = 'brief'; Store.save(); vt(renderBrief, 'fade');
     };
   }
 
@@ -112,14 +113,14 @@ function studioSetupView(root) {
         </div>
         <div class="brief-cols">
           <div>
-            <h3>Requirements</h3>
+            <h3>Requirements <span class="h-count">${b.requirements.length}</span></h3>
             <ul class="req-list">${b.requirements.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>
-            ${b.niceToHave.length ? `<h3>Nice to have</h3><ul class="req-list req-soft">${b.niceToHave.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
+            ${b.niceToHave.length ? `<h3>Nice to have <span class="h-count">${b.niceToHave.length}</span></h3><ul class="req-list req-soft">${b.niceToHave.map((r) => `<li>${esc(r)}</li>`).join('')}</ul>` : ''}
             ${b.workRights && b.workRights !== 'Not stated' ? `<div class="callout">${icon('shield', 16)}<div><strong>${esc(b.workRights)}.</strong> Your knowledge base says: ${esc(st.kb.workRights.status)}.</div></div>` : ''}
           </div>
           <div>
-            <h3>Keywords</h3>
-            <p class="muted small">Teal keywords are backed by your knowledge base. Grey ones aren't, so they can't be claimed.</p>
+            <h3>Keywords <span class="h-count">${b.keywords.length}</span></h3>
+            <div class="kw-legend small"><span><i class="lg lg-ok"></i>Backed by your knowledge base</span><span><i class="lg lg-miss"></i>Not backed, so it can't be claimed</span></div>
             <div class="chips kw-chips">${b.keywords.map((k, i) => `<span class="chip ${Docs.kwMatch(kbText, k) ? 'chip-ok' : 'chip-missing'}">${Docs.kwMatch(kbText, k) ? icon('check', 12) : ''}${esc(k)}<button data-kw-rm="${i}" aria-label="Remove ${esc(k)}">${icon('x', 11)}</button></span>`).join('')}</div>
             <div class="input-row kw-add"><input placeholder="Add a keyword" data-kw-new><button class="btn btn-ghost btn-sm" data-kw-add>Add</button></div>
           </div>
@@ -134,8 +135,8 @@ function studioSetupView(root) {
     const add = () => { const v = $('[data-kw-new]', root).value.trim(); if (v) { b.keywords.push(v); Store.save(); renderBrief(); $('[data-kw-new]', root).focus(); } };
     $('[data-kw-add]', root).onclick = add;
     $('[data-kw-new]', root).onkeydown = (e) => { if (e.key === 'Enter') add(); };
-    $('[data-back]', root).onclick = () => { nd.stage = 'jd'; Store.save(); renderJd(); };
-    $('[data-next]', root).onclick = () => { nd.stage = 'select'; Store.save(); renderSelect(); };
+    $('[data-back]', root).onclick = () => { nd.stage = 'jd'; Store.save(); vt(renderJd, 'back'); };
+    $('[data-next]', root).onclick = () => { nd.stage = 'select'; Store.save(); vt(renderSelect, 'forward'); };
   }
 
   function renderSelect() {
@@ -151,10 +152,14 @@ function studioSetupView(root) {
     ];
     const total = groups.reduce((n, [k]) => n + st.kb[k].filter(e => !e.referenceOnly).length, 0);
     const suggested = Docs.suggestSelection(st.kb, b);
+    const entries = groups.flatMap(([k]) => st.kb[k]);
+    const skillText = st.kb.skills.flatMap((g) => g.items).join(' ');
+    // Keywords the chosen entries (plus your skills list) can back up
+    const covered = () => Docs.matchedKeywords(nd.selected.map((id) => entries.find((e) => e.id === id)).filter(Boolean).map(Docs.entryText).join(' ') + ' ' + skillText, b.keywords).length;
     frame(`
       <section class="panel new-panel">
         <div class="panel-head"><div><h1>Choose what to draw on</h1><p class="muted">Suggestions are based on keyword matches. Only ticked entries can appear in the documents.</p></div>
-          <span class="pill" data-sel-count>${nd.selected.length} of ${total} selected</span></div>
+          <div class="head-pills"><span class="pill" data-cover></span><span class="pill" data-sel-count>${nd.selected.length} of ${total} selected</span></div></div>
         <div class="select-groups">
           ${groups.map(([k, label, name]) => st.kb[k].filter(e => !e.referenceOnly).length ? `
             <fieldset class="select-group"><legend>${label}</legend>
@@ -162,28 +167,31 @@ function studioSetupView(root) {
                 const m = Docs.matchedKeywords(Docs.entryText(e), b.keywords);
                 return `<label class="select-item">
                   <input type="checkbox" value="${e.id}" ${nd.selected.includes(e.id) ? 'checked' : ''}>
-                  <span class="si-main"><span class="si-name">${esc(name(e))}</span>
+                  <span class="si-main"><span class="si-name">${esc(name(e))}${suggested.includes(e.id) ? '<span class="si-sug">Suggested</span>' : ''}</span>
                   <span class="muted small">${m.length ? 'Matches ' + m.slice(0, 5).map(esc).join(', ') : 'No keyword matches'}</span></span>
-                  ${suggested.includes(e.id) ? '<span class="pill pill-ok">Suggested</span>' : ''}
+                  ${m.length ? `<span class="si-score" data-tip="Matches ${m.length} of ${b.keywords.length} job keywords"><span style="width:${(m.length / b.keywords.length) * 100}%"></span></span>` : ''}
                 </label>`;
               }).join('')}
             </fieldset>` : '').join('')}
         </div>
-        <div class="new-foot">
+        <div class="new-foot sticky-foot">
           <button class="btn btn-ghost" data-back>${icon('chevLeft', 15)} Job brief</button>
           <div class="row-gap"><span class="muted small">Runs on ${esc(model())}, about 6,000 tokens</span>
           <button class="btn btn-primary" data-generate>${icon('spark')} Generate resume and cover letter</button></div>
         </div>
       </section>`);
+    const showCover = () => { const n = covered(); const el = $('[data-cover]', root); el.textContent = `Covers ${n} of ${b.keywords.length} keywords`; el.classList.toggle('pill-ok', n >= b.keywords.length / 2); el.classList.toggle('pill-warn', n < b.keywords.length / 2); };
+    showCover();
     $$('.select-item input', root).forEach((c) => (c.onchange = () => {
       nd.selected = $$('.select-item input:checked', root).map((x) => x.value);
       $('[data-sel-count]', root).textContent = `${nd.selected.length} of ${total} selected`;
+      showCover();
       Store.save();
     }));
-    $('[data-back]', root).onclick = () => { nd.stage = 'brief'; Store.save(); renderBrief(); };
+    $('[data-back]', root).onclick = () => { nd.stage = 'brief'; Store.save(); vt(renderBrief, 'back'); };
     $('[data-generate]', root).onclick = () => {
       if (!nd.selected.length) return toast('Select at least one knowledge base entry', { kind: 'error' });
-      generate();
+      vt(() => { generate(); }, 'forward'); // not vt(generate): the update would wait for the whole run
     };
   }
 
@@ -258,7 +266,7 @@ function studioSetupView(root) {
       </div>`;
     $('[data-retry]', root).onclick = generate;
     $('[data-switch]', root).onclick = () => $('[data-model-toggle]', root).click();
-    $('[data-back-sel]', root).onclick = () => { nd.stage = 'select'; renderSelect(); };
+    $('[data-back-sel]', root).onclick = () => { nd.stage = 'select'; vt(renderSelect, 'back'); };
   }
 
   ({ jd: renderJd, extracting: renderJd, brief: renderBrief, select: renderSelect }[nd.stage] || renderJd)();
