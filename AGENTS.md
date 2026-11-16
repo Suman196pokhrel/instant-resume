@@ -19,4 +19,5 @@ Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first (
 - Every resume bullet traces to a knowledge base highlight ID. Design changes never call the LLM. API keys stay in the browser.
 - Keep the two modes apart: the local app makes real provider calls and uses SQLite; the public Vercel demo is static, simulated and must never collect real keys.
 - Australian defaults (A4, AU spelling, work-rights line, referees); single-column templates only.
+- UI quality is part of done, not a later pass: every screen matches the mock's layout, copy, states and motion, and uses only the shared tokens and components (SPEC §11–12). No one-off colours, durations or easings; keyboard, focus and reduced motion work.
 - Update SPEC.md and the mock in the same commit as any behaviour change. Synthetic fixtures only. Never change the licence or invent a domain or Vercel project, and never publish or deploy without explicit approval.
