@@ -108,6 +108,9 @@
   --side: 232px;
   --topbar-h: 58px;
 
+  /* Motion (SPEC §12); the rest of the motion tokens arrive with TASK-32 */
+  --t: 180ms;
+
   color-scheme: light;
 }
 

@@ -58,7 +58,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 aria-current={active ? "page" : undefined}
                 aria-label={compact ? label : undefined}
                 className={cn(
-                  "group/nav flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-ink-2 no-underline transition-[background-color,color,box-shadow] duration-180",
+                  "group/nav flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-ink-2 no-underline transition-[background-color,color,box-shadow] duration-(--t)",
                   "hover:bg-sunken hover:text-ink",
                   "aria-[current=page]:bg-surface aria-[current=page]:text-ink aria-[current=page]:shadow-[inset_0_0_0_1px_var(--line)]",
                   "group-data-[shell=compact]/shell:justify-center group-data-[shell=compact]/shell:p-[9px]",

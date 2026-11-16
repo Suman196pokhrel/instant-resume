@@ -4,7 +4,7 @@ title: Password lock for a self-hosted install
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:18:00Z'
+updated_date: '2026-11-16T00:41:00Z'
 labels:
   - m1
 dependencies:
@@ -32,3 +32,15 @@ As someone running Instant Resume on a private server, I can set APP_PASSWORD so
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-16T00:41:00Z
+
+---
+
+From TASK-1: proxy.ts's CSP matcher skips prefetch requests (next-router-prefetch / purpose: prefetch). The lock gate must check every request except /unlock, POST /api/unlock and static assets (SPEC §4.1), so don't reuse that matcher as-is or prefetches bypass the lock.
+
+---
+<!-- COMMENTS:END -->

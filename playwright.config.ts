@@ -19,7 +19,7 @@ export default defineConfig({
     command: "pnpm build && pnpm start",
     url: `http://127.0.0.1:${PORT}/dashboard`,
     env: { PORT: String(PORT) },
-    reuseExistingServer: !process.env.CI,
+    reuseExistingServer: false, // always test a fresh production build
     timeout: 180_000,
   },
 });

@@ -827,6 +827,7 @@ Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 1
 | `/` | Redirect: onboarding not complete and KB empty → `/onboarding`; else `/dashboard` | none |
 | `/unlock` | Password mode only (§4.1). Every other route redirects here without a session, keeping the requested URL to return to | none (centred card) |
 | `/onboarding` | Choose manual entry or resume import, then review | Chooser in the app shell; the wizard and review are full screen with their own top bar |
+| `/onboarding/manual` | Manual onboarding wizard and review (§14.1) | none (full screen, own top bar) |
 | `/import` | Resume upload/pasted text and extraction review | App shell |
 | `/dashboard` | Applications | App shell |
 | `/kb/[section]` | Knowledge base (sections: contact, workRights, roles, portfolio, education, skills, credentials, referees, volunteering, additional; default roles) | App shell |
