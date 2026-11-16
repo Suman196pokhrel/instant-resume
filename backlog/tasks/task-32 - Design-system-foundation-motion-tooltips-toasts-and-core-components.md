@@ -1,10 +1,10 @@
 ---
 id: TASK-32
 title: 'Design system foundation: motion, tooltips, toasts and core components'
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:18:00Z'
-updated_date: '2026-11-16T01:10:00Z'
+updated_date: '2026-11-16T01:26:00Z'
 labels:
   - m0
 dependencies:
@@ -58,6 +58,13 @@ app/globals.css, app/layout.tsx (Tooltip provider, Toaster), app/(shell)/layout.
 ## Out of scope
 TASK-33: segmented control, tabs, switch, checkbox, range slider, disclosure, dialog, menu. Other §11.5 parts (pill, chip, count badge, callout, banner, empty state, skeleton, stepper, font cards, swatches, model picker) are built by the first card that uses them, on these tokens. Owner rule: shadcn's built-in animations (tw-animate-css) stay as shipped; a shared component is customised only when we deliberately want different motion (here: the button's spring press). SPEC §3 and §12 updated to say so.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Motion foundation done: tokens + reduced-motion rule, React ViewTransition page crossfade and directional step slides, Button (spring press), Base UI Tooltip (150ms/300ms warm window), sonner Toast via lib/toast.ts, /dev/ui gallery, token guard test. shadcn's built-in animations kept (owner rule).
+Review: passed; page crossfade now ignores 'fade' typed transitions; TASK-15 warned about untyped transitions (useDeferredValue) crossfading the page.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
