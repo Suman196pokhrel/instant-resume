@@ -1,10 +1,10 @@
 ---
 id: TASK-1
 title: Scaffold the app, shell and tooling
-status: Review
+status: In Progress
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:38:00Z'
+updated_date: '2026-11-16T00:46:00Z'
 labels:
   - m0
 dependencies: []
@@ -60,6 +60,12 @@ None. / redirects to /dashboard until TASK-3 adds the database. shortcut: no onb
 ## Out of scope
 Access gate, unlock page and cookie (TASK-2); database (TASK-3); motion tokens, view transitions, tooltips, toasts and components beyond what shadcn init adds (TASK-32); model picker (TASK-10); real page content; dev-only demo controls; Docker.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Review fix list: 1. Phone bottom-bar nav links have no accessible name (labels display:none, aria-label only when compact): use sr-only, assert the link name in the phone e2e test. 2. Drop the unused x-nonce request header in proxy.ts.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 

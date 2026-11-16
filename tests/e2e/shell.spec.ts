@@ -64,6 +64,10 @@ test("at phone width the nav becomes a bottom bar with no sideways scroll (AC2)"
   const nav = page.getByRole("navigation", { name: "Main" });
   const box = await nav.boundingBox();
   expect(box!.y).toBeGreaterThan(700);
+  // Icon-only links still need names for screen readers (SPEC §16).
+  for (const name of ["Applications", "Knowledge base", "Settings"]) {
+    await expect(nav.getByRole("link", { name }), name).toBeVisible();
+  }
   const overflow = await page.evaluate(() => document.documentElement.scrollWidth - window.innerWidth);
   expect(overflow).toBe(0);
 });

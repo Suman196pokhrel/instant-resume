@@ -56,7 +56,6 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 key={href}
                 href={href}
                 aria-current={active ? "page" : undefined}
-                aria-label={compact ? label : undefined}
                 className={cn(
                   "group/nav flex w-full items-center gap-2.5 rounded-sm px-2.5 py-2 text-sm font-medium text-ink-2 no-underline transition-[background-color,color,box-shadow] duration-(--t)",
                   "hover:bg-sunken hover:text-ink",
@@ -66,7 +65,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 )}
               >
                 <Icon size={18} aria-hidden className="flex-none group-aria-[current=page]/nav:text-primary" />
-                <span className="group-data-[shell=compact]/shell:hidden max-[900px]:hidden">{label}</span>
+                <span className="group-data-[shell=compact]/shell:sr-only max-[900px]:sr-only">{label}</span>
               </Link>
             );
           })}
