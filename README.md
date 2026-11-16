@@ -82,7 +82,7 @@ By default the app only accepts connections from the computer it runs on. To rea
 
 - [x] Product and build specification ([`docs/SPEC.md`](docs/SPEC.md))
 - [x] Interactive mock covering every flow, with simulated AI ([`mock/`](mock/))
-- [ ] Scaffold, schemas and SQLite (M0–M1)
+- [ ] Scaffold, schemas and SQLite (M0–M1): app shell, routes, CSP and test tooling in place
 - [ ] Typst rendering spike (M2)
 - [ ] Knowledge base, onboarding and resume import (M3)
 - [ ] Provider connections, Studio, Workspace and checks (M4–M7)
@@ -101,11 +101,26 @@ xdg-open mock/index.html   # macOS: open mock/index.html
 
 Uses synthetic sample data. AI responses are simulated, and **Demo controls** in the sidebar show the empty, error and gap states.
 
+## Run the app (in progress)
+
+Needs Node 22+ and pnpm. The app only accepts connections from this computer.
+
+```sh
+pnpm install
+pnpm dev          # http://127.0.0.1:3000
+pnpm typecheck && pnpm lint && pnpm test && pnpm test:e2e
+```
+
+Only the app shell and placeholder pages exist so far. `pnpm test:e2e` needs Playwright's browser once: `pnpm exec playwright install chromium`.
+
 ## Repository
 
 ```
+app/ components/ lib/   the Next.js app (in progress)
+tests/         Vitest unit tests and Playwright end-to-end tests
 docs/SPEC.md   single source of truth: scope, architecture, schemas, flows, tests
 mock/          static interactive demo (HTML, CSS, vanilla JS)
+backlog/       the build plan as story cards (Backlog.md)
 AGENTS.md      entry point for AI coding agents
 ```
 

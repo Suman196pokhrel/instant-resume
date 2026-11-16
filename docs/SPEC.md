@@ -133,7 +133,7 @@ CI, reproducible local setup, validated AI outputs, useful error handling and ev
 |---|---|
 | This specification | Current |
 | `mock/` static interactive demo | Exists; matches this spec's flows with simulated AI |
-| Real Next.js application | Not started; build from M0 (§19) |
+| Real Next.js application | M0 scaffold in progress (§19) |
 | GitHub publication | Public repository; licensed under PolyForm Noncommercial 1.0.0 (`LICENSE`) |
 | Vercel demo deployment | Not configured; pre-deployment items in §1.5 pending |
 | Custom domain | Optional; a hosting-provided address is sufficient |
@@ -261,7 +261,7 @@ Request boundaries:
 - **Browser → LLM provider:** directly, using the decrypted key in memory only for the duration of the call.
 - **Browser → Web Worker:** Typst compile. The worker holds the WASM compiler, fonts and templates.
 
-Security: set a strict Content-Security-Policy in `next.config` headers: `connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com`; `script-src 'self' 'wasm-unsafe-eval'`; no third-party scripts. Pin dependency versions.
+Security: `proxy.ts` sets a strict Content-Security-Policy on every page with a fresh nonce per request (Next.js needs a few inline scripts, and the nonce allows only those): `script-src 'self' 'nonce-…' 'strict-dynamic' 'wasm-unsafe-eval'` (plus `'unsafe-eval'` in development only), never `'unsafe-inline'` for scripts; `connect-src 'self' https://api.openai.com https://api.anthropic.com https://generativelanguage.googleapis.com`; `worker-src 'self' blob:`; `style-src 'self' 'unsafe-inline'` (React style attributes and runtime styles); `frame-ancestors 'none'`; no `upgrade-insecure-requests`, because the app is served over `http://127.0.0.1`. Nonces need per-request rendering, so the root layout awaits `connection()` and Cache Components/PPR stay off. No third-party scripts. Pin dependency versions.
 
 ### 4.1 Access (single-user lock)
 
@@ -293,9 +293,10 @@ instant-resume/
   app/
     layout.tsx                 # fonts, Toaster, global CSS
     page.tsx                   # redirect: onboarding incomplete → /onboarding, else /dashboard
-    onboarding/page.tsx        # chooser, manual wizard and import review
-    import/page.tsx            # upload/paste, extraction and review handoff
+    (focus)/onboarding/manual/page.tsx # full-screen manual wizard and review (own top bar)
     (shell)/layout.tsx         # App shell: sidebar + top bar + model picker
+    (shell)/onboarding/page.tsx# chooser: import or manual (in the shell, as the mock)
+    (shell)/import/page.tsx    # upload/paste, extraction and review handoff
     (shell)/dashboard/page.tsx
     (shell)/kb/[section]/page.tsx
     (shell)/settings/page.tsx
@@ -1369,7 +1370,7 @@ Anything else unclear: see §23.3.
 | `AGENTS.md` | Short entry point for coding agents; `CLAUDE.md` imports it |
 | `README.md` | Public project overview |
 
-There is no package.json, build, lint or test yet. Run the mock with `xdg-open mock/index.html` (no server; works over `file://`). The real app goes in the structure from §5 with the pnpm scripts listed there.
+The real app lives at the repository root in the structure from §5 (`app/`, `components/`, `lib/`, `tests/`, `proxy.ts`, `instrumentation.ts`), next to `mock/` and `docs/`. Run it with `pnpm install && pnpm dev`; checks are `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e`. Run the mock with `xdg-open mock/index.html` (no server; works over `file://`). The board (`backlog/`) and `.smartdev/` hold the build plan and session state.
 
 ### 23.2 Mock architecture (`mock/`)
 

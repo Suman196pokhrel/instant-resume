@@ -1,5 +1,5 @@
 # Smart Dev state: Instant Resume
-stage: spec
+stage: build
 task: TASK-1
 next: write the spec for TASK-1 (scaffold) into the card; check Next 16 and pnpm setup against official docs first
 blockers: none
