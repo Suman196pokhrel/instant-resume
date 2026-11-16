@@ -4,11 +4,12 @@ title: 'Studio setup: job brief and entry selection'
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:18:00Z'
+updated_date: '2026-11-16T00:51:00Z'
 labels:
   - m5
 dependencies:
   - TASK-32
+  - TASK-33
 ordinal: 12000
 ---
 

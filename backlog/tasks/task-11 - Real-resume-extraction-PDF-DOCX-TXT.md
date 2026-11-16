@@ -4,11 +4,12 @@ title: Real resume extraction (PDF, DOCX, TXT)
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:18:00Z'
+updated_date: '2026-11-16T00:51:00Z'
 labels:
   - m3a
 dependencies:
   - TASK-32
+  - TASK-33
 ordinal: 11000
 ---
 

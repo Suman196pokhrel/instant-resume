@@ -13,6 +13,7 @@ Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first (
 - Still to come (SPEC §5): `db:migrate`, `db:seed`.
 - `mock/`: the static interactive demo with simulated AI; the visual reference. Run it: `xdg-open mock/index.html`.
 - Build plan: Smart Dev board in `backlog/` (`backlog task list --plain`), session state in `.smartdev/STATE.md`.
+- Shared UI: `components/ui` (shadcn on Base UI, restyled to SPEC §11.5; keep shadcn's built-in animations, custom motion only where SPEC §12 says), `lib/toast.ts` (use instead of sonner directly), `lib/motion.ts`. See them all at `/dev/ui` in `pnpm dev`. `tests/unit/tokens-guard.test.ts` fails on raw colours, durations or easings.
 - Tokens: SPEC `--accent` is `--primary` and SPEC `--muted` text is `--muted-foreground` in `app/globals.css` (shadcn owns those names).
 
 ## Non-negotiables (details in SPEC.md)

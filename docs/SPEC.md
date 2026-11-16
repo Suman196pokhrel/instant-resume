@@ -192,7 +192,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
 | Forms | React Hook Form + Zod resolver |
 | Editor state | Zustand (one store per open project; see 14.5) |
-| UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. No Framer Motion or animation libraries in app screens: CSS transitions and keyframes, plus the browser's View Transitions API (`document.startViewTransition`) where section 12 says so. |
+| UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. Motion: shadcn components keep their built-in animations (`tw-animate-css`) as shipped; a shared component gets custom CSS motion only where the mock calls for it (section 12). Page, step and document transitions use React's `<ViewTransition>` (React 19.3; it drives the browser's View Transitions API). No Framer Motion or other JS animation libraries. |
 | Drag and drop | dnd-kit (with keyboard sensor) |
 | LLM | Vercel AI SDK, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. Use `generateObject` with Zod schemas. |
 | Patching | `fast-json-patch` (RFC 6902) |
@@ -760,7 +760,7 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 - **Count badge:** 18px circle; warn variant.
 - **Segmented control:** sunken track with 3px padding and equal-width options; a white thumb with a 1px shadow slides (spring) under the active option. Used for Document tabs, Job/Checks, paper size, spelling and page budget.
 - **Tabs (inspector):** equal-width tabs over a hairline; a 2px accent underline slides (spring) to the active tab.
-- **Tooltip:** ink background, light 12.5px text, optional bold title, 8px arrow, max-width 260px. Shows 150 ms after hover, or at once when another tooltip closed within the last 300 ms, and at once on keyboard focus. Enters with a 120 ms fade and scale from .97 towards its arrow; hides instantly on any press, scroll, Escape or route change. It never takes pointer events, so it can't block a click. Placed above (below if there's no room); the compact sidebar's tooltips sit to the right. Native `title` attributes are not used.
+- **Tooltip:** ink background, light 12.5px text, optional bold title, 8px arrow, max-width 260px. Shows 150 ms after hover, or at once when another tooltip closed within the last 300 ms, and at once on keyboard focus. Enters and leaves with shadcn's built-in fade and zoom; closes on any press, scroll, Escape or route change. It never takes pointer events, so it can't block a click. Placed above (below if there's no room); the compact sidebar's tooltips sit to the right. Native `title` attributes are not used.
 - **Disclosure:** a summary row with a chevron that turns 90° (180 ms) and content that fades in. Used for the job description, parse safety and Studio notes.
 - **Checkbox (option rows):** 18px, 5px radius, accent fill with a white tick when checked; presses with a small spring (scale .86).
 - **Switch:** 38×22 track, accent when on, with an "On"/"Off" text label next to it.
@@ -780,20 +780,20 @@ Special colours: diff deleted `#FBE1DD` background / `#8A1C12` text, struck thro
 
 ## 12. Motion and animation
 
-Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 120 ms, `--t` 180 ms, `--t-slow` 280 ms, `--ease` `cubic-bezier(.22, 1, .36, 1)`, and `--spring` (480 ms, a CSS `linear()` curve with about 4% overshoot). The spring is only for small, discrete state changes: segmented thumbs and tab underlines, the switch knob, pressed buttons, checkboxes, menus, tooltips, toasts, the dialog panel and the proposal card. Large surfaces (drawer, sheet, page and step changes) and progress use `--ease` with no overshoot. No confetti, and nothing animates on load except a screen's one signature moment. Never animate on every render: anything re-rendered while typing (the preview, the job panel) only animates on a real state change. View transitions (`vt()` in the mock) run with clicks passing through (`::view-transition { pointer-events: none }`), so they never swallow input. **Respect `prefers-reduced-motion`**: set animation and transition durations to ~0 and swap states instantly (one global CSS rule, plus JS checks for smooth scrolling and artificial delays). Animation code stays scoped to the screens that use it. No animation libraries in app screens.
+Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 120 ms, `--t` 180 ms, `--t-slow` 280 ms, `--ease` `cubic-bezier(.22, 1, .36, 1)`, and `--spring` (480 ms, a CSS `linear()` curve with about 4% overshoot). **shadcn components keep their built-in enter/exit animations** (owner decision); custom motion is written only where this table calls for it. The spring is only for small, discrete state changes: segmented thumbs and tab underlines, the switch knob, pressed buttons, checkboxes and the proposal card. Large surfaces (drawer, sheet, page and step changes) and progress use `--ease` with no overshoot. No confetti, and nothing animates on load except a screen's one signature moment. Never animate on every render: anything re-rendered while typing (the preview, the job panel) only animates on a real state change. View transitions (React `<ViewTransition>` in the app, `vt()` in the mock; step changes tag their direction with `addTransitionType('forward' | 'back')`) run with clicks passing through (`::view-transition { pointer-events: none }`), so they never swallow input. **Respect `prefers-reduced-motion`**: set animation and transition durations to ~0 and swap states instantly (one global CSS rule, plus JS checks for smooth scrolling and artificial delays). Animation code stays scoped to the screens that use it. No JS animation libraries.
 
 | Element | Animation |
 |---|---|
 | Buttons, inputs, nav, cards | colour, border and shadow transitions, `--t`; press scale with `--spring`; project cards lift 1px on hover |
 | Segmented thumb, tab underline, switch knob | slide with `--spring` |
-| Tooltip | see 11.5: 150 ms delay (300 ms warm window), 120 ms fade and scale in, instant hide |
+| Tooltip | see 11.5: 150 ms delay (300 ms warm window); shadcn's built-in fade and zoom in and out |
 | Page change | crossfade, 160 ms; the sidebar and demo strip stay still (view transition) |
 | Studio step change | the step panel slides 24px in the direction of travel (out 200 ms, in 280 ms) while the stepper stays put (view transition) |
 | Document switch (Resume ↔ Cover letter) | crossfade (view transition) |
 | Reorder or hide a section | the moved sections glide to their new place on the page and in the Structure list at the same time (view transition, `--t-slow`), then the moved section flashes |
 | Accepting a proposal | the section morphs from its proposed state to the final one, then flashes |
 | Checks keyword ring | draws from empty in 700 ms when the Checks tab opens (not on later re-renders) |
-| Toast | in: opacity 0→1 (`--t`), translateY 10px and scale .97 → normal with `--spring`; out the same in reverse |
+| Toast | sonner's built-in slide and fade (the mock's spring is mock-only) |
 | Dialog | backdrop fade `--t`; panel translateY 8px and scale .97 → 1 with `--spring` |
 | Model picker menu, card menu | "pop": opacity 0, translateY −4px, scale .96 → normal with `--spring`, growing from the corner nearest the button |
 | Onboarding step change | card slides from +18px (next) or −18px (back) with fade, 280 ms `cubic-bezier(.3,.7,.3,1)` |
@@ -836,6 +836,7 @@ Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 1
 | `/new/quick` | Quick generate (input → progress → result) | App shell |
 | `/new/studio` | Studio setup (stepper) | App shell |
 | `/projects/[id]` | Workspace | App shell, compact sidebar, own bar |
+| `/dev/ui` | Development only (404 in production unless `IR_DEV_UI=1`, which the e2e server sets): every shared component in every state, for review against the mock | App shell |
 
 Sidebar: brand (dark rounded square with a document icon, "Instant Resume") → Applications, Knowledge base, Settings (the active item is white with an inset border and an accent icon). Footer: "Stored on this device" with a teal dot. (The mock's "Demo controls" are mock-only; replace them with a dev-only panel behind `NODE_ENV=development` if useful.)
 

@@ -1,9 +1,11 @@
 "use client";
 
+import { ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Book, File, Settings } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
 const NAV = [
   { href: "/dashboard", match: ["/dashboard", "/new", "/projects"], label: "Applications", Icon: File },
@@ -25,6 +27,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       )}
     >
       <aside
+        style={{ viewTransitionName: "sidebar" }}
         className={cn(
           "sticky top-0 flex h-dvh flex-col gap-[18px] border-r border-line bg-surface-2 px-3 py-4",
           "group-data-[shell=compact]/shell:items-center group-data-[shell=compact]/shell:px-2.5 group-data-[shell=compact]/shell:py-3",
@@ -51,7 +54,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <nav aria-label="Main" className="flex flex-col gap-0.5 max-[900px]:flex-1 max-[900px]:flex-row max-[900px]:justify-around">
           {NAV.map(({ href, match, label, Icon }) => {
             const active = match.some((m) => pathname === m || pathname.startsWith(m + "/"));
-            return (
+            const link = (
               <Link
                 key={href}
                 href={href}
@@ -68,6 +71,13 @@ export function AppShell({ children }: { children: React.ReactNode }) {
                 <span className="group-data-[shell=compact]/shell:sr-only max-[900px]:sr-only">{label}</span>
               </Link>
             );
+            if (!compact) return link;
+            return (
+              <Tooltip key={href}>
+                <TooltipTrigger render={link} />
+                <TooltipContent side="right">{label}</TooltipContent>
+              </Tooltip>
+            );
           })}
         </nav>
 
@@ -79,7 +89,10 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         </div>
       </aside>
 
-      <div className="flex min-w-0 flex-col max-[900px]:order-1 max-[900px]:min-h-[calc(100dvh-56px)]">{children}</div>
+      {/* Page changes crossfade (SPEC §12); step changes inside a page carry their own types and skip this. */}
+      <ViewTransition update={{ forward: "none", back: "none", default: "page" }} default="none">
+        <div className="flex min-w-0 flex-col max-[900px]:order-1 max-[900px]:min-h-[calc(100dvh-56px)]">{children}</div>
+      </ViewTransition>
     </div>
   );
 }

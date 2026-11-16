@@ -8,7 +8,8 @@
  *   SPEC --accent (teal)       -> --primary            (shadcn --accent is the subtle hover fill = --sunken)
  *   SPEC --muted (tertiary text) -> --muted-foreground (shadcn --muted is a background = --sunken)
  * Every other SPEC token keeps its name and is a Tailwind colour (bg-surface-2, text-ink-2, border-line, …).
- * Motion tokens and component styling arrive with TASK-32.
+ * Motion (SPEC §12): shadcn components keep their built-in tw-animate-css animations (owner rule);
+ * we only write custom motion where the mock calls for it, using the tokens below.
  */
 
 @theme inline {
@@ -60,6 +61,14 @@
 
   --shadow-pop: 0 14px 36px -10px rgba(26, 35, 32, 0.24), 0 2px 6px rgba(26, 35, 32, 0.08);
   --shadow-card-hover: 0 4px 16px -8px rgba(26, 35, 32, 0.18);
+  --shadow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(10, 90, 79, 0.28);
+  --shadow-tip: 0 6px 18px -6px rgba(26, 35, 32, 0.4);
+
+  --color-on-ink: var(--on-ink);
+  --color-toast-action: var(--toast-action);
+
+  --ease-standard: var(--ease);
+  --ease-spring: var(--spring);
 }
 
 :root {
@@ -82,6 +91,8 @@
   --danger-soft: #fcebe8;
   --danger-line: #f1b5ac;
   --ok: #2f7a3a;
+  --on-ink: #eef2f0; /* light text on ink: tooltips */
+  --toast-action: #8fd6c6; /* toast action text on ink */
 
   /* shadcn variables mapped onto the palette */
   --background: var(--bg);
@@ -108,8 +119,13 @@
   --side: 232px;
   --topbar-h: 58px;
 
-  /* Motion (SPEC §12); the rest of the motion tokens arrive with TASK-32 */
+  /* Motion (SPEC §12). Spring: about 4% overshoot, only for small discrete state changes. */
+  --t-fast: 120ms;
   --t: 180ms;
+  --t-slow: 280ms;
+  --t-spring: 480ms;
+  --ease: cubic-bezier(0.22, 1, 0.36, 1);
+  --spring: linear(0, 0.026, 0.092, 0.184, 0.29, 0.4, 0.508, 0.609, 0.701, 0.781, 0.849, 0.904, 0.949, 0.983, 1.008, 1.026, 1.037, 1.044, 1.046, 1.045, 1.043, 1.039, 1.034, 1.029, 1.024, 1.019, 1.015, 1.011, 1);
 
   color-scheme: light;
 }
@@ -151,5 +167,82 @@
   :focus-visible {
     outline: 2px solid var(--primary);
     outline-offset: 2px;
+  }
+}
+
+/* View transitions (SPEC §12), driven by React's <ViewTransition> (components/shell/AppShell.tsx, Studio steps). */
+::view-transition {
+  pointer-events: none; /* clicks pass through to the live page */
+}
+/* The sidebar stays still while the page content crossfades. */
+::view-transition-group(sidebar) {
+  animation: none;
+  z-index: 10;
+}
+::view-transition-old(sidebar) {
+  display: none;
+}
+::view-transition-new(sidebar) {
+  animation: none;
+}
+::view-transition-group(.page) {
+  animation-duration: 160ms;
+}
+::view-transition-old(.page),
+::view-transition-new(.page) {
+  animation-duration: 160ms;
+}
+/* Step changes: the panel slides 24px in the direction of travel (out 200ms, in 280ms). */
+::view-transition-old(.step-out-forward) {
+  animation: 200ms var(--ease) both vt-out-left;
+}
+::view-transition-new(.step-in-forward) {
+  animation: 280ms var(--ease) both vt-in-right;
+}
+::view-transition-old(.step-out-back) {
+  animation: 200ms var(--ease) both vt-out-right;
+}
+::view-transition-new(.step-in-back) {
+  animation: 280ms var(--ease) both vt-in-left;
+}
+@keyframes vt-out-left {
+  to {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+@keyframes vt-out-right {
+  to {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes vt-in-right {
+  from {
+    opacity: 0;
+    transform: translateX(24px);
+  }
+}
+@keyframes vt-in-left {
+  from {
+    opacity: 0;
+    transform: translateX(-24px);
+  }
+}
+
+/* Reduced motion (SPEC §12): one global rule; JS uses lib/motion.ts for delays and smooth scrolling. */
+@media (prefers-reduced-motion: reduce) {
+  *,
+  *::before,
+  *::after,
+  ::view-transition-group(*),
+  ::view-transition-old(*),
+  ::view-transition-new(*) {
+    animation-duration: 0.01ms !important;
+    animation-iteration-count: 1 !important;
+    animation-delay: 0ms !important;
+    transition-duration: 0.01ms !important;
+    transition-delay: 0ms !important;
+    scroll-behavior: auto !important;
   }
 }
