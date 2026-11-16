@@ -1,10 +1,10 @@
 ---
 id: TASK-1
 title: Scaffold the app, shell and tooling
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:46:00Z'
+updated_date: '2026-11-16T00:47:00Z'
 labels:
   - m0
 dependencies: []
@@ -64,7 +64,8 @@ Access gate, unlock page and cookie (TASK-2); database (TASK-3); motion tokens, 
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Review fix list: 1. Phone bottom-bar nav links have no accessible name (labels display:none, aria-label only when compact): use sr-only, assert the link name in the phone e2e test. 2. Drop the unused x-nonce request header in proxy.ts.
+Scaffold done: Next.js 16 app shell, tokens, every route stubbed, per-request CSP nonce (proxy.ts), startup refusal of unsafe HOST/APP_PASSWORD, Vitest + Playwright on the production build.
+Review fixed: phone nav links now named (sr-only labels, tested); unused x-nonce header removed. Known shortcut: startup check reads only the HOST env var.
 <!-- SECTION:NOTES:END -->
 
 ## Comments
