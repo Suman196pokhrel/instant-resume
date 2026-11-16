@@ -4,7 +4,7 @@ title: Workspace preview, hand edits and autosave
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-16T01:26:00Z'
 labels:
   - m6
 dependencies:
@@ -32,3 +32,15 @@ As a job seeker, I can edit any section by hand and see the preview update right
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-16T01:26:00Z
+
+---
+
+From TASK-32 review: the shell's page <ViewTransition> (components/shell/AppShell.tsx) crossfades on ANY transition inside it unless the transition carries a type it maps to none (forward/back/fade). If the live preview uses useDeferredValue or startTransition without a type, the whole page crossfades on every keystroke (SPEC §12 forbids). Tag those transitions or exclude them.
+
+---
+<!-- COMMENTS:END -->

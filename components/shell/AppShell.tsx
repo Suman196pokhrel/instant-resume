@@ -90,7 +90,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
       </aside>
 
       {/* Page changes crossfade (SPEC §12); step changes inside a page carry their own types and skip this. */}
-      <ViewTransition update={{ forward: "none", back: "none", default: "page" }} default="none">
+      <ViewTransition update={{ forward: "none", back: "none", fade: "none", default: "page" }} default="none">
         <div className="flex min-w-0 flex-col max-[900px]:order-1 max-[900px]:min-h-[calc(100dvh-56px)]">{children}</div>
       </ViewTransition>
     </div>
