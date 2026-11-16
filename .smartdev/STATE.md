@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
-stage: review
-task: TASK-32
-next: write the spec for TASK-1 (scaffold) into the card; check Next 16 and pnpm setup against official docs first
+stage: spec
+task: TASK-33
+next: write the spec for TASK-33 (form controls and overlays) via shadcn add, restyled to SPEC §11.5, shown on /dev/ui
 blockers: none
-updated: 2026-11-16 10:49 · session 2
+updated: 2026-11-16 11:57 · session 3
 
 ## Numbers
-stories: 0 done · 0 review · 0 in progress · 30 to do · 2 parked | tests: not run | commits last session: 2
+stories: 2 done · 0 review · 0 in progress · 29 to do · 2 parked | tests: 21 unit + 17 e2e pass | commits last session: 9
 
 ## Last session
-- owner approved card order: TASK-1 scaffold, TASK-32 design system foundation, then TASK-2..29 (all depend on TASK-32)
-- correction: UI/UX polish was missing; now TASK-32 builds shared tokens, motion, tooltips, toasts and components first, every card has a DoD "matches the mock, shared tokens only, keyboard and reduced motion", and TASK-29 ends with a side-by-side mock review
-- Docker skipped for now (TASK-31 parked); Vercel release TASK-30 parked until owner approves publishing
-- version notes for spec stage: Next 16 (proxy.ts), AI SDK 7 structured output, Zod 4, Vitest 5; pin pnpm via packageManager; app lives at repo root beside mock/
+- TASK-1 scaffold and TASK-32 motion foundation built, reviewed, done. Next 16 at repo root; CSP nonce in proxy.ts needs per-request rendering (root layout awaits connection()); e2e always runs on a fresh production build (IR_DEV_UI=1 enables /dev/ui there)
+- correction: keep shadcn's built-in animations (tw-animate-css, sonner) as shipped; custom motion only on a specific shared component when deliberately wanted (SPEC §3, §11.5, §12 updated)
+- decisions: React <ViewTransition> + addTransitionType('forward'|'back'|'fade') replaces the mock's vt(); shadcn's --accent/--muted keep shadcn meaning (SPEC teal = --primary, muted text = --muted-foreground); TASK-32 split, TASK-33 created
+- gotchas: Tailwind v4 scale-* animates CSS scale, not transform; the shell's page ViewTransition crossfades on any untyped transition (warning on TASK-15); startup check reads only the HOST env var
