@@ -4,9 +4,11 @@ title: Persistence API route handlers
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
+updated_date: '2026-11-16T00:18:00Z'
 labels:
   - m1
-dependencies: []
+dependencies:
+  - TASK-32
 ordinal: 4000
 ---
 
@@ -23,3 +25,9 @@ As the app, I can save and load the knowledge base, projects, documents, revisio
 - [ ] #3 Every /api route sits behind the password lock when APP_PASSWORD is set
 - [ ] #4 No request or response body ever carries a connection, key or apiKey field
 <!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+<!-- DOD:END -->

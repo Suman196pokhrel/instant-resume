@@ -1,14 +1,15 @@
 # Smart Dev state: Instant Resume
-stage: stories
-task: none
-next: owner approves the card order (TASK-1..29) and the stack decisions; then spec TASK-1
+stage: spec
+task: TASK-1
+next: write the spec for TASK-1 (scaffold) into the card; check Next 16 and pnpm setup against official docs first
 blockers: none
-updated: 2026-11-16 10:39 · session 1
+updated: 2026-11-16 10:49 · session 2
 
 ## Numbers
-stories: 0 done · 0 review · 0 in progress · 29 to do · 2 parked | tests: n/a | commits last session: 0
+stories: 0 done · 0 review · 0 in progress · 30 to do · 2 parked | tests: not run | commits last session: 2
 
 ## Last session
-- explore taken as done (owner: mock + SPEC finalised); docs/explore.md points into SPEC.md, Non-goals from §21/§1.6
-- 29 stories cut from SPEC §19 M0–M10, labelled by milestone; M11 release and a Dockerfile parked
-- version notes for spec stage: Next 16 (proxy.ts), AI SDK 7 structured output, Zod 4, Vitest 5; pin pnpm via packageManager
+- owner approved card order: TASK-1 scaffold, TASK-32 design system foundation, then TASK-2..29 (all depend on TASK-32)
+- correction: UI/UX polish was missing; now TASK-32 builds shared tokens, motion, tooltips, toasts and components first, every card has a DoD "matches the mock, shared tokens only, keyboard and reduced motion", and TASK-29 ends with a side-by-side mock review
+- Docker skipped for now (TASK-31 parked); Vercel release TASK-30 parked until owner approves publishing
+- version notes for spec stage: Next 16 (proxy.ts), AI SDK 7 structured output, Zod 4, Vitest 5; pin pnpm via packageManager; app lives at repo root beside mock/

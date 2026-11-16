@@ -4,9 +4,11 @@ title: Real resume extraction (PDF, DOCX, TXT)
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
+updated_date: '2026-11-16T00:18:00Z'
 labels:
   - m3a
-dependencies: []
+dependencies:
+  - TASK-32
 ordinal: 11000
 ---
 
@@ -23,3 +25,9 @@ As a new user, I can upload my PDF or DOCX resume and have my provider extract i
 - [ ] #3 Unknown content is preserved as Additional sections
 - [ ] #4 Scanned or unreadable files and provider failures show a clear reason and a retry
 <!-- AC:END -->
+
+## Definition of Done
+<!-- DOD:BEGIN -->
+- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+<!-- DOD:END -->
