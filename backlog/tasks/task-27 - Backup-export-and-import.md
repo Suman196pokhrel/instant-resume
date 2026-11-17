@@ -4,12 +4,13 @@ title: Backup export and import
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-17T10:26:00Z'
 labels:
   - m10
 dependencies:
   - TASK-32
   - TASK-33
+  - TASK-35
 ordinal: 27000
 ---
 
