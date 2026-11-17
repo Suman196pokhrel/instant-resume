@@ -1,4 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
+import { SESSION_COOKIE, verifySession } from "./lib/access/session";
 
 // Browser-direct LLM calls (SPEC §4): the only hosts a page may talk to besides this server.
 const PROVIDER_HOSTS = ["https://api.openai.com", "https://api.anthropic.com", "https://generativelanguage.googleapis.com"];
@@ -22,7 +23,44 @@ function contentSecurityPolicy(nonce: string, dev: boolean): string {
   ].join("; ");
 }
 
-export function proxy(request: NextRequest) {
+const STATE_CHANGING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
+
+/** Same-site check for state-changing API calls (SPEC §4.1). Behind a reverse proxy the public host is x-forwarded-host. */
+function sameOrigin(request: NextRequest): boolean {
+  const origin = request.headers.get("origin");
+  if (!origin) return false;
+  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+  try {
+    return new URL(origin).host === host;
+  } catch {
+    return false;
+  }
+}
+
+/** Access gate (SPEC §4.1): returns the response that stops this request, or null to let it through. */
+async function gate(request: NextRequest): Promise<NextResponse | null> {
+  const { pathname, search } = request.nextUrl;
+  const api = pathname === "/api" || pathname.startsWith("/api/");
+  // In both modes: also stops other websites posting to a local 127.0.0.1 install.
+  if (api && STATE_CHANGING.has(request.method) && !sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
+
+  if (!process.env.APP_PASSWORD) return pathname === "/unlock" ? NextResponse.redirect(new URL("/", request.url)) : null;
+  if (pathname === "/unlock" || (pathname === "/api/unlock" && request.method === "POST")) return null;
+  if (await verifySession(request.cookies.get(SESSION_COOKIE)?.value)) return null;
+  if (api) return NextResponse.json({ error: "locked" }, { status: 401 });
+  const to = new URL("/unlock", request.url);
+  to.searchParams.set("next", pathname + search);
+  return NextResponse.redirect(to);
+}
+
+const isPrefetch = (request: NextRequest) =>
+  request.headers.has("next-router-prefetch") || request.headers.get("purpose") === "prefetch";
+
+export async function proxy(request: NextRequest) {
+  const stop = await gate(request);
+  if (stop) return stop;
+  if (isPrefetch(request)) return NextResponse.next();
+
   const nonce = Buffer.from(crypto.randomUUID()).toString("base64");
   const csp = contentSecurityPolicy(nonce, process.env.NODE_ENV === "development");
 
@@ -35,14 +73,7 @@ export function proxy(request: NextRequest) {
   return response;
 }
 
+// Every request except static assets, prefetches included: the gate must see them all (CSP skips prefetches above).
 export const config = {
-  matcher: [
-    {
-      source: "/((?!_next/static|_next/image|favicon.ico).*)",
-      missing: [
-        { type: "header", key: "next-router-prefetch" },
-        { type: "header", key: "purpose", value: "prefetch" },
-      ],
-    },
-  ],
+  matcher: ["/((?!_next/static|_next/image|favicon.ico).*)"],
 };
