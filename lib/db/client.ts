@@ -6,7 +6,8 @@ import { migrate } from "drizzle-orm/libsql/migrator";
 import * as schema from "./schema";
 
 /** Opens the SQLite database (SPEC §3: ./data/instant-resume.db, creating ./data), or another libSQL URL in tests. */
-export function openDb(url?: string) {
+// IR_DB_URL points the e2e server (and its db:seed) at a throwaway database, so tests never touch ./data.
+export function openDb(url = process.env.IR_DB_URL) {
   if (!url) {
     const dir = join(process.cwd(), "data");
     mkdirSync(dir, { recursive: true });
