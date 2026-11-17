@@ -1,7 +1,7 @@
 ---
 id: TASK-35
 title: Projects, documents and revisions API
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-17T10:02:00Z'
 updated_date: '2026-11-17T10:14:00Z'
@@ -53,3 +53,10 @@ Tests
 Out of scope
 - Revision coalescing (TASK-19), keyword match counts (TASK-14), checking that bullet sources exist in the KB (patch validation and rules engine), Undo for delete (UI), any UI.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+lib/db/projects.ts + routes: create (project, docs, first revisions in one tx), list, get, PATCH editable fields, duplicate (new IDs, snapshots repointed, role '(copy)'), cascading delete, document save appends a revision and bumps the project, revisions newest first.
+Review: pass, no fixes. 99 unit/api + 31 e2e green.
+<!-- SECTION:NOTES:END -->
