@@ -1,0 +1,45 @@
+{
+  "schemaVersion": 1,
+  "contact": { "id": "kb-contact", "name": "Jordan Whitlock", "email": "jordan.whitlock@example.com", "phone": "0412 345 678", "location": "Sydney NSW", "linkedin": "linkedin.com/in/jordan-whitlock-example", "github": "github.com/jwhitlock-example" },
+  "workRights": { "id": "kb-rights", "status": "Australian citizen", "notes": "Eligible for Baseline security clearance", "noticePeriod": "4 weeks" },
+  "roles": [
+    { "id": "role-brightwater", "title": "Senior Software Engineer", "company": "Brightwater Logistics", "location": "Sydney NSW", "start": "Mar 2022", "end": "Present", "highlights": [
+      { "id": "hl-bw-1", "text": "Rebuilt the shipment tracking dashboard in React and TypeScript, cutting page load from 4.2s to 1.1s", "metric": "4.2s to 1.1s load", "skills": ["React", "TypeScript", "Performance"] },
+      { "id": "hl-bw-2", "text": "Designed an event-driven pricing service on AWS Lambda and SQS that handles 2M quotes a month", "metric": "2M quotes a month", "skills": ["AWS", "Node.js", "Event-driven architecture"] },
+      { "id": "hl-bw-3", "text": "Reduced AWS spend by 25% by right-sizing ECS services and adding autoscaling", "metric": "25% lower AWS spend", "skills": ["AWS", "Terraform", "Cost optimisation"] },
+      { "id": "hl-bw-4", "text": "Introduced Playwright end-to-end tests, cutting production rollbacks from 6 to 1 per quarter", "metric": "6 to 1 rollbacks a quarter", "skills": ["Playwright", "Testing", "CI/CD"] },
+      { "id": "hl-bw-5", "text": "Mentored three graduate engineers through their first year; two now own services end to end", "metric": "3 graduates mentored", "skills": ["Mentoring", "Leadership"] },
+      { "id": "hl-bw-6", "text": "Led the design system rollout across four product teams, with 60 shared components in Storybook", "metric": "60 components, 4 teams", "skills": ["Design systems", "React", "Accessibility"] } ] },
+    { "id": "role-mosaic", "title": "Software Engineer", "company": "Mosaic Learning", "location": "Melbourne VIC", "start": "Feb 2019", "end": "Feb 2022", "highlights": [
+      { "id": "hl-mo-1", "text": "Built the assignment marking workflow used by 140 schools, in Node.js and PostgreSQL", "metric": "140 schools", "skills": ["Node.js", "PostgreSQL"] },
+      { "id": "hl-mo-2", "text": "Migrated a jQuery front end to React over nine months without a feature freeze", "metric": "9-month migration", "skills": ["React", "JavaScript"] },
+      { "id": "hl-mo-3", "text": "Cut API p95 latency from 900ms to 220ms with Redis caching and query indexes", "metric": "900ms to 220ms p95", "skills": ["Redis", "PostgreSQL", "Performance"] },
+      { "id": "hl-mo-4", "text": "Ran fortnightly user interviews with teachers and turned findings into the product roadmap", "metric": "", "skills": ["User research", "Product"] } ] },
+    { "id": "role-civic", "title": "Graduate Developer", "company": "Civic Data Co-op", "location": "Sydney NSW", "start": "Feb 2018", "end": "Jan 2019", "highlights": [
+      { "id": "hl-cd-1", "text": "Fixed accessibility issues across the public data portal, bringing it to WCAG 2.1 AA", "metric": "WCAG 2.1 AA", "skills": ["Accessibility", "HTML", "CSS"] },
+      { "id": "hl-cd-2", "text": "Wrote Python ETL jobs that publish 30 council datasets each night", "metric": "30 datasets nightly", "skills": ["Python", "SQL"] } ] }
+  ],
+  "portfolio": [
+    { "id": "pf-tidewatch", "name": "Tidewatch", "summary": "Open-source tide and swell forecast app for NSW beaches", "link": "github.com/jwhitlock-example/tidewatch", "highlights": [
+      { "id": "hl-tw-1", "text": "Offline-first PWA in React and TypeScript with 3,100 monthly users", "metric": "3,100 monthly users", "skills": ["React", "TypeScript", "PWA"] },
+      { "id": "hl-tw-2", "text": "Processes Bureau of Meteorology feeds with a Go worker on Fly.io", "metric": "", "skills": ["Go"] } ] },
+    { "id": "pf-ledgerline", "name": "Ledgerline", "summary": "Command-line tool for splitting shared household bills", "link": "github.com/jwhitlock-example/ledgerline", "highlights": [
+      { "id": "hl-ll-1", "text": "Go CLI with 400 GitHub stars and 12 outside contributors", "metric": "400 stars", "skills": ["Go", "Open source"] } ] }
+  ],
+  "education": [ { "id": "ed-unsw", "degree": "Bachelor of Science (Computer Science)", "institution": "UNSW Sydney", "year": "2017", "notes": "Distinction average; thesis on offline sync for mobile apps" } ],
+  "skills": [
+    { "id": "sk-lang", "group": "Languages", "items": ["TypeScript", "JavaScript", "Python", "Go", "SQL"] },
+    { "id": "sk-fe", "group": "Frontend", "items": ["React", "Next.js", "Tailwind CSS", "Storybook", "Playwright", "Accessibility"] },
+    { "id": "sk-be", "group": "Backend", "items": ["Node.js", "PostgreSQL", "Redis", "GraphQL", "REST APIs"] },
+    { "id": "sk-cloud", "group": "Cloud and tooling", "items": ["AWS (Lambda, ECS, SQS)", "Docker", "Terraform", "GitHub Actions"] }
+  ],
+  "credentials": [
+    { "id": "cr-aws", "kind": "Certification", "title": "AWS Certified Developer, Associate", "issuer": "Amazon Web Services", "year": "2023" },
+    { "id": "cr-award", "kind": "Award", "title": "Engineering Excellence Award", "issuer": "Brightwater Logistics", "year": "2024" },
+    { "id": "cr-talk", "kind": "Publication", "title": "Talk: Event-driven systems without the drama", "issuer": "SydJS", "year": "2024" }
+  ],
+  "referees": [
+    { "id": "ref-dana", "name": "Dana Okafor", "title": "Engineering Manager", "company": "Brightwater Logistics", "contact": "dana.okafor@example.com" },
+    { "id": "ref-sam", "name": "Sam Reyes", "title": "Head of Product", "company": "Mosaic Learning", "contact": "0400 111 222" }
+  ]
+}
