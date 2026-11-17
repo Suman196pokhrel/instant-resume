@@ -4,7 +4,7 @@ title: Backup export and import
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:26:00Z'
+updated_date: '2026-11-17T10:34:00Z'
 labels:
   - m10
 dependencies:
@@ -32,3 +32,15 @@ As a job seeker, I can back up everything except my API keys and restore it late
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-17T10:34:00Z
+
+---
+
+From TASK-6 spec: the KB top bar's Import backup and Export backup buttons (SPEC §13.2) are built here; TASK-6 leaves room for them next to Import resume.
+
+---
+<!-- COMMENTS:END -->

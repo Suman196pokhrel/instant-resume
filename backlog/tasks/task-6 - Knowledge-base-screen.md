@@ -1,10 +1,10 @@
 ---
 id: TASK-6
 title: Knowledge base screen
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-17T10:36:00Z'
 labels:
   - m3
 dependencies:
@@ -32,3 +32,36 @@ As a job seeker, I can browse and edit every entry in my knowledge base by secti
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Approach
+- Port the mock's KB_SCHEMA, KB_ORDER and kbEntrySummary to one shared module, lib/schemas/kb-fields.ts (TASK-7 reuses it). It holds labels, placeholders, req, type, options, wide and list, plus a pure validateFields(section, values) that returns { field: message } using the mock's copy ("Enter your job title", "Enter an email like name@example.com"). Rules follow Zod/SPEC §6.1, not the mock: contact location is required, volunteering start/end are optional, additional notes is required (stricter than Zod, as the mock has it).
+- /kb/[section] is a server component: it calls readKb(await getDb()) directly and redirects to /onboarding when there is no KB. It renders a client KbScreen: a sub-nav with counts in KB_ORDER, the section head with "Add {noun}", entry cards, and the Edit/Add dialog. Saves call the existing routes (PUT contact/work-rights, POST/PATCH/DELETE /api/kb/:type), then router.refresh(), then lib/toast: "Saved to knowledge base" or "Entry deleted". A 422 maps issues onto fields.
+- Highlights editor: rows keep the highlight's id, skills and evidenceFor; new rows are sent without an id (the server fills it); empty rows are dropped. PATCH replaces the whole highlights array, so nothing may be lost.
+- On Save, invalid fields get aria-invalid, aria-describedby and the error text, and focus moves to the first one.
+
+Files to touch
+- lib/schemas/kb-fields.ts (new); app/(shell)/kb/[section]/page.tsx (drop the SECTIONS shortcut); components/kb/KbScreen.tsx, EntryDialog.tsx, HighlightsEditor.tsx (new)
+- components/ui: input.tsx, textarea.tsx, native-select.tsx (styled native <select>), field.tsx (label, "optional", error), chip.tsx, pill.tsx, empty-state.tsx (new, mock styles.css, tokens only); add each to /dev/ui (components/dev/Gallery)
+- lib/db/client.ts: openDb() reads IR_DB_URL when set; playwright.config.ts: webServer sets IR_DB_URL=file:<os tmp>/ir-e2e.db and runs `pnpm db:seed --force && pnpm build && pnpm start`; SPEC §3/§18.4 and AGENTS.md note the variable
+- docs/SPEC.md §13.2: note the no-KB redirect and the corrected required fields
+
+Data/API: no route changes. IR_DB_URL is test-only plumbing, so e2e never touches ./data.
+
+Tests
+- unit tests/unit/kb-fields.test.ts: KB_ORDER matches SPEC §13 slugs; required and email messages; a volunteer role without dates passes; skills list splits on commas; the summary of a volunteer role without location has no stray comma; every req field agrees with the Zod schema (parse the minimal valid entry built from req fields)
+- e2e tests/e2e/kb.spec.ts (serial, seeded Jordan Whitlock KB):
+  - AC1: the nav lists the sections in KB_ORDER with counts; each slug renders its title; an unknown slug 404s
+  - AC2: add a role with 2 highlights, then reload and see it. Edit a seeded role's title and one highlight's text, reload, then GET /api/kb: every highlight id and its skills are unchanged. Remove a highlight; delete the entry; both survive a reload
+  - AC3: Save on an empty Add role form shows the errors and focuses Job title; a bad contact email shows the email message
+  - AC4: a volunteer role saves with no dates; an additional section saves; a section emptied by deleting shows "No {section} yet"
+  - DoD: Edit opens by keyboard, Escape closes it and focus returns to Edit; mobile width turns the nav into a horizontal row
+- existing e2e specs still pass against the seeded test DB
+
+Out of scope
+- Import backup and Export backup actions (TASK-27; add a note there). "Import resume" only links to /import.
+- Orphaned bullet references after a highlight is deleted (claims check, TASK-20); reordering entries; showing referenceOnly additional sections differently
+- Component-test infrastructure (Testing Library isn't installed; §18.2 doesn't list the KB)
+<!-- SECTION:PLAN:END -->
