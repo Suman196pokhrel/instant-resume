@@ -126,6 +126,7 @@ test("an emptied section shows its empty state (AC4)", async ({ page }) => {
   await page.getByRole("button", { name: "Edit Languages" }).click();
   await dialog(page).getByRole("button", { name: "Delete" }).click();
   await expect(page.getByRole("heading", { name: "No additional sections yet" })).toBeVisible();
+  await expect(page.getByRole("button", { name: "Add section" })).toBeFocused(); // the deleted card's Edit is gone
   await expect(page.getByText("Add one and it becomes available to every application.")).toBeVisible();
 });
 

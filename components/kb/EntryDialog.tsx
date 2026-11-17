@@ -35,6 +35,7 @@ export function EntryDialog({ section, entry, trigger }: { section: KbSection; e
   const [errors, setErrors] = useState<Record<string, string>>({});
   const [rows, setRows] = useState<Row[]>([]);
   const [busy, setBusy] = useState(false);
+  const deleted = useRef(false);
   const isNew = !entry;
 
   const onOpenChange = (next: boolean) => {
@@ -90,8 +91,9 @@ export function EntryDialog({ section, entry, trigger }: { section: KbSection; e
     setBusy(true);
     const res = await send("DELETE", `/api/kb/${section}/${entry!.id}`);
     setBusy(false);
-    if (res.ok) done("Entry deleted");
-    else toast("Couldn't delete. Try again.", { kind: "error" });
+    if (!res.ok) return toast("Couldn't delete. Try again.", { kind: "error" });
+    deleted.current = true;
+    done("Entry deleted");
   }
 
   const addRow = () => {
@@ -104,7 +106,7 @@ export function EntryDialog({ section, entry, trigger }: { section: KbSection; e
   return (
     <Dialog open={open} onOpenChange={onOpenChange}>
       <DialogTrigger render={trigger} />
-      <DialogContent size={def.highlights ? "wide" : "default"}>
+      <DialogContent size={def.highlights ? "wide" : "default"} finalFocus={() => (deleted.current && document.querySelector<HTMLElement>("[data-kb-add]")) || true}>
         <DialogHeader>
           <DialogTitle>{`${isNew ? "Add" : "Edit"} ${def.noun}`}</DialogTitle>
         </DialogHeader>

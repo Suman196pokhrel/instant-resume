@@ -54,7 +54,7 @@ export function KbScreen({ kb, section }: { kb: KnowledgeBase; section: KbSectio
               <EntryDialog
                 section={section}
                 trigger={
-                  <Button variant="ghost" size="sm">
+                  <Button variant="ghost" size="sm" data-kb-add>
                     <Plus className="size-3.5" /> Add {def.noun}
                   </Button>
                 }

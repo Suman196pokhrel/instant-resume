@@ -53,6 +53,11 @@ test("every route renders inside the right layout without errors (AC2, AC4)", as
   expect(errors).toEqual([]);
 });
 
+test("/kb opens the default section, Experience (SPEC §13)", async ({ page }) => {
+  await page.goto("/kb");
+  await expect(page).toHaveURL(/\/kb\/roles$/);
+});
+
 test("unknown knowledge base sections are a 404 (AC2)", async ({ page }) => {
   const res = await page.goto("/kb/unknown");
   expect(res?.status()).toBe(404);

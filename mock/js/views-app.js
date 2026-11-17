@@ -236,11 +236,11 @@ function kbEntrySummary(type, e) {
   switch (type) {
     case 'additional': return { title: e.title, line: e.notes };
     case 'volunteering':
-    case 'roles': return { title: e.title, sub: `${e.company}, ${e.location}`, meta: `${e.start} to ${e.end}` };
+    case 'roles': return { title: e.title, sub: [e.company, e.location].filter(Boolean).join(', '), meta: [e.start, e.end].filter(Boolean).join(' to ') };
     case 'portfolio': return { title: e.name, sub: e.summary, meta: e.link };
     case 'education': return { title: e.degree, sub: e.institution, meta: e.year, line: e.notes };
     case 'skills': return { title: e.group, chips: e.items };
-    case 'credentials': return { title: e.title, sub: `${e.kind}, ${e.issuer}`, meta: e.year };
+    case 'credentials': return { title: e.title, sub: [e.kind, e.issuer].filter(Boolean).join(', '), meta: e.year };
     case 'referees': return { title: e.name, sub: [e.title, e.company].filter(Boolean).join(', '), meta: e.contact };
     default: return { title: '' };
   }
