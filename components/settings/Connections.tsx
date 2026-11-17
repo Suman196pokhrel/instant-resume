@@ -137,7 +137,7 @@ function ConnectedCard({ p, c, inUse, fresh, onUse, onRemove, onModel }: { p: Pr
         {inUse && <Pill variant="ok">In use</Pill>}
       </div>
       <div className="flex flex-wrap items-center gap-2 text-ink-2">
-        <KeyRound className="size-[15px]" /> <code>{c.masked}</code>
+        <KeyRound className="size-[15px]" /> <code className="rounded-sm border border-line bg-surface-2 px-1.5 py-px font-mono text-[12.5px]">{c.masked}</code>
         <span className="text-[13px] text-muted-foreground">Encrypted on this device</span>
       </div>
       {fresh && (
@@ -217,6 +217,7 @@ function EmptyCard({ p, onConnected }: { p: Provider; onConnected: (model: strin
         <Input
           ref={input}
           type={show ? "text" : "password"}
+          spellCheck={false} // shown keys must never go to a cloud spellchecker
           value={key}
           placeholder={`${p.prefix}…`}
           onChange={(e) => {

@@ -60,6 +60,7 @@ test("a working key is saved encrypted in this browser only, shown masked, and b
   await anthropic.getByLabel("API key").fill(ANTHROPIC);
   await anthropic.getByRole("button", { name: "Show" }).click();
   await expect(anthropic.getByLabel("API key")).toHaveAttribute("type", "text");
+  await expect(anthropic.getByLabel("API key")).toHaveAttribute("spellcheck", "false");
   await anthropic.getByRole("button", { name: "Test and save" }).click();
   await expect(anthropic.getByText("Key works. Saved and encrypted on this device.")).toBeVisible();
   await expect(page.getByText("Anthropic connected")).toBeVisible();
