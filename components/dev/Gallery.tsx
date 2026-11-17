@@ -1,8 +1,22 @@
 "use client";
 
 import { addTransitionType, startTransition, useState, ViewTransition } from "react";
-import { Undo2 } from "lucide-react";
+import { ArrowDownUp, FileText, LayoutList, Palette, Undo2 } from "lucide-react";
 import { Button } from "@/components/ui/button";
+import { Checkbox } from "@/components/ui/checkbox";
+import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
+import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogClose, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import {
+  DropdownMenu,
+  DropdownMenuContent,
+  DropdownMenuRadioGroup,
+  DropdownMenuRadioItem,
+  DropdownMenuTrigger,
+} from "@/components/ui/dropdown-menu";
+import { Segmented } from "@/components/ui/segmented";
+import { Slider } from "@/components/ui/slider";
+import { Switch } from "@/components/ui/switch";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { toast } from "@/lib/toast";
 
@@ -17,6 +31,7 @@ function Section({ title, children }: { title: string; children: React.ReactNode
 
 export function Gallery() {
   const [step, setStep] = useState(1);
+  const [sort, setSort] = useState("newest");
   const go = (delta: 1 | -1) =>
     startTransition(() => {
       addTransitionType(delta > 0 ? "forward" : "back");
@@ -87,6 +102,111 @@ export function Gallery() {
               Next step
             </Button>
           </div>
+        </div>
+      </Section>
+      <Section title="Segmented and tabs">
+        <div className="flex w-full flex-col gap-5">
+          <div className="flex flex-wrap gap-5">
+            <Segmented aria-label="Paper size" defaultValue="a4" options={[{ value: "a4", label: "A4" }, { value: "letter", label: "Letter" }]} />
+            <Segmented
+              aria-label="Page budget"
+              defaultValue="1"
+              options={[{ value: "1", label: "1 page" }, { value: "2", label: "2 pages" }, { value: "3", label: "3 pages" }]}
+            />
+          </div>
+          <Tabs defaultValue="resume">
+            <TabsList aria-label="Document">
+              <TabsTrigger value="resume">Resume</TabsTrigger>
+              <TabsTrigger value="cover">Cover letter</TabsTrigger>
+            </TabsList>
+            <TabsContent value="resume" className="text-ink-2">Resume preview</TabsContent>
+            <TabsContent value="cover" className="text-ink-2">Cover letter preview</TabsContent>
+          </Tabs>
+          <Tabs defaultValue="content" className="w-[372px] rounded-lg border border-line">
+            <TabsList variant="underline" aria-label="Inspector">
+              <TabsTrigger value="content"><FileText />Content</TabsTrigger>
+              <TabsTrigger value="structure"><LayoutList />Structure</TabsTrigger>
+              <TabsTrigger value="design"><Palette />Design</TabsTrigger>
+            </TabsList>
+            <TabsContent value="content" className="px-4 pb-4 text-ink-2">Edit bullets here.</TabsContent>
+            <TabsContent value="structure" className="px-4 pb-4 text-ink-2">Reorder sections here.</TabsContent>
+            <TabsContent value="design" className="px-4 pb-4 text-ink-2">Adjust the theme here.</TabsContent>
+          </Tabs>
+        </div>
+      </Section>
+
+      <Section title="Toggles">
+        <div className="flex items-center gap-3">
+          <span id="sw-cover">Cover letter</span>
+          <Switch aria-labelledby="sw-cover" />
+        </div>
+        <label className="ml-6 flex items-center gap-2.5">
+          <Checkbox />
+          Include referees
+        </label>
+      </Section>
+
+      <Section title="Slider">
+        <div className="w-[300px]">
+          <Slider label="Font size" defaultValue={10.5} min={9} max={12} step={0.5} unit="pt" />
+        </div>
+      </Section>
+
+      <Section title="Disclosure">
+        <Collapsible className="w-full">
+          <CollapsibleTrigger>Job description</CollapsibleTrigger>
+          <CollapsibleContent className="mt-2 text-ink-2">Senior product designer, Sydney. Hybrid, full time.</CollapsibleContent>
+        </Collapsible>
+      </Section>
+
+      <Section title="Dialog">
+        <Dialog>
+          <DialogTrigger render={<Button variant="ghost" />}>Open dialog</DialogTrigger>
+          <DialogContent>
+            <DialogHeader>
+              <DialogTitle>Delete application</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <DialogDescription>This removes the resume, cover letter and history for this application.</DialogDescription>
+            </DialogBody>
+            <DialogFooter>
+              <DialogClose render={<Button variant="danger-ghost" />}>Delete</DialogClose>
+              <DialogClose render={<Button variant="ghost" />}>Cancel</DialogClose>
+              <DialogClose render={<Button />}>Keep</DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+        <Dialog>
+          <DialogTrigger render={<Button variant="ghost" />}>Open wide dialog</DialogTrigger>
+          <DialogContent size="wide">
+            <DialogHeader>
+              <DialogTitle>Compare revisions</DialogTitle>
+            </DialogHeader>
+            <DialogBody>
+              <DialogDescription>The wide variant holds side-by-side content.</DialogDescription>
+            </DialogBody>
+            <DialogFooter>
+              <DialogClose render={<Button />}>Done</DialogClose>
+            </DialogFooter>
+          </DialogContent>
+        </Dialog>
+      </Section>
+
+      <Section title="Menu">
+        <div className="flex w-full justify-end">
+          <DropdownMenu>
+            <DropdownMenuTrigger render={<Button variant="ghost" size="sm" />}>
+              <ArrowDownUp />
+              Sort by
+            </DropdownMenuTrigger>
+            <DropdownMenuContent align="end">
+              <DropdownMenuRadioGroup value={sort} onValueChange={setSort}>
+                <DropdownMenuRadioItem value="newest">Newest</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="oldest">Oldest</DropdownMenuRadioItem>
+                <DropdownMenuRadioItem value="name">Name</DropdownMenuRadioItem>
+              </DropdownMenuRadioGroup>
+            </DropdownMenuContent>
+          </DropdownMenu>
         </div>
       </Section>
       <div aria-hidden className="h-[120vh]" />

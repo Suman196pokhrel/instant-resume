@@ -196,7 +196,7 @@ test.describe("reduced motion (AC3)", () => {
 
   test("the gallery lists every shared component", async ({ page }) => {
     await page.goto("/dev/ui");
-    for (const name of ["Buttons", "Tooltips", "Toasts", "Transitions"]) {
+    for (const name of ["Buttons", "Tooltips", "Toasts", "Transitions", "Segmented and tabs", "Toggles", "Slider", "Disclosure", "Dialog", "Menu"]) {
       await expect(page.getByRole("heading", { level: 2, name })).toBeVisible();
     }
   });

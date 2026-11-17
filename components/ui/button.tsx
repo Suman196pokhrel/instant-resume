@@ -37,6 +37,7 @@ function Button({
   return (
     <ButtonPrimitive
       data-slot="button"
+      data-variant={size === "icon" ? undefined : variant}
       className={cn(buttonVariants({ variant: size === "icon" ? null : variant, size, className }))}
       {...props}
     />
