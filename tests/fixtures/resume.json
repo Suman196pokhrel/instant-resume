@@ -1,0 +1,241 @@
+{
+  "id": "doc-sample-resume",
+  "projectId": "p-sample",
+  "kind": "resume",
+  "theme": {
+    "font": "Liberation Sans",
+    "baseSize": 10.5,
+    "headingSize": 12,
+    "nameSize": 22,
+    "margin": 18,
+    "lineHeight": 1.35,
+    "sectionGap": 12,
+    "accent": "#0E7466"
+  },
+  "sections": [
+    {
+      "id": "sec-summary",
+      "kind": "summary",
+      "title": "Summary",
+      "hidden": false,
+      "text": "Senior full stack engineer with seven years building React, TypeScript and Node.js products on AWS. Cut page loads from 4.2s to 1.1s, runs event-driven services at 2M quotes a month, and mentors graduate engineers."
+    },
+    {
+      "id": "sec-exp",
+      "kind": "experience",
+      "title": "Experience",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-role-brightwater",
+          "ref": "role-brightwater",
+          "heading": "Senior Software Engineer",
+          "sub": "Brightwater Logistics",
+          "meta": "Sydney NSW | Mar 2022 to Present",
+          "bullets": [
+            {
+              "id": "b-hl-bw-1",
+              "text": "Rebuilt the shipment tracking dashboard in React and TypeScript, cutting page load from 4.2s to 1.1s",
+              "source": "hl-bw-1"
+            },
+            {
+              "id": "b-hl-bw-2",
+              "text": "Designed an event-driven pricing service on AWS Lambda and SQS that handles 2M quotes a month",
+              "source": "hl-bw-2"
+            },
+            {
+              "id": "b-hl-bw-3",
+              "text": "Reduced AWS spend by 25% by right-sizing ECS services and adding autoscaling",
+              "source": "hl-bw-3"
+            },
+            {
+              "id": "b-hl-bw-4",
+              "text": "Introduced Playwright end-to-end tests, cutting production rollbacks from 6 to 1 per quarter",
+              "source": "hl-bw-4"
+            },
+            {
+              "id": "b-hl-bw-5",
+              "text": "Mentored three graduate engineers through their first year; two now own services end to end",
+              "source": "hl-bw-5"
+            }
+          ]
+        },
+        {
+          "id": "it-role-mosaic",
+          "ref": "role-mosaic",
+          "heading": "Software Engineer",
+          "sub": "Mosaic Learning",
+          "meta": "Melbourne VIC | Feb 2019 to Feb 2022",
+          "bullets": [
+            {
+              "id": "b-hl-mo-1",
+              "text": "Built the assignment marking workflow used by 140 schools, in Node.js and PostgreSQL",
+              "source": "hl-mo-1"
+            },
+            {
+              "id": "b-hl-mo-2",
+              "text": "Migrated a jQuery front end to React over nine months without a feature freeze",
+              "source": "hl-mo-2"
+            },
+            {
+              "id": "b-hl-mo-3",
+              "text": "Cut API p95 latency from 900ms to 220ms with Redis caching and query indexes",
+              "source": "hl-mo-3"
+            }
+          ]
+        },
+        {
+          "id": "it-role-civic",
+          "ref": "role-civic",
+          "heading": "Graduate Developer",
+          "sub": "Civic Data Co-op",
+          "meta": "Sydney NSW | Feb 2018 to Jan 2019",
+          "bullets": [
+            {
+              "id": "b-hl-cd-1",
+              "text": "Fixed accessibility issues across the public data portal, bringing it to WCAG 2.1 AA",
+              "source": "hl-cd-1"
+            },
+            {
+              "id": "b-hl-cd-2",
+              "text": "Wrote Python ETL jobs that publish 30 council datasets each night",
+              "source": "hl-cd-2"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sec-skills",
+      "kind": "skills",
+      "title": "Skills",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-sk-lang",
+          "ref": "sk-lang",
+          "heading": "Languages",
+          "line": "TypeScript, JavaScript, Python, Go, SQL"
+        },
+        {
+          "id": "it-sk-fe",
+          "ref": "sk-fe",
+          "heading": "Frontend",
+          "line": "React, Next.js, Tailwind CSS, Storybook, Playwright, Accessibility"
+        },
+        {
+          "id": "it-sk-be",
+          "ref": "sk-be",
+          "heading": "Backend",
+          "line": "Node.js, PostgreSQL, Redis, GraphQL, REST APIs"
+        },
+        {
+          "id": "it-sk-cloud",
+          "ref": "sk-cloud",
+          "heading": "Cloud and tooling",
+          "line": "AWS (Lambda, ECS, SQS), Docker, Terraform, GitHub Actions"
+        }
+      ]
+    },
+    {
+      "id": "sec-portfolio",
+      "kind": "portfolio",
+      "title": "Portfolio",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-pf-tidewatch",
+          "ref": "pf-tidewatch",
+          "heading": "Tidewatch",
+          "sub": "Open-source tide and swell forecast app for NSW beaches",
+          "meta": "github.com/jwhitlock-example/tidewatch",
+          "bullets": [
+            {
+              "id": "b-hl-tw-1",
+              "text": "Offline-first PWA in React and TypeScript with 3,100 monthly users",
+              "source": "hl-tw-1"
+            }
+          ]
+        },
+        {
+          "id": "it-pf-ledgerline",
+          "ref": "pf-ledgerline",
+          "heading": "Ledgerline",
+          "sub": "Command-line tool for splitting shared household bills",
+          "meta": "github.com/jwhitlock-example/ledgerline",
+          "bullets": [
+            {
+              "id": "b-hl-ll-1",
+              "text": "Go CLI with 400 GitHub stars and 12 outside contributors",
+              "source": "hl-ll-1"
+            }
+          ]
+        }
+      ]
+    },
+    {
+      "id": "sec-edu",
+      "kind": "education",
+      "title": "Education",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-ed-unsw",
+          "ref": "ed-unsw",
+          "heading": "Bachelor of Science (Computer Science)",
+          "sub": "UNSW Sydney",
+          "meta": "2017",
+          "line": "Distinction average; thesis on offline sync for mobile apps"
+        }
+      ]
+    },
+    {
+      "id": "sec-cred",
+      "kind": "credentials",
+      "title": "Certifications and awards",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-cr-aws",
+          "ref": "cr-aws",
+          "heading": "AWS Certified Developer, Associate",
+          "meta": "Amazon Web Services | 2023"
+        },
+        {
+          "id": "it-cr-award",
+          "ref": "cr-award",
+          "heading": "Engineering Excellence Award",
+          "meta": "Brightwater Logistics | 2024"
+        },
+        {
+          "id": "it-cr-talk",
+          "ref": "cr-talk",
+          "heading": "Talk: Event-driven systems without the drama",
+          "meta": "SydJS | 2024"
+        }
+      ]
+    },
+    {
+      "id": "sec-ref",
+      "kind": "referees",
+      "title": "Referees",
+      "hidden": false,
+      "items": [
+        {
+          "id": "it-ref-dana",
+          "ref": "ref-dana",
+          "heading": "Dana Okafor",
+          "sub": "Engineering Manager, Brightwater Logistics",
+          "line": "dana.okafor@example.com"
+        },
+        {
+          "id": "it-ref-sam",
+          "ref": "ref-sam",
+          "heading": "Sam Reyes",
+          "sub": "Head of Product, Mosaic Learning",
+          "line": "0400 111 222"
+        }
+      ]
+    }
+  ]
+}

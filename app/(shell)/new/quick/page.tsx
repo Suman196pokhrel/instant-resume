@@ -1,8 +1,10 @@
+import { RenderWarmup } from "@/components/render/RenderWarmup";
 import { Content, TopBar } from "@/components/shell/TopBar";
 
 export default function Page() {
   return (
     <>
+      <RenderWarmup />
       <TopBar title="New application / Quick generate" />
       <Content>
         <h1>Paste a job description</h1>

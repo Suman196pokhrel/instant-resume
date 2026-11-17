@@ -1,0 +1,50 @@
+{
+  "id": "doc-sample-letter",
+  "projectId": "p-sample",
+  "kind": "coverLetter",
+  "theme": {
+    "font": "Liberation Sans",
+    "baseSize": 10.5,
+    "headingSize": 12,
+    "nameSize": 22,
+    "margin": 18,
+    "lineHeight": 1.35,
+    "sectionGap": 12,
+    "accent": "#0E7466"
+  },
+  "recipient": {
+    "name": "Hiring Manager",
+    "company": "Mintleaf",
+    "location": "Melbourne VIC"
+  },
+  "sections": [
+    {
+      "id": "sec-opening",
+      "kind": "paragraph",
+      "title": "Opening",
+      "hidden": false,
+      "text": "I'm applying for the Senior Full Stack Engineer role at Mintleaf. I build fast, well-tested web products in React, TypeScript and Node.js, and I'd like to bring that to your payments team."
+    },
+    {
+      "id": "sec-evidence",
+      "kind": "paragraph",
+      "title": "Evidence",
+      "hidden": false,
+      "text": "At Brightwater Logistics I rebuilt the shipment tracking dashboard, cutting page load from 4.2s to 1.1s, and designed an event-driven pricing service on AWS Lambda and SQS that handles 2M quotes a month."
+    },
+    {
+      "id": "sec-fit",
+      "kind": "paragraph",
+      "title": "Fit",
+      "hidden": false,
+      "text": "Your ad asks for strong SQL, AWS in production and mentoring. I cut API p95 latency from 900ms to 220ms at Mosaic Learning with Redis and query indexes, and I've mentored three graduate engineers."
+    },
+    {
+      "id": "sec-close",
+      "kind": "paragraph",
+      "title": "Close",
+      "hidden": false,
+      "text": "I'd welcome the chance to talk about how I can help Mintleaf ship faster. Thank you for considering my application."
+    }
+  ]
+}
