@@ -5,10 +5,11 @@ import { Button } from "@/components/ui/button";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Chip, Count, Pill } from "@/components/ui/pill";
 import { entrySummary, KB_ORDER, KB_SECTIONS, type KbSection } from "@/lib/schemas/kb-fields";
-import type { Highlight, KnowledgeBase } from "@/lib/schemas/kb";
+import type { KnowledgeBase } from "@/lib/schemas/kb";
 import { EntryDialog } from "./EntryDialog";
+import type { Entry as KbEntry } from "./EntryForm";
 
-type Entry = Record<string, unknown> & { id: string; highlights?: Highlight[] };
+type Entry = KbEntry & { id: string };
 
 const card = "rounded-lg border border-line bg-surface px-[18px] py-4";
 const kbId = "font-mono text-[11.5px] text-muted-foreground";
