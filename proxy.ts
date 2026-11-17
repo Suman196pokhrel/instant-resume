@@ -48,9 +48,8 @@ async function gate(request: NextRequest): Promise<NextResponse | null> {
   if (pathname === "/unlock" || (pathname === "/api/unlock" && request.method === "POST")) return null;
   if (await verifySession(request.cookies.get(SESSION_COOKIE)?.value)) return null;
   if (api) return NextResponse.json({ error: "locked" }, { status: 401 });
-  const to = new URL("/unlock", request.url);
-  to.searchParams.set("next", pathname + search);
-  return NextResponse.redirect(to);
+  // Relative Location: request.url may carry the internal host or scheme behind a reverse proxy.
+  return new NextResponse(null, { status: 307, headers: { Location: `/unlock?${new URLSearchParams({ next: pathname + search })}` } });
 }
 
 const isPrefetch = (request: NextRequest) =>

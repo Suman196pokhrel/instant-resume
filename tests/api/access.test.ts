@@ -54,7 +54,7 @@ describe("password lock (AC2–AC5)", () => {
   it("AC2: pages redirect to /unlock keeping the URL; /api returns 401 locked; prefetches are gated", async () => {
     const page = await proxy(req("/kb/roles?tab=1"));
     expect(page.status).toBe(307);
-    const to = new URL(page.headers.get("location")!);
+    const to = new URL(page.headers.get("location")!, BASE);
     expect(to.pathname).toBe("/unlock");
     expect(to.searchParams.get("next")).toBe("/kb/roles?tab=1");
 
@@ -68,6 +68,17 @@ describe("password lock (AC2–AC5)", () => {
     expect(passes(await proxy(req("/unlock")))).toBe(true);
     expect(passes(await proxy(req("/api/unlock", { method: "POST" })))).toBe(true);
     expect((await proxy(req("/api/unlock"))).status).toBe(401);
+  });
+
+  it("AC3: parallel guesses can't get past the limit", async () => {
+    const client = `203.0.113.${++ip}`;
+    const codes = (await Promise.all(Array.from({ length: 12 }, () => login("wrong password!", client)))).map((r) => r.status);
+    expect(codes.filter((c) => c === 401)).toHaveLength(5);
+    expect(codes.filter((c) => c === 429)).toHaveLength(7);
+  });
+
+  it("redirects with a relative Location, so a reverse proxy's public host and scheme are kept", async () => {
+    expect((await proxy(req("/kb/roles"))).headers.get("location")).toBe("/unlock?next=%2Fkb%2Froles");
   });
 
   it("AC3: wrong → 401, 6th attempt → 429; the right one sets the cookie and opens the page", async () => {

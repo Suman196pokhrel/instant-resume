@@ -11,6 +11,8 @@ export async function POST(request: NextRequest) {
   const client = clientOf(request.headers);
   const wait = limiter.retryAfter(client);
   if (wait) return NextResponse.json({ error: "rate_limited", retryAfter: wait }, { status: 429, headers: { "Retry-After": String(wait) } });
+  // Count the attempt before any await, so parallel guesses can't all slip past the check; cleared on success.
+  const retryAfter = limiter.fail(client);
 
   const body: unknown = await request.json().catch(() => null);
   const password = (body as { password?: unknown } | null)?.password;
@@ -19,7 +21,6 @@ export async function POST(request: NextRequest) {
   }
 
   if (!(await checkPassword(password))) {
-    const retryAfter = limiter.fail(client);
     return NextResponse.json(retryAfter ? { error: "wrong_password", retryAfter } : { error: "wrong_password" }, { status: 401 });
   }
   limiter.clear(client);
