@@ -101,6 +101,17 @@ test("a volunteer-only background reaches Review and saves to the knowledge base
   await page.getByRole("button", { name: "Save volunteer role" }).click();
   await expect(page.getByText("Add another volunteer role")).toBeVisible();
   await expect(page.getByText("1 highlight", { exact: true })).toBeVisible();
+  // Removing the entry being edited clears the form, so Continue can't quietly add it back.
+  await page.getByRole("button", { name: "Edit Mentor" }).click();
+  await expect(page.getByLabel("Job title")).toHaveValue("Mentor");
+  await page.getByRole("button", { name: "Remove Mentor" }).click();
+  await expect(page.getByText("Add your first volunteer role")).toBeVisible();
+  await expect(page.getByLabel("Job title")).toHaveValue("");
+  await page.getByLabel("Job title").fill("Mentor");
+  await page.getByLabel("Organisation").fill("Code Club Australia");
+  await page.getByLabel("Highlight 1", { exact: true }).fill("Ran weekly coding sessions for 20 students");
+  await page.getByRole("button", { name: "Save volunteer role" }).click();
+  await expect(page.getByText("Add another volunteer role")).toBeVisible();
   await cont(page).click();
   for (const title of ["Portfolio items", "Education", "Skills", "Achievements and publications", "Referees", "Additional sections"]) {
     await expect(page.getByRole("heading", { level: 1 })).toHaveText(title);
@@ -122,6 +133,11 @@ test("a volunteer-only background reaches Review and saves to the knowledge base
   await expect(page.getByText("Ran weekly coding sessions for 20 students")).toBeVisible();
   await page.goto("/kb/workRights");
   await expect(page.getByText("Not set").first()).toBeVisible();
+  // Saving the empty work rights card creates the entry.
+  await page.getByRole("button", { name: "Edit work rights" }).click();
+  await page.getByRole("dialog").getByLabel("Work rights").selectOption("Permanent resident");
+  await page.getByRole("dialog").getByRole("button", { name: "Save" }).click();
+  await expect(page.locator("dd", { hasText: "Permanent resident" })).toBeVisible();
   await page.goto("/");
   await expect(page).toHaveURL(/\/dashboard$/);
 });

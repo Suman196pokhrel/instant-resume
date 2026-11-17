@@ -262,7 +262,13 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
                   setErrors({});
                   setFormKey((k) => k + 1);
                 }}
-                onRemove={(i) => save({ ...st, draft: { ...draft, [step.key]: listOf(draft, step.key as KbSection).filter((_, j) => j !== i) } }, { flash: false }).then(() => setEditing(null))}
+                onRemove={(i) =>
+                  save({ ...st, draft: { ...draft, [step.key]: listOf(draft, step.key as KbSection).filter((_, j) => j !== i) } }, { flash: false }).then(() => {
+                    // Clear the form too: it may hold the removed entry (and its highlight IDs), which Continue would re-add.
+                    setEditing(null);
+                    setFormKey((k) => k + 1);
+                  })
+                }
               >
                 <form key={formKey} ref={form} noValidate onSubmit={(e) => (e.preventDefault(), saveEntry())} className="flex flex-col gap-3.5 rounded-md border border-dashed border-line-2 p-4">
                   <strong>
