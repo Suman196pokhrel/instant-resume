@@ -149,3 +149,12 @@ test("at phone width the section nav is one scrolling row (DoD)", async ({ page 
   expect(b!.y).toBe(a!.y);
   expect(await page.evaluate(() => document.documentElement.scrollWidth <= window.innerWidth)).toBe(true);
 });
+
+test("a failed save says so and lets you try again", async ({ page }) => {
+  await page.goto("/kb/referees");
+  await page.getByRole("button", { name: "Edit Dana Okafor" }).click();
+  await page.route("**/api/kb/referees/**", (route) => route.abort());
+  await dialog(page).getByRole("button", { name: "Save" }).click();
+  await expect(page.getByText("Couldn't save your changes. Try again.")).toBeVisible();
+  await expect(dialog(page).getByRole("button", { name: "Save" })).toBeEnabled();
+});

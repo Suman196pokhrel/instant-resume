@@ -1,10 +1,10 @@
 ---
 id: TASK-6
 title: Knowledge base screen
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:48:00Z'
+updated_date: '2026-11-17T10:53:00Z'
 labels:
   - m3
 dependencies:
@@ -65,6 +65,13 @@ Out of scope
 - Orphaned bullet references after a highlight is deleted (claims check, TASK-20); reordering entries; showing referenceOnly additional sections differently
 - Component-test infrastructure (Testing Library isn't installed; §18.2 doesn't list the KB)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+KB screen at /kb/[section]: section nav, entry cards, add/edit/delete dialogs with a highlights editor that keeps highlight IDs, skills and evidenceFor; shared field schema in lib/schemas/kb-fields.ts for TASK-7; new form, pill, chip and empty-state components; e2e runs on a seeded throwaway DB (IR_DB_URL).
+Review: 107 unit + 45 e2e green; contact, empty, skills, error and dialog states match the mock; fixed in review: network failure left Save stuck, misleading failure toast, duplicate chip keys. Parked: Undo for KB deletes.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 

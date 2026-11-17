@@ -16,10 +16,15 @@ type Row = { key: string; h?: Highlight };
 
 const SINGLE_URL: Partial<Record<KbSection, string>> = { contact: "/api/kb/contact", workRights: "/api/kb/work-rights" };
 
+/** Calls a KB route; a network failure comes back as not ok, so the dialog never stays stuck as busy. */
 async function send(method: string, url: string, body?: unknown) {
-  const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
-  const data = res.status === 204 ? null : await res.json().catch(() => null);
-  return { ok: res.ok, data };
+  try {
+    const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body: body === undefined ? undefined : JSON.stringify(body) });
+    const data = res.status === 204 ? null : await res.json().catch(() => null);
+    return { ok: res.ok, data };
+  } catch {
+    return { ok: false, data: null };
+  }
 }
 
 /**
@@ -84,7 +89,7 @@ export function EntryDialog({ section, entry, trigger }: { section: KbSection; e
     const issues: { path: string; message: string }[] = res.data?.issues ?? [];
     const fieldErrors = Object.fromEntries(issues.map((i) => [i.path.split(".").at(-1)!, i.message]).filter(([k]) => def.fields.some((f) => f.k === k)));
     setErrors(fieldErrors);
-    toast("Couldn't save. Check the fields and try again.", { kind: "error" });
+    toast(Object.keys(fieldErrors).length ? "Couldn't save. Check the fields and try again." : "Couldn't save your changes. Try again.", { kind: "error" });
   }
 
   async function remove() {

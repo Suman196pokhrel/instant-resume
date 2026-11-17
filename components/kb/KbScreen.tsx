@@ -117,8 +117,8 @@ function EntryCard({ section, entry }: { section: KbSection; entry: Entry }) {
       {s.line && <p className="mt-2.5 text-ink-2">{s.line}</p>}
       {s.chips && (
         <div className="mt-3 flex flex-wrap gap-1.5">
-          {s.chips.map((c) => (
-            <Chip key={c}>{c}</Chip>
+          {s.chips.map((c, i) => (
+            <Chip key={i}>{c}</Chip>
           ))}
         </div>
       )}
