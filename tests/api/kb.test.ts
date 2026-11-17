@@ -88,6 +88,14 @@ describe("knowledge base routes (AC3)", () => {
     expect((await getKb()).referees.map((r: any) => r.id)).toEqual(["ref-dana"]);
   });
 
+  it("PATCH fills the id of a newly added highlight", async () => {
+    const civic = (await getKb()).roles.find((r: any) => r.id === "role-civic");
+    const res = await entry.PATCH(req("PATCH", { highlights: [...civic.highlights, { text: "Ran the data portal's on-call roster", skills: [] }] }), ctx({ type: "roles", id: "role-civic" }));
+    expect(res.status).toBe(200);
+    const added = (await res.json()).highlights.at(-1);
+    expect(added.id).toMatch(/^hl-[0-9a-f]{8}$/);
+  });
+
   it("404 for an unknown type or a missing entry", async () => {
     expect((await entries.POST(req("POST", {}), ctx({ type: "hobbies" }))).status).toBe(404);
     expect((await entry.PATCH(req("PATCH", { title: "x" }), ctx({ type: "roles", id: "role-nope" }))).status).toBe(404);

@@ -65,7 +65,18 @@ export type KbListKey = keyof typeof KB_LIST_PREFIX;
 export const isKbList = (type: string): type is KbListKey => Object.hasOwn(KB_LIST_PREFIX, type);
 export const newId = (prefix: string) => `${prefix}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
 
+/** Gives an incoming entry, and each of its highlights, an ID when it has none. */
+export function fillIds(entry: Record<string, unknown>, prefix: string) {
+  entry.id ||= newId(prefix);
+  if (Array.isArray(entry.highlights)) {
+    entry.highlights = entry.highlights.map((h: Record<string, unknown>) => ({ ...h, id: h?.id || newId("hl") }));
+  }
+  return entry;
+}
+
 /** Read, change, then save the whole KB, so every change is validated as a whole (the KB is small). */
+// shortcut: read and write are separate steps, so two simultaneous edits can lose one; fine for one user with
+// debounced saves. Move both into one transaction if the KB screen ever saves in parallel.
 export async function updateKb(db: Db, change: (kb: KnowledgeBase) => void): Promise<KnowledgeBase> {
   const kb = await readKb(db);
   if (!kb) throw new ApiError(409, "no_knowledge_base");

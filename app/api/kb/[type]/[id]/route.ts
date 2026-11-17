@@ -1,7 +1,7 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { ApiError, handle, noContent, readJson } from "@/lib/api";
 import { getDb } from "@/lib/db/client";
-import { isKbList, updateKb } from "@/lib/db/kb";
+import { fillIds, isKbList, KB_LIST_PREFIX, updateKb } from "@/lib/db/kb";
 
 type Ctx = RouteContext<"/api/kb/[type]/[id]">;
 
@@ -21,7 +21,7 @@ async function target(ctx: Ctx) {
 // PATCH /api/kb/:type/:id: merges the given fields into the entry; its id never changes.
 export const PATCH = handle(async (request: NextRequest, ctx: Ctx) => {
   const { type, id } = await target(ctx);
-  const body = await readJson(request);
+  const body = fillIds({ ...(await readJson(request)), id }, KB_LIST_PREFIX[type]); // new highlights get IDs
   const kb = await updateKb(await getDb(), (kb) => {
     const list = kb[type] as { id: string }[];
     const i = indexOf(list, id);
