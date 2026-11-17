@@ -4,12 +4,11 @@ title: Manual onboarding wizard
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:03:00Z'
+updated_date: '2026-11-17T10:58:00Z'
 labels:
   - m3
 dependencies:
-  - TASK-32
-  - TASK-33
+  - TASK-37
 ordinal: 7000
 ---
 
@@ -33,6 +32,29 @@ As a new user, I can enter my background step by step and come back where I left
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Approach (UI on the TASK-37 API; mock views-onboarding.js)
+- /onboarding (shell): the chooser (import card primary with "Recommended · about 2 minutes", manual secondary), without the mock-only "This mock makes no provider calls" line. When saved, unfinished progress exists (not completed and step or draft set), it redirects to /onboarding/manual.
+- /onboarding/manual (focus, full screen): a server page reads the state and, only when devUiEnabled(), the sample sections, then renders a client Wizard. Top bar: brand, progressbar "Step n of 11" / "k steps left" / "Last step", "Save and exit" (→ /dashboard). Left rail: numbered steps with checks and "optional"; steps up to maxStep are clickable. Card: h1, blurb, Fill with sample (dev only), body, footer (Back, "✓ Saved", Skip this step on optional steps, Save and continue / Save to knowledge base).
+- Contact and Work rights: field grid. Repeatable steps: compact entry cards (Edit, Remove), then a dashed inline form "Add your first {noun}" / "Add another {noun}" / "Edit {noun}" with "Save {noun}" / "Update {noun}". Continue saves a partly filled form when it's valid. EntryForm (fields grid and highlights editor) is extracted from EntryDialog and shared, so the ID, skills and evidenceFor preservation lives in one place.
+- Every save awaits PUT /api/onboarding and adopts the returned state (stable IDs). Continue shows a spinner, moves on with a view-transition slide (existing step-out/in classes) and flashes "✓ Saved" (2.4 s fade keyframe in globals.css). Loading at step > 0 shows the toast "Picked up where you left off: {step}".
+- Review: a row per step with a summary, a pill ("{n} added", "Done", "Empty") and Edit; the save mode select only when a KB exists; "Save to knowledge base" → POST complete, then the done screen (animated check, "Your knowledge base is ready", "{n} entries saved…", Review knowledge base / Start an application). An invalid contact shows the mock toast and goes to step 1.
+
+Files: app/(shell)/onboarding/page.tsx, app/(focus)/onboarding/manual/page.tsx, components/onboarding/Wizard.tsx (+ Review, Done if large), components/kb/EntryForm.tsx (from EntryDialog), app/globals.css (saved fade, done check), tests/e2e/onboarding.spec.ts, tests/e2e/shell.spec.ts
+
+Tests (e2e on its own empty server: spawn `pnpm start` on port 3103 with a fresh IR_DB_URL and IR_DEV_UI=1, killed in afterAll; serial)
+- AC1: / → /onboarding shows both choices; "Enter details manually" opens the wizard at Contact details
+- AC2: the progress label reads "Step 1 of 11" / "10 steps left", and Review reads "Last step"; the rail lists the 11 steps
+- AC3: Continue on empty Contact shows "Enter your full name" and focuses Full name; Skip shows on Work rights but not on Contact or Review
+- AC4: after Contact, reload resumes at Work rights with the toast; /onboarding redirects to the wizard while it's unfinished
+- AC5: volunteer-only (contact, skip, skip, add a volunteer role, skip the rest) reaches Review with "1 added", saves, shows "Your knowledge base is ready", and /kb/volunteering lists the role while /kb/workRights shows "Not set"
+- DoD: keyboard path through Continue; the existing shell.spec placeholder checks are updated
+
+Out of scope: import (TASK-8); the setup checklist (TASK-29)
+<!-- SECTION:PLAN:END -->
 
 ## Comments
 
