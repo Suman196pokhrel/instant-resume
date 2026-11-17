@@ -96,7 +96,7 @@ Views.onboarding = function (root, params = []) {
     return `
       ${list.length ? `<div class="onb-entries">${list.map((e, i) => {
         const s = kbEntrySummary(step.key, e);
-        return `<div class="onb-entry ${i === editingIdx ? 'editing' : ''}"><div><strong>${esc(s.title)}</strong><div class="muted small">${esc(s.sub || (s.chips || []).join(', '))}</div>${e.highlights ? `<div class="muted small">${e.highlights.length} highlights</div>` : ''}</div>
+        return `<div class="onb-entry ${i === editingIdx ? 'editing' : ''}"><div><strong>${esc(s.title)}</strong><div class="muted small">${esc(s.sub || (s.chips || []).join(', '))}</div>${e.highlights ? `<div class="muted small">${e.highlights.length} ${e.highlights.length === 1 ? 'highlight' : 'highlights'}</div>` : ''}</div>
           <div class="row-gap"><button class="btn btn-ghost btn-sm" data-edit-entry="${i}">Edit</button><button class="icon-btn" data-remove-entry="${i}" aria-label="Remove">${icon('trash', 15)}</button></div></div>`;
       }).join('')}</div>` : ''}
       <form class="onb-entry-form" novalidate>

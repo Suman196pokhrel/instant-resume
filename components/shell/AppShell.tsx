@@ -4,6 +4,7 @@ import { ViewTransition } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { Book, File, Settings } from "lucide-react";
+import { BrandMark } from "./Brand";
 import { cn } from "@/lib/utils";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -39,13 +40,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
           aria-label="Instant Resume home"
           className="flex items-center gap-[9px] px-2 py-1 text-ink no-underline group-data-[shell=compact]/shell:px-0"
         >
-          <span aria-hidden className="grid size-[30px] flex-none place-items-center rounded-md bg-ink text-background">
-            <svg viewBox="0 0 24 24" width="20" height="20" fill="none" stroke="currentColor" strokeWidth="1.8" strokeLinejoin="round" strokeLinecap="round">
-              <path d="M6 3h9l4 4v14H6z" />
-              <path d="M9 11h7M9 15h4" />
-              <path d="M15 3v4h4" />
-            </svg>
-          </span>
+          <BrandMark />
           <span className="text-[15px] font-[650] tracking-[-0.01em] group-data-[shell=compact]/shell:hidden max-[900px]:hidden">
             Instant Resume
           </span>

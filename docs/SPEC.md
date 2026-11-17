@@ -944,8 +944,8 @@ Behaviour:
 - Inline validation on Continue. Errors appear under the fields: "Enter your full name", "Enter your email". Focus moves to the first invalid field. Optional labels say "optional" in muted text.
 - Repeatable steps show saved entries as compact cards (Edit, Remove), then a dashed form "Add your first role" or "Add another role" with "Save role". On Continue, a partially filled valid form is saved automatically. All background sections may be skipped; no paid role is required.
 - "Save and continue" shows a brief spinner, saves the step (PUT `/api/onboarding`), moves on, and shows "✓ Saved" fading near the footer. "Skip this step" appears on optional steps.
-- Returning to `/onboarding` resumes at the saved step, with the toast "Picked up where you left off: {step}".
-- Review lists each step with a summary, a status pill ("{n} added", "Done", "Empty") and Edit. "Save to knowledge base" merges the draft (POST complete) and shows the done screen: animated check, "Your knowledge base is ready", "{n} entries saved. Every resume and cover letter you make will draw only on these facts.", then "Review knowledge base" and "Start an application".
+- Returning to `/onboarding` resumes at the saved step, with the toast "Picked up where you left off: {step}". While a wizard is unfinished, `/onboarding` goes straight to `/onboarding/manual`; once saved, it shows the chooser again.
+- Review lists each step with a summary, a status pill ("{n} added", "Done", "Empty") and Edit. The save behaviour select (merge or replace) appears only when a knowledge base already exists. "Save to knowledge base" merges the draft (POST complete) and shows the done screen: animated check, "Your knowledge base is ready", "{n} entries saved. Every resume and cover letter you make will draw only on these facts.", then "Review knowledge base" and "Start an application".
 - Dev only: a "Fill with sample" button per step that loads the seed data (section 17).
 
 ### 14.1a Resume import and review

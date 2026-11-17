@@ -1,9 +1,15 @@
-// Full-screen wizard with its own top bar and progress (SPEC §14.1). Arrives with TASK-7.
-export default function Page() {
-  return (
-    <main className="mx-auto max-w-[760px] p-7">
-      <h1>Contact details</h1>
-      <p className="mt-2 text-muted-foreground">The manual onboarding wizard arrives with TASK-7.</p>
-    </main>
-  );
+import { Wizard } from "@/components/onboarding/Wizard";
+import { getDb } from "@/lib/db/client";
+import { readKb } from "@/lib/db/kb";
+import { readOnboarding } from "@/lib/db/onboarding";
+import { devUiEnabled } from "@/lib/dev";
+import { KB_ORDER } from "@/lib/schemas/kb-fields";
+
+// Full-screen manual onboarding wizard (SPEC §14.1), resuming at the saved step.
+export default async function Page() {
+  const db = await getDb();
+  const [state, kb] = await Promise.all([readOnboarding(db), readKb(db)]);
+  // Dev only: "Fill with sample" (SPEC §17). Loaded here so the sample never ships in the production bundle.
+  const sample = devUiEnabled() ? (await import("@/tests/fixtures/kb.json")).default : null;
+  return <Wizard initial={state} kbExists={!!kb} sample={sample && Object.fromEntries(KB_ORDER.map((k) => [k, (sample as Record<string, unknown>)[k] ?? []]))} />;
 }
