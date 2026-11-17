@@ -1,10 +1,10 @@
 ---
 id: TASK-6
 title: Knowledge base screen
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:36:00Z'
+updated_date: '2026-11-17T10:44:00Z'
 labels:
   - m3
 dependencies:
@@ -21,16 +21,16 @@ As a job seeker, I can browse and edit every entry in my knowledge base by secti
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 /kb/[section] lists the entries for each KB section in KB_ORDER
-- [ ] #2 Adding, editing and deleting an entry or highlight saves it and survives a reload
-- [ ] #3 Inline validation shows field errors and moves focus to the first one
-- [ ] #4 Volunteer work and additional sections are supported, and no paid role is required
+- [x] #1 /kb/[section] lists the entries for each KB section in KB_ORDER
+- [x] #2 Adding, editing and deleting an entry or highlight saves it and survives a reload
+- [x] #3 Inline validation shows field errors and moves focus to the first one
+- [x] #4 Volunteer work and additional sections are supported, and no paid role is required
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -65,3 +65,15 @@ Out of scope
 - Orphaned bullet references after a highlight is deleted (claims check, TASK-20); reordering entries; showing referenceOnly additional sections differently
 - Component-test infrastructure (Testing Library isn't installed; §18.2 doesn't list the KB)
 <!-- SECTION:PLAN:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-17T10:44:00Z
+
+---
+
+Build done. Unit 107/107 (incl. kb-fields, kb-page redirect); e2e 42/43: the one failure is startup.spec 'pnpm dev refuses a non-loopback HOST', because the owner's own next dev was running (Next allows one dev server per project), unrelated. Visual check against mock #/kb/roles and the Edit role dialog: matches; backup buttons and model picker arrive with TASK-27/TASK-10. Mutation check: dropping the preserved highlight fields fails the AC2 e2e. Mock fix: contact location required, volunteer dates optional (SPEC §6.1).
+
+---
+<!-- COMMENTS:END -->
