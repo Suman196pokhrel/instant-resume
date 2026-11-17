@@ -1,10 +1,10 @@
 ---
 id: TASK-8
 title: Resume import review (TXT and paste)
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T11:14:00Z'
+updated_date: '2026-11-17T11:22:00Z'
 labels:
   - m3
 dependencies:
@@ -21,16 +21,16 @@ As a new user, I can paste my existing resume or upload a TXT file, review what 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Pasted text or a TXT upload opens a review draft, and nothing is saved before the user confirms
-- [ ] #2 Unrecognised sections are kept as Additional sections, and the original text is kept as reference-only
-- [ ] #3 Merge adds entries and keeps existing contact and work-rights details; replace swaps the KB; existing documents survive both
-- [ ] #4 Abandoning the draft leaves the saved KB unchanged; invalid, empty and oversized files show clear errors
+- [x] #1 Pasted text or a TXT upload opens a review draft, and nothing is saved before the user confirms
+- [x] #2 Unrecognised sections are kept as Additional sections, and the original text is kept as reference-only
+- [x] #3 Merge adds entries and keeps existing contact and work-rights details; replace swaps the KB; existing documents survive both
+- [x] #4 Abandoning the draft leaves the saved KB unchanged; invalid, empty and oversized files show clear errors
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -52,3 +52,10 @@ Tests
 
 Out of scope: PDF/DOCX extraction and the provider data-transfer notice (TASK-11); the mock's "Try sample extraction" (mock-only simulation)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Pasted text or a TXT file is parsed on the device (lib/import/parse.ts) into an onboarding draft that opens at Review with an import note; entries missing details show 'Needs details' and block saving until fixed; merge/replace via TASK-37. Unknown sections, Work rights text and the original text are kept as Additional sections. PDF/DOCX show a clear 'arrives with your provider' message (TASK-11). Drafts now accept incomplete entries.
+Review: 126 unit + 55 e2e green (import e2e on its own empty-DB server, port 3104); import screen and import Review match the mock. Fixed in review: contact details were taken from anywhere in the text (a referee's email, a date range as phone, a heading as name). Reviewed in the same session that built it.
+<!-- SECTION:NOTES:END -->
