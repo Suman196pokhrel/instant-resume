@@ -10,13 +10,16 @@
   <link rel="stylesheet" href="styles.css">
 </head>
 <body>
-  <div class="demo-notice" role="note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span>Interactive demo · Sample data · AI responses are simulated</span></div>
+  <div class="demo-notice" role="note"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 11v5M12 8h.01"/></svg><span class="demo-notice-text">Interactive demo · Sample data · AI responses are simulated</span><button class="demo-fb" data-fb-open>Give feedback</button></div>
   <div id="app"></div>
   <div id="toasts" aria-live="polite"></div>
   <div id="modal-root"></div>
   <div id="print-root" aria-hidden="true"></div>
+  <div id="feedback-root"></div>
+  <div id="fb-ts"><p>A quick check that you're a person, then your feedback is sent.</p><div id="fb-ts-slot"></div></div>
 
   <!-- Classic scripts (no modules) so index.html also works straight from file:// -->
+  <script src="config.js"></script>
   <script src="js/data.js"></script>
   <script src="js/core.js"></script>
   <script src="js/docs.js"></script>
@@ -26,6 +29,7 @@
   <script src="js/views-quick.js"></script>
   <script src="js/views-workspace.js"></script>
   <script src="js/views-import.js"></script>
+  <script src="js/feedback.js"></script>
   <script src="js/main.js"></script>
 </body>
 </html>

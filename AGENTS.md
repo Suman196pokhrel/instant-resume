@@ -21,10 +21,10 @@ Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first (
 - One workflow only: knowledge base (manual or import, reviewed before save) → new application from a pasted job description → Quick generate or Studio → edit, check, export. Navigation: Applications, Knowledge base, Settings.
 - Removed features never return (SPEC §21): scraping and discovery, sweeps and schedulers, matches inbox, career maps and analytics, resume experiments, listing-trust checks, outreach, application-stage tracking.
 - Every resume bullet traces to a knowledge base highlight ID. Design changes never call the LLM. API keys stay in the browser.
-- Keep the two modes apart: the local app makes real provider calls and uses SQLite; the public Vercel demo is static, simulated and must never collect real keys.
+- Keep the two modes apart: the local app makes real provider calls and uses SQLite; the public demo (`mock/` on Cloudflare: `cd mock/feedback-worker && npx wrangler deploy`) is static, simulated and must never collect real keys; its only server code is the visitor-feedback endpoint, stored in D1.
 - Australian defaults (A4, AU spelling, work-rights line, referees); single-column templates only.
 - UI quality is part of done, not a later pass: every screen matches the mock's layout, copy, states and motion, and uses only the shared tokens and components (SPEC §11–12). No one-off colours, durations or easings; keyboard, focus and reduced motion work.
-- Update SPEC.md and the mock in the same commit as any behaviour change. Synthetic fixtures only. Never change the licence or invent a domain or Vercel project, and never publish or deploy without explicit approval.
+- Update SPEC.md and the mock in the same commit as any behaviour change. Synthetic fixtures only. Never change the licence or invent a domain or hosting project, and never publish or deploy without explicit approval.
 
 <!-- BEGIN:nextjs-agent-rules -->
 

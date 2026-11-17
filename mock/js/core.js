@@ -447,6 +447,7 @@ function openDemoControls() {
         <select id="dc-scenario" class="dc-select">${['happy', 'gaps', 'findings', 'error-stage-1', 'error-stage-2', 'error-stage-3', 'error-stage-4', 'error-stage-5'].map((v) => `<option ${(d.quickScenario || 'happy') === v ? 'selected' : ''}>${v}</option>`).join('')}</select></span></div>
       <label class="switch-row"><input type="checkbox" id="dc-lock" ${d.passwordLock ? 'checked' : ''}><span><strong>Simulate a password-protected server</strong><br><span class="muted small">As if APP_PASSWORD were set: every page asks to unlock first. The mock password is <code>${MOCK_PASSWORD}</code>.</span></span></label>
       <label class="switch-row"><input type="checkbox" id="dc-noconn" ${Object.keys(Store.state.connections).length === 0 ? 'checked' : ''}><span><strong>Remove all connections</strong><br><span class="muted small">See what happens with no API key.</span></span></label>
+      <div class="switch-row"><span><strong>Feedback on this device</strong><br><span class="muted small">${esc(Feedback.summary())}</span></span><button class="btn btn-ghost btn-sm" id="dc-feedback">Review</button></div>
       <hr>
       <button class="btn btn-ghost" id="dc-onb">${icon('book')} Restart onboarding from step 1</button>
       <button class="btn btn-danger-ghost" id="dc-reset">${icon('undo')} Reset all demo data</button>`,
@@ -461,6 +462,7 @@ function openDemoControls() {
         else { Store.state.connections = Store.state._savedConnections || seedState().connections; }
         Store.save(); Router.refresh();
       };
+      $('#dc-feedback', root).onclick = () => { close(); setTimeout(Feedback.inbox, 200); };
       $('#dc-onb', root).onclick = () => { Store.state.onboarding = { step: 0, draft: null, visited: false }; Store.saveNow(); close(); location.hash = '#/onboarding'; };
       $('#dc-reset', root).onclick = () => { Store.reset(); close(); location.hash = '#/dashboard'; Router.refresh(); toast('Demo data reset'); };
     },

@@ -45,7 +45,7 @@
 - Runs on the user's own machine or a private server the user controls (`pnpm dev`, local SQLite file). The user's own AI provider keys; the user pays the provider directly.
 - **Local-first is the first-stage target.** There is no hosted platform and no Instant Resume API between the user and their AI provider. Any hosted offering would need an explicit revision of this spec first.
 - Source on a public GitHub repository, built in public.
-- Vercel hosts only a **simulated** public demo (§1.5).
+- A Cloudflare Worker hosts only a **simulated** public demo (§1.5), plus its visitor-feedback collector.
 - No subscription, billing, accounts, managed real-user backend or live public AI service.
 
 Users build the knowledge base by manual onboarding or by importing an existing resume and reviewing the extracted details before saving. Then, for each job, there are two ways to create documents:
@@ -61,13 +61,13 @@ Core principles (these shape every decision):
 4. **The API key never leaves the browser** except to the provider. LLM calls go browser → provider directly. Local storage does not mean offline AI: the relevant input goes to the user's selected provider, and the UI must say so.
 5. **Everything saves automatically**, with revision history and undo.
 
-Deliverables: a working local Next.js application with public GitHub source and reproducible setup, and a separately deployed simulated Vercel demo. Each meets its own criteria in §18 and §20; neither substitutes for the other.
+Deliverables: a working local Next.js application with public GitHub source and reproducible setup, and a separately deployed simulated public demo. Each meets its own criteria in §18 and §20; neither substitutes for the other.
 
 ### 1.2 Two operating modes
 
 | Capability | Real local application | Public demo (current `mock/`) |
 |---|---|---|
-| Runtime | Local Next.js server installed by the user | Static HTML/CSS/JS served by Vercel; no server |
+| Runtime | Local Next.js server installed by the user | Static HTML/CSS/JS served by a Cloudflare Worker; its only server code is the visitor-feedback endpoint (§1.5) |
 | Provider access | User's own API keys; real requests to the chosen provider | Simulated only; no real key entry or provider calls in the public release |
 | Resume import | Real PDF/DOCX/TXT extraction into a review draft | PDF/DOCX show labelled **sample** extraction; TXT and pasted text use a basic local parser |
 | Generation and rewrites | Schema-validated provider responses with evidence references | Fixtures or deterministic transformations, visibly labelled simulated |
@@ -121,11 +121,13 @@ Visitors explore sample career information and sample job descriptions, choose Q
 - Uploaded content stays in the browser. Make that distinction from real provider processing explicit.
 - **Before public deployment (not yet done):** disable real API-key collection and live-provider paths (including the Settings "How to get an API key" guide, which must point to local setup instead of asking visitors to paste a key), make reset easy to find, explain browser-local storage, keep personal uploads optional with a sample-first path, and link to the source repository and local setup once they exist. Never label the mock a fully implemented AI product.
 
+- **Visitor feedback** (owner decision 2026-11-17, ported from the Sambad demo): "Give feedback" in the demo strip opens a non-modal panel (usefulness 1–5, topics, note, "Point at it" to attach any on-screen element, optional role and email). Entries are saved in the browser first (`instant-resume-feedback-v1`, kept by "Reset all demo data"), then sent to the Worker's `/feedback`, which verifies a Turnstile token, validates, rate-limits and stores them in D1 with only a salted IP hash. Opened from `file://` nothing is sent; Demo controls → "Feedback on this device" reviews and exports it. Details: `mock/feedback-worker/README.md`.
+
 Delivery rules: §3.1. Release checks: §18.5. Acceptance: §20.
 
 ### 1.6 Engineering boundaries
 
-CI, reproducible local setup, validated AI outputs, useful error handling and evaluation support the one user problem. Public multi-tenant infrastructure, remote workers, always-on jobs and cloud databases are not needed, including for the demo. Do not add cloud infrastructure, auth, billing or background services for the demo, and do not add product features to justify infrastructure.
+CI, reproducible local setup, validated AI outputs, useful error handling and evaluation support the one user problem. Public multi-tenant infrastructure, remote workers, always-on jobs and cloud databases are not needed, including for the demo. The one exception is the demo's visitor-feedback collector (§1.5, owner decision 2026-11-17). Do not add any other cloud infrastructure, auth, billing or background services for the demo, and do not add product features to justify infrastructure.
 
 ### 1.7 Current status
 
@@ -135,7 +137,7 @@ CI, reproducible local setup, validated AI outputs, useful error handling and ev
 | `mock/` static interactive demo | Exists; matches this spec's flows with simulated AI |
 | Real Next.js application | M0 scaffold in progress (§19) |
 | GitHub publication | Public repository; licensed under PolyForm Noncommercial 1.0.0 (`LICENSE`) |
-| Vercel demo deployment | Not configured; pre-deployment items in §1.5 pending |
+| Public demo deployment | `mock/` live on Cloudflare at https://instant-resume-demo.spokhrel196.workers.dev with visitor feedback (Turnstile key pending); pre-deployment items in §1.5 pending |
 | Custom domain | Optional; a hosting-provided address is sufficient |
 
 ---
@@ -184,9 +186,9 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Concern | Choice |
 |---|---|
 | Source and collaboration | Public GitHub repository; build in public |
-| Public demo host | Vercel; static simulated demo, no provider secrets or database |
+| Public demo host | Cloudflare Worker with static assets (`mock/feedback-worker/`); simulated demo, no provider secrets; a D1 database holds visitor feedback only |
 | Framework | Next.js (App Router), TypeScript strict mode |
-| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts: by default it only accepts connections from the same computer, and a self-hosted instance must use the password lock (§4.1) and be served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Vercel hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
+| Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts: by default it only accepts connections from the same computer, and a self-hosted instance must use the password lock (§4.1) and be served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Cloudflare hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
 | Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only from Next.js route handlers |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
@@ -210,16 +212,16 @@ Layout: **single column only** for ATS safety. **One** resume template and **one
 
 ---
 
-### 3.1 GitHub and Vercel delivery requirements
+### 3.1 GitHub and demo delivery requirements
 
 - GitHub is the source/collaboration destination. Publish code, versioned docs, synthetic fixtures, tests and reproducible local setup.
 - Licence: **PolyForm Noncommercial 1.0.0** (`LICENSE`, with the owner's `Required Notice:` line). Free for personal and other noncommercial use, modification and redistribution; preparing one's own resume and job applications counts as personal use. Commercial use, including selling copies or modified versions, requires a separate paid licence from the owner. Call the project "source-available", never "open source" (the licence is not OSI-approved). Do not change the licence without the owner.
-- Initial Vercel deployment serves **only `mock/`** as static HTML/CSS/JavaScript. Keep docs, local data, key stores and development configuration out of the deployment artifact. No Next.js route handlers, database service or live LLM functions are needed for this static artifact.
+- The Cloudflare deployment (`cd mock/feedback-worker && npx wrangler deploy`) serves **only `mock/`** as static HTML/CSS/JavaScript; `mock/.assetsignore` keeps the Worker folder out. Keep docs, local data, key stores and development configuration out of the deployment artifact. No Next.js route handlers or live LLM functions; the only server code and database are the feedback collector.
 - Use a Git-connected deployment workflow with checks before production promotion; preview deployments can support review. Do not deploy every change directly to the public demo without validating it.
 - If the mock is later replaced by a demo build of the real UI, provide a separate static/demo target with mock provider and browser persistence adapters. A runtime toggle alone must not enable live providers on the public deployment. Never deploy the full local server under the assumption that setting one mock-provider flag removes its database/API dependencies.
 - Public demo: immediately visible simulation notice, sample-first entry, no login/key/payment requirements, reset action, clear local-storage behavior, and links to GitHub/local setup once available. All examples must be synthetic. Uploaded content stays in the browser in this mode; make that distinction explicit from real provider processing.
 - Hosted demo settings may demonstrate provider selection, but must disable real key collection and real connection tests. The current mock's editable connection form needs this public-release adjustment; it is not completed by this specification update.
-- Vercel project, public repository URL and domain are not configured by this document. A custom domain is optional. Add actual links only after publication; publishing and deploying remain separate authorized tasks.
+- The Worker `instant-resume-demo` and D1 database `instant-resume-feedback` exist on the owner's Cloudflare account. Public repository URL and a custom domain are not configured by this document. A custom domain is optional. Add actual links only after publication; publishing and deploying remain separate authorized tasks.
 - CI uses fixture/mock providers and no personal API keys. Real-provider checks are opt-in local verification, documented separately from the deterministic CI suite. Do not claim passing fixture tests prove provider connectivity or output quality.
 
 ---
@@ -1250,7 +1252,7 @@ CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes docu
 - Test TXT/paste parsing, PDF/DOCX simulation labels, invalid/empty/oversized files, unknown sections, original-text retention, editing the review draft, cancellation, and merge/replace behavior. Test real PDF/DOCX extraction separately in the local application; do not treat sample extraction as parser coverage.
 - Test volunteer-only and education-only backgrounds through both generation flows. Exclude reference-only original text from automatic selection. Verify imported details do not silently mix with demo identity data.
 - Serve the demo artifact independently of the local app. Verify direct/reloaded routes, import review, Quick generate, Studio, editing, history, export, persistence and reset with no local API server.
-- Inspect browser requests during every demo flow: no real provider traffic, key submission, backend storage calls or uploaded document transfer. Verify public demo cannot enable a live adapter via URL parameters, stored preferences or the provider picker.
+- Inspect browser requests during every demo flow: no real provider traffic, key submission, backend storage calls (other than visitor feedback the visitor chose to send) or uploaded document transfer. Verify public demo cannot enable a live adapter via URL parameters, stored preferences or the provider picker.
 - Verify simulation labels, empty/error scenarios, keyboard access, narrow-screen layout, and browser print/export behavior. Sample generation may be simulated; manual editing must actually work.
 - Check that the deployment artifact contains only intended public assets and synthetic fixtures. Build/release failures must not promote a broken demo. Document the actual public URLs after deployment.
 - Current mock checks use JavaScript syntax checks and DOM interaction smoke tests; the application-level `pnpm` commands below are future implementation requirements, not commands available in this static checkout.
@@ -1275,7 +1277,7 @@ Do them in this order. Each ends with its tests green.
 | M8 | History and export | History drawer, restore, Export dialog, file naming |
 | M9 | Quick generate | Pipeline emitter, page fitting, the input, progress, error and result screens, Settings defaults |
 | M10 | Backup and polish | Backup export and import, unlock screen and Settings → Access, empty states, responsive layout, reduced motion, accessibility pass, e2e suite complete |
-| M11 | Public release and demo | GitHub publication/setup/contribution docs, CI, static Vercel demo with simulation boundary and public-demo checks passing |
+| M11 | Public release and demo | GitHub publication/setup/contribution docs, CI, static Cloudflare demo with simulation boundary and public-demo checks passing |
 
 ---
 
@@ -1327,7 +1329,7 @@ Do them in this order. Each ends with its tests green.
 
 **Local application acceptance:** `pnpm typecheck`, `pnpm lint`, `pnpm test` and `pnpm test:e2e` all pass; no console errors in the main flows; the app works from a fresh clone with `pnpm install && pnpm db:migrate && pnpm dev` (empty user KB); `pnpm db:seed` is optional synthetic demo data; with `APP_PASSWORD` unset the server only accepts connections from the same computer, and with it set every page and API route requires a session (§4.1); a README documents setup, scripts, BYOK costs/data flow, the mock provider and scenarios. CI is deterministic/offline with mock providers; real integration behavior is separately verified and documented.
 
-**Public demo acceptance:** a Vercel-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
+**Public demo acceptance:** a Cloudflare-hosted simulated product experience opens without login, keys or payment; all visible AI results are labelled simulated; sample data is synthetic; manual edits, layout, history and reset work; no real provider requests or backend dependencies; import and export limitations are explicit. A working local app does not by itself satisfy this deployment criterion, and a hosted mock does not satisfy the real-app criteria above.
 
 **Publication acceptance:** source is published on GitHub under the PolyForm Noncommercial licence, setup and contribution guidance, tests and an honest completed/planned feature list. Document actual repository/demo URLs when live. No paid SaaS, tracking CRM or scraping functionality is required for acceptance.
 
@@ -1337,13 +1339,13 @@ Do them in this order. Each ends with its tests green.
 
 **Removed and must not return:** job scraping and discovery, matching inbox, source connections, scheduled sweeps and schedulers, batch generation from discovered jobs, listing-trust scores, outreach and contact discovery, application-stage tracking (status tracker or kanban), career maps, hiring funnels, timing analytics and resume experiments.
 
-**Also out of scope:** paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Vercel demo is in scope); server sync between devices, user accounts, sign-up and password reset (the single-user password lock in §4.1 is in scope); multi-column layouts; more than one resume and one cover letter template; DOCX or other export formats (DOCX *import* is in scope); LinkedIn profile integration; MCP or chat-app integrations; interview-style onboarding; dark mode.
+**Also out of scope:** paid plans and subscriptions; managed hosting of the real application and live public AI processing (the simulated Cloudflare demo is in scope); server sync between devices, user accounts, sign-up and password reset (the single-user password lock in §4.1 is in scope); multi-column layouts; more than one resume and one cover letter template; DOCX or other export formats (DOCX *import* is in scope); LinkedIn profile integration; MCP or chat-app integrations; interview-style onboarding; dark mode.
 
 ---
 
 ## 22. Open decisions (defaults chosen, flagged for the owner)
 
-GitHub source, local BYOK operation, the simulated Vercel demo, and the absence of a paid service are confirmed decisions, not open alternatives. The Vercel project and domain remain release setup items.
+GitHub source, local BYOK operation, the simulated public demo on Cloudflare, and the absence of a paid service are confirmed decisions, not open alternatives. A custom domain remains a release setup item.
 
 | Decision | Default used in this spec |
 |---|---|
@@ -1368,7 +1370,7 @@ Anything else unclear: see §23.3.
 | Path | Purpose |
 |---|---|
 | `docs/SPEC.md` | This document; the only specification |
-| `mock/` | Static interactive demo (§23.2); future Vercel demo artifact |
+| `mock/` | Static interactive demo (§23.2), deployed to Cloudflare by `mock/feedback-worker/` |
 | `AGENTS.md` | Short entry point for coding agents; `CLAUDE.md` imports it |
 | `README.md` | Public project overview |
 
@@ -1376,19 +1378,20 @@ The real app lives at the repository root in the structure from §5 (`app/`, `co
 
 ### 23.2 Mock architecture (`mock/`)
 
-- Plain classic `<script>` tags, not ES modules, so it works over `file://`. Load order in `index.html` matters: `data.js` → `core.js` → `docs.js` → `views-*.js` → `main.js`. All files share one global scope.
+- Plain classic `<script>` tags, not ES modules, so it works over `file://`. Load order in `index.html` matters: `config.js` → `data.js` → `core.js` → `docs.js` → `views-*.js` → `feedback.js` → `main.js`. All files share one global scope.
 - `data.js`: `window.MOCK` holds the seed KB (persona "Jordan Whitlock", §17), sample JDs and their briefs, providers, banned phrases, theme defaults and presets.
 - `core.js`: helpers (`$`, `$$`, `esc`, `uid`, `clone`), icons, tooltips (`data-tip`, `data-tip-title`, `data-tip-side`), `vt(update, kind)` (runs a DOM update as a view transition; `kind` sets `html[data-vt]` for direction-aware CSS, and it falls back to a plain update without support or with reduced motion), toasts, modals, model picker, app shell and Demo controls, plus:
   - `Store`: all state, persisted to `localStorage` under `instant-resume-mock-v1`. Call `Store.save()` (debounced) after changes; `Store.reset()` reseeds; `normalizeKnowledgeBase()` fills missing KB arrays on load.
   - `Router`: hash router. `#/<name>/<params…>` dispatches to `Views[name](root, params)`; a view may return a cleanup function.
 - `docs.js`: `Docs` builds documents from the KB, renders them as HTML (stand-in for Typst), runs the rules engine and the mock LLM (brief extraction, rewrites).
 - `views-*.js` register routes: `dashboard`, `kb`, `settings` (views-app; KB field schema in `KB_SCHEMA`, order in `KB_ORDER`), `onboarding`, `import` (`ResumeImport`), `new` (chooser, `#/new/studio`, and `#/new/quick` in views-quick with the mock pipeline emitter), `project` (Workspace).
-- The demo notice strip is static markup in `index.html`; its height is the `--demo-h` CSS variable used by sticky elements.
+- The demo notice strip is static markup in `index.html`; its height is the `--demo-h` CSS variable used by sticky elements. Its "Give feedback" button opens the visitor-feedback panel.
+- `feedback.js`: `Feedback` (panel, point-at-it, device queue, Turnstile and batch sending, and `Feedback.inbox()` for Demo controls). `config.js` sets `window.IR_FEEDBACK` (endpoint and public Turnstile site key). `feedback-worker/`: the Cloudflare Worker, D1 schema and `node test.mjs` self-check (§1.5).
 - Mock-only extras: Demo controls (sidebar) and the `?mock=` scenario parameter (§17). The "Simulate a password-protected server" switch turns on `Access` in `core.js`: the router shows `Views.unlock` for every route until the fixture password `instant-demo` is entered, keeping the "session" in `sessionStorage` (the real app uses the §4.1 cookie). In the real app put these behind a dev-only panel (`NODE_ENV=development`).
 
 ### 23.3 Rules for every change
 
 - When product behaviour changes, update this document and the mock in the same commit. Keep completed, simulated and planned behaviour clearly distinct.
 - All fixtures and examples are synthetic. Never commit real resumes, provider keys or personal databases.
-- Do not change the licence, or invent a Vercel project or domain. Add real links only once they exist. Publishing and deploying are separate tasks that need explicit owner approval.
+- Do not change the licence, or invent a domain or another hosting project. Add real links only once they exist. Publishing and deploying are separate tasks that need explicit owner approval.
 - When anything is unclear, choose the option that keeps facts grounded, keeps formatting free of LLM calls, and matches the mock. Record each assumption in the README.

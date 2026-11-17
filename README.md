@@ -87,7 +87,7 @@ By default the app only accepts connections from the computer it runs on. To rea
 - [ ] Knowledge base, onboarding and resume import (M3)
 - [ ] Provider connections, Studio, Workspace and checks (M4–M7)
 - [ ] History, export, Quick generate and backup (M8–M10)
-- [ ] Public release and Vercel demo (M11)
+- [ ] Public release and demo (M11); the mock is live at https://instant-resume-demo.spokhrel196.workers.dev
 
 ## Try the mock
 

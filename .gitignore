@@ -87,3 +87,9 @@ venv/
 .DS_Store
 Thumbs.db
 desktop.ini
+
+# ---------------------------------------------------------------
+# Cloudflare (wrangler local state and dev secrets for the mock demo)
+# ---------------------------------------------------------------
+.wrangler/
+.dev.vars*

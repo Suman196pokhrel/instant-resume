@@ -823,6 +823,42 @@ input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--
 /* Public demo notice (required on every screen; see docs/SPEC.md) */
 .demo-notice { position: sticky; top: 0; z-index: 60; height: var(--demo-h); display: flex; align-items: center; justify-content: center; gap: 8px; padding: 0 16px; background: var(--ink); color: #E8EEEC; font-size: 12.5px; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
 .demo-notice svg { color: #8FD6C6; flex: none; }
+.demo-notice-text { min-width: 0; overflow: hidden; text-overflow: ellipsis; }
+.demo-fb { flex: none; margin-left: 8px; padding: 2px 10px; border-radius: 999px; border: 1px solid currentColor; background: none; color: #8FD6C6; font: 500 12px var(--font); cursor: pointer; transition: background var(--t), color var(--t); }
+.demo-fb:hover { background: #8FD6C6; color: var(--ink); }
+
+/* Visitor feedback panel (js/feedback.js): non-modal, so the demo stays usable behind it */
+.fb-panel { position: fixed; top: calc(var(--demo-h) + 10px); right: 16px; z-index: 80; width: min(400px, calc(100vw - 32px)); max-height: calc(100vh - var(--demo-h) - 26px); display: flex; flex-direction: column; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); opacity: 0; transform: translateY(-6px) scale(.98); transform-origin: top right; transition: opacity var(--t) var(--ease), transform var(--t-spring) var(--spring); }
+.fb-panel.in { opacity: 1; transform: none; }
+.fb-head { display: flex; justify-content: space-between; align-items: center; padding: 12px 14px 4px; }
+.fb-head h2 { font-size: 15px; margin: 0; }
+.fb-body { padding: 6px 14px 12px; overflow: auto; display: flex; flex-direction: column; gap: 8px; }
+.fb-label { font-size: 13px; font-weight: 500; margin-top: 6px; }
+.fb-about { display: flex; align-items: center; gap: 8px; padding: 8px 10px; background: var(--surface-2); border: 1px solid var(--line); border-radius: var(--r); font-size: 13px; color: var(--ink-2); }
+.fb-about > span { flex: 1; min-width: 0; overflow-wrap: anywhere; }
+.fb-scale { align-self: center; margin-left: 4px; }
+.fb-count { text-align: right; margin-top: -4px; }
+.fb-hp { position: absolute; left: -9999px; width: 1px; height: 1px; opacity: 0; }
+.fb-more summary { cursor: pointer; font-size: 13px; color: var(--ink-2); }
+.fb-more[open] { display: flex; flex-direction: column; gap: 8px; }
+.fb-foot { display: flex; align-items: center; gap: 12px; padding: 10px 14px; border-top: 1px solid var(--line); }
+.fb-foot > span { flex: 1; }
+.fb-done { align-items: center; text-align: center; padding: 18px 14px 20px; }
+.fb-done > .ic { color: var(--ok); }
+.fb-done h3 { margin: 0; font-size: 15px; }
+.fb-done p { margin: 0 0 8px; max-width: 32ch; }
+.fb-list { display: flex; flex-direction: column; gap: 8px; }
+.fb-entry { padding: 10px 12px; border: 1px solid var(--line); border-radius: var(--r); }
+.fb-entry p { margin: 6px 0; white-space: pre-wrap; }
+.fb-bad { background: var(--danger-soft); border-color: var(--danger-line); color: var(--danger); }
+#fb-point-box { position: fixed; z-index: 95; pointer-events: none; border: 2px solid var(--accent); border-radius: var(--r); background: var(--accent-soft); opacity: 0; transition: opacity var(--t-fast); mix-blend-mode: multiply; }
+#fb-point-box.on { opacity: 1; }
+#fb-point-hint { position: fixed; z-index: 96; bottom: 20px; left: 50%; transform: translateX(-50%); display: flex; align-items: center; gap: 10px; padding: 6px 6px 6px 14px; background: var(--ink); color: var(--bg); border-radius: var(--r); font-size: 13.5px; box-shadow: var(--shadow-pop); }
+#fb-point-hint .btn { color: var(--bg); }
+body.fb-pointing, body.fb-pointing * { cursor: crosshair !important; }
+#fb-ts { display: none; position: fixed; z-index: 96; right: 16px; top: calc(var(--demo-h) + 10px); padding: 12px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); box-shadow: var(--shadow-pop); font-size: 13px; max-width: 320px; }
+#fb-ts.on { display: block; }
+#fb-ts p { margin: 0 0 8px; }
 
 @media print {
   @page { size: A4; margin: 0; }

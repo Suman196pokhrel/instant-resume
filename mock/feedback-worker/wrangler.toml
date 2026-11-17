@@ -1,0 +1,21 @@
+# Instant Resume demo on Cloudflare: deploy settings.
+# One Worker serves the clickable mock (the files in mock/) and collects its
+# feedback at /feedback into a D1 database. Secrets are set with
+# `npx wrangler secret put`, never written here. See README.md.
+
+name = "instant-resume-demo"
+main = "src/index.js"
+compatibility_date = "2025-10-01"
+
+# The mock's files. ../.assetsignore keeps this folder out of what gets published.
+[assets]
+directory = "../"
+
+[vars]
+# Other sites allowed to send feedback here, comma separated. The Worker's own URL is always allowed.
+ALLOWED_ORIGINS = ""
+
+[[d1_databases]]
+binding = "DB"
+database_name = "instant-resume-feedback"
+database_id = "e79af438-a9e4-4c8f-b51e-9836d1a0ce20"
