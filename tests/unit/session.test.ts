@@ -34,7 +34,8 @@ describe("session", () => {
     expect(await verifySession(cookie, now + SESSION_MAX_AGE * 1000 + 1)).toBe(false);
     const [exp, sig] = cookie.split(".");
     expect(await verifySession(`${Number(exp) + 1}.${sig}`, now)).toBe(false);
-    expect(await verifySession(`${exp}.${sig.slice(0, -2)}AA`, now)).toBe(false);
+    const tampered = sig.slice(0, -3) + (sig.at(-3) === "A" ? "B" : "A") + sig.slice(-2); // always differs from sig
+    expect(await verifySession(`${exp}.${tampered}`, now)).toBe(false);
     for (const bad of [undefined, "", "abc", `${exp}`, `${exp}.${sig}.x`, `x${exp}.${sig}`]) {
       expect(await verifySession(bad, now)).toBe(false);
     }
