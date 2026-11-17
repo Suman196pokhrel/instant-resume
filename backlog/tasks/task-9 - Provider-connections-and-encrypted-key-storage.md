@@ -53,6 +53,6 @@ Tests
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Settings → Connections: a card per provider; format checks before any request; test call = GET the provider's models endpoint from the browser (CORS verified for all three; Gemini rejects with 400 API_KEY_INVALID); keys AES-GCM encrypted with a non-extractable IndexedDB CryptoKey (lib/keystore.ts, readKey for TASK-10), shown masked; active model in localStorage. Other Settings sections: TASK-26/27/28 and new TASK-39 (preferences).
+Settings → Connections: a card per provider; format checks before any request; test call = GET the provider's models endpoint from the browser (CORS verified for all three; Gemini rejects with 400 API_KEY_INVALID); keys AES-GCM encrypted with a non-extractable IndexedDB CryptoKey (lib/keystore.ts, readKey for TASK-10), shown masked; active model in localStorage. Other Settings sections: TASK-26/27/28 and new TASK-38 (preferences).
 Review: 135 unit + 60 e2e green; matches the mock. Fixed in review: the shown key could be sent to a cloud spellchecker (spellcheck off). Model IDs are the mock's fixtures until TASK-10 verifies them. Reviewed in the same session that built it.
 <!-- SECTION:NOTES:END -->
