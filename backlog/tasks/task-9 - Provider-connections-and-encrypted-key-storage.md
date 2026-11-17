@@ -1,10 +1,10 @@
 ---
 id: TASK-9
 title: Provider connections and encrypted key storage
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T11:27:00Z'
+updated_date: '2026-11-17T11:31:00Z'
 labels:
   - m4
 dependencies:
@@ -21,16 +21,16 @@ As a job seeker, I can connect my OpenAI, Anthropic or Gemini key, checked befor
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Settings shows a connection card for each of the 3 providers
-- [ ] #2 A wrong-prefix key shows its error before any request (an sk-ant- key is rejected as an OpenAI key)
-- [ ] #3 A test call runs before saving; a rejected key shows a clear error
-- [ ] #4 The saved key is AES-GCM encrypted with a non-extractable IndexedDB key, shown masked, and never reaches the server or a backup
+- [x] #1 Settings shows a connection card for each of the 3 providers
+- [x] #2 A wrong-prefix key shows its error before any request (an sk-ant- key is rejected as an OpenAI key)
+- [x] #3 A test call runs before saving; a rejected key shows a clear error
+- [x] #4 The saved key is AES-GCM encrypted with a non-extractable IndexedDB key, shown masked, and never reaches the server or a backup
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -49,3 +49,10 @@ Tests
 - unit: encrypt/decrypt round trip with a non-extractable key; the ciphertext doesn't contain the key
 - e2e (provider endpoints stubbed with page.route): three cards (AC1); a wrong-prefix key shows its error and makes no request (AC2); a rejected key shows the 401 message and saves nothing (AC3); success shows the masked key and "Encrypted on this device", survives a reload, IndexedDB holds no plaintext, the CryptoKey is non-extractable, and no request to the app's own server carries the key (AC4); Use and Remove update the active model and toast
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Settings → Connections: a card per provider; format checks before any request; test call = GET the provider's models endpoint from the browser (CORS verified for all three; Gemini rejects with 400 API_KEY_INVALID); keys AES-GCM encrypted with a non-extractable IndexedDB CryptoKey (lib/keystore.ts, readKey for TASK-10), shown masked; active model in localStorage. Other Settings sections: TASK-26/27/28 and new TASK-39 (preferences).
+Review: 135 unit + 60 e2e green; matches the mock. Fixed in review: the shown key could be sent to a cloud spellchecker (spellcheck off). Model IDs are the mock's fixtures until TASK-10 verifies them. Reviewed in the same session that built it.
+<!-- SECTION:NOTES:END -->
