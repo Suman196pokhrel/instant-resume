@@ -1,7 +1,7 @@
 ---
 id: TASK-3
 title: Schemas, database and seed data
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
 updated_date: '2026-11-17T10:00:00Z'
@@ -57,6 +57,13 @@ Tests
 Out of scope
 - Route handlers and 422 responses (TASK-4); JD and brief fixtures and mock-provider scenarios (TASK-10); "Fill with sample" buttons (TASK-7); Next.js bundling config for libSQL (whoever adds the first route that touches the DB).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Zod schemas for SPEC §6 (lib/schemas), schemaVersion upgrade hook on load, Drizzle §7.1 tables + committed migration, readKb/writeKb, db:migrate / db:seed (refuses to overwrite without --force).
+Review: pass; follow-ups noted on TASK-4 (unique IDs → 422) and TASK-7 (deep-partial onboarding draft).
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 

@@ -4,7 +4,7 @@ title: Manual onboarding wizard
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-17T10:00:00Z'
 labels:
   - m3
 dependencies:
@@ -33,3 +33,15 @@ As a new user, I can enter my background step by step and come back where I left
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-17T10:00:00Z
+
+---
+
+From TASK-3 review: onboardingStateSchema.draft is kbSchema.partial(), which is shallow: a half-filled contact or role in a wizard draft fails validation. Loosen the draft shape when building the wizard.
+
+---
+<!-- COMMENTS:END -->
