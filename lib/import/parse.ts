@@ -42,15 +42,15 @@ const HEADINGS: Record<string, Kind> = {
   "work rights": "additional",
 };
 
+const INTRO = "Contact and introductory details";
+
 /** Keeps only the fields that have a value. */
 const present = (e: Entry): Entry => Object.fromEntries(Object.entries(e).filter(([, v]) => v !== "" && v !== undefined));
 
 export function parseResume(text: string): ParsedDraft {
   const lines = text.replace(/\r/g, "").split("\n");
-  const email = text.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0];
-  const phone = text.match(/\+?\d[\d ()-]{7,}\d/)?.[0];
   const d: ParsedDraft = {
-    contact: present({ id: "kb-contact", name: lines.find((l) => l.trim())?.trim(), email, phone }),
+    contact: {},
     roles: [],
     volunteering: [],
     portfolio: [],
@@ -62,7 +62,7 @@ export function parseResume(text: string): ParsedDraft {
   };
 
   const sections: { title: string; kind: Kind; lines: string[] }[] = [];
-  let current = { title: "Contact and introductory details", kind: "additional" as Kind, lines: [] as string[] };
+  let current = { title: INTRO, kind: "additional" as Kind, lines: [] as string[] };
   for (const line of lines) {
     const value = line.trim();
     const kind = HEADINGS[value.replace(/:$/, "").toLowerCase()] ?? (/^[A-Z][A-Z &/-]{2,45}:?$/.test(value) || /^[A-Za-z][A-Za-z &/-]{1,45}:$/.test(value) ? "additional" : null);
@@ -73,10 +73,19 @@ export function parseResume(text: string): ParsedDraft {
   }
   if (current.lines.some((l) => l.trim())) sections.push(current);
 
+  // Name, email and phone come only from the top, so a referee's email or a "2015 - 2016" range is never taken as yours.
+  const intro = sections[0]?.title === INTRO ? sections[0].lines.join("\n") : "";
+  d.contact = present({
+    id: "kb-contact",
+    name: intro.split("\n").find((l) => l.trim())?.trim(),
+    email: intro.match(/[A-Z0-9._%+-]+@[A-Z0-9.-]+\.[A-Z]{2,}/i)?.[0],
+    phone: intro.match(/\+?\d[\d ()-]{7,}\d/)?.[0],
+  });
+
   for (const [i, s] of sections.entries()) {
     const content = s.lines.join("\n").trim();
     if (s.kind === "additional") {
-      d.additional.push({ title: s.title, notes: content, ...(i === 0 && s.title === "Contact and introductory details" && { referenceOnly: true }) });
+      d.additional.push({ title: s.title, notes: content, ...(i === 0 && s.title === INTRO && { referenceOnly: true }) });
       continue;
     }
     for (const block of content.split(/\n\s*\n/).filter((b) => b.trim())) {

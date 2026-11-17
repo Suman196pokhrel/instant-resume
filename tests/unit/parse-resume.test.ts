@@ -74,6 +74,15 @@ describe("parseResume", () => {
     ]);
   });
 
+  it("takes contact details only from the top, never from a referee or a date range", () => {
+    const d = parseResume("Riley Ng\nHobart TAS\n\nEXPERIENCE\nTutor | Uni\n2015 - 2016 casual\n\nREFERENCES\nDana Okafor\ndana@example.com\n");
+    expect(d.contact).toEqual({ id: "kb-contact", name: "Riley Ng" });
+  });
+
+  it("leaves the name blank when the text starts with a heading", () => {
+    expect(parseResume("EXPERIENCE\nTutor | Uni\n").contact).toEqual({ id: "kb-contact" });
+  });
+
   it("recognises a plain 'Work rights' heading", () => {
     expect(parseResume("Riley Ng\n\nWork rights\nPermanent resident\n").additional[1]).toEqual({ title: "Work rights", notes: "Permanent resident" });
   });
