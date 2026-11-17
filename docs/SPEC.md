@@ -189,7 +189,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Public demo host | Cloudflare Worker with static assets (`mock/feedback-worker/`); simulated demo, no provider secrets; a D1 database holds visitor feedback only |
 | Framework | Next.js (App Router), TypeScript strict mode |
 | Runtime target | Local machine first (`pnpm dev`, or `pnpm build && pnpm start`), or a private self-hosted server for a single user. The app has no accounts: by default it only accepts connections from the same computer, and a self-hosted instance must use the password lock (§4.1) and be served over HTTPS (Web Crypto key storage needs a secure context; `localhost` already is one). Cloudflare hosts only the separately built/static simulated demo. Real-user cloud hosting and sync are out of scope. |
-| Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only from Next.js route handlers |
+| Database | SQLite via libSQL (`@libsql/client`), file `./data/instant-resume.db`, accessed only on the server (route handlers and server components). The browser never touches the database: every write goes through a `/api/*` route that validates the whole body with Zod, sits behind the §4.1 access check, and rejects a foreign `Origin` with 403 |
 | ORM | Drizzle ORM + drizzle-kit migrations |
 | Validation | Zod for every schema: DB JSON columns, API bodies, LLM outputs |
 | Forms | React Hook Form + Zod resolver |
