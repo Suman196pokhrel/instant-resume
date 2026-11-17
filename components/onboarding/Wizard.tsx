@@ -2,7 +2,7 @@
 
 import { addTransitionType, startTransition, useEffect, useId, useRef, useState, ViewTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Pencil, Plus, Trash2, Zap } from "lucide-react";
+import { Check, ChevronLeft, Plus, Trash2, Zap } from "lucide-react";
 import { cn } from "cn";
 import { EntryFields, formHasContent, readEntry, type Entry } from "@/components/kb/EntryForm";
 import { BrandMark } from "@/components/shell/Brand";
@@ -59,6 +59,14 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
   const idPrefix = useId();
   const step = STEPS[st.step];
   const draft = st.draft as Draft;
+
+  // The card remounts on a step change, taking focus with it: move focus to the new step's heading.
+  const heading = useRef<HTMLHeadingElement>(null);
+  const firstStep = useRef(initial.step);
+  useEffect(() => {
+    if (st.step !== firstStep.current) heading.current?.focus();
+    firstStep.current = -1;
+  }, [st.step]);
 
   const greeted = useRef(false);
   useEffect(() => {
@@ -226,7 +234,9 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
           <section className="rounded-lg border border-line bg-surface p-7 max-[900px]:px-4 max-[900px]:py-5">
             <div className="mb-[22px] flex items-start justify-between gap-4">
               <div>
-                <h1 className="mb-1.5">{step.title}</h1>
+                <h1 ref={heading} tabIndex={-1} className="mb-1.5 outline-none">
+                  {step.title}
+                </h1>
                 <p className="m-0 max-w-[520px] text-muted-foreground">{step.blurb}</p>
               </div>
               {sample && step.key !== "review" && (
@@ -329,7 +339,7 @@ function ListStep({
                 </div>
                 <div className="flex gap-2">
                   <Button variant="ghost" size="sm" aria-label={`Edit ${s.title}`} onClick={() => onEdit(i)}>
-                    <Pencil className="size-3.5" /> Edit
+                    Edit
                   </Button>
                   <Button size="icon" aria-label={`Remove ${s.title}`} onClick={() => onRemove(i)}>
                     <Trash2 className="size-[15px]" />

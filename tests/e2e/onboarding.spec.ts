@@ -66,6 +66,7 @@ test("required fields show errors and focus; only optional steps can be skipped 
   await page.getByLabel("Email").fill("riley@example.com");
   await cont(page).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Work rights");
+  await expect(page.getByRole("heading", { level: 1 })).toBeFocused(); // the card remounts, so focus moves to its heading
   await expect(page.getByRole("status").getByText("Saved")).toBeVisible();
   await expect(page.getByRole("button", { name: "Skip this step" })).toBeVisible();
 });
