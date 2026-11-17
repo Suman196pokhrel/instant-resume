@@ -50,7 +50,7 @@ export const additionalSectionSchema = z.object({ id: req, title: req, notes: z.
 export const kbObjectSchema = z.object({
   schemaVersion: z.literal(1),
   contact: contactSchema,
-  workRights: workRightsSchema,
+  workRights: workRightsSchema.optional(), // the onboarding step is optional and never inferred (SPEC §14.1, §1.4)
   roles: z.array(roleSchema),
   volunteering: z.array(volunteerRoleSchema).default([]), // older knowledge bases have none
   portfolio: z.array(portfolioItemSchema),
@@ -61,11 +61,11 @@ export const kbObjectSchema = z.object({
   additional: z.array(additionalSectionSchema).default([]),
 });
 
-const LIST_KEYS = ["roles", "volunteering", "portfolio", "education", "skills", "credentials", "referees", "additional"] as const;
+export const LIST_KEYS = ["roles", "volunteering", "portfolio", "education", "skills", "credentials", "referees", "additional"] as const;
 
 /** Entry and highlight IDs are unique across the whole KB: bullets reference highlights by ID. */
 export const kbSchema = kbObjectSchema.superRefine((kb, ctx) => {
-  const seen = new Set<string>([kb.contact.id, kb.workRights.id]);
+  const seen = new Set<string>([kb.contact.id, "kb-rights"]);
   const claim = (id: string, path: (string | number)[]) => {
     if (seen.has(id)) ctx.addIssue({ code: "custom", message: `The ID "${id}" is already used`, path });
     seen.add(id);

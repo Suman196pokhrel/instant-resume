@@ -354,10 +354,10 @@ Credential   { id; kind: 'Certification'|'Award'|'Publication'|'Patent'; title; 
 Referee      { id; name; title?; company?; contact }
 VolunteerRole{ id; title; company /* organisation */; location?; start?; end?; highlights: Highlight[] }
 AdditionalSection{ id; title; notes; referenceOnly?: boolean }
-KnowledgeBase{ schemaVersion; contact; workRights; roles; volunteering; portfolio; education; skills; credentials; referees; additional }
+KnowledgeBase{ schemaVersion; contact; workRights?; roles; volunteering; portfolio; education; skills; credentials; referees; additional }
 ```
 
-Volunteer work renders as an experience-style section titled Volunteer work. Additional sections retain their title and content; reference-only original resume text is excluded from automatic selection. Normalise older knowledge bases with empty `volunteering` and `additional` arrays.
+Work rights is optional: the onboarding step can be skipped and it is never inferred (§1.4), so a KB may have none; templates then leave the line out. Volunteer work renders as an experience-style section titled Volunteer work. Additional sections retain their title and content; reference-only original resume text is excluded from automatic selection. Normalise older knowledge bases with empty `volunteering` and `additional` arrays.
 
 IDs are stable strings (`role-…`, `hl-…`, `pf-…`, `ed-…`, `sk-…`, `cr-…`, `ref-…`), generated with a short random suffix. **Never reuse or change an ID**; bullets reference highlight IDs.
 
@@ -472,8 +472,8 @@ Validate every JSON column with the Zod schema on read and on write. Reject inva
 | `PUT /api/kb/contact`, `PUT /api/kb/work-rights` | Replace single entries |
 | `POST /api/kb/:type` | Add entry (type: roles, volunteering, portfolio, education, skills, credentials, referees, additional) |
 | `PATCH /api/kb/:type/:id`, `DELETE /api/kb/:type/:id` | Edit or delete entry |
-| `GET/PUT /api/onboarding` | Wizard progress and draft |
-| `POST /api/onboarding/complete` | Validate and save reviewed draft in explicit merge/replace mode; mark complete |
+| `GET/PUT /api/onboarding` | Wizard progress and draft (settings key `onboarding`: step, maxStep, draft, completed, saveMode). PUT gives new entries and highlights their IDs |
+| `POST /api/onboarding/complete` | `{ mode }`: validate and save the stored draft. Replace: the draft becomes the KB. Merge: keep existing contact/work rights, add entries whose IDs aren't there yet. Returns `{ added }`; marks complete and clears the draft |
 | `GET /api/projects` | List: id, company, role, location, updatedAt, keyword match counts |
 | `POST /api/projects` | Create with brief, selected, documents and initial revisions in one transaction |
 | `GET /api/projects/:id` | Project, both documents, revisions |
@@ -927,10 +927,10 @@ Full-screen. Top bar: brand; a centred progress bar labelled "Step {n} of 11" wi
 Do not require paid experience: volunteer-only and education-based backgrounds must work. Entry forms may validate their own required fields; an import may retain incomplete details for review without inventing missing information.
 
 Field schemas (* = required):
-- Contact: Full name*, Email* (format check: "Enter an email like name@example.com"), Phone, Location, LinkedIn, GitHub or website.
+- Contact: Full name*, Email* (format check: "Enter an email like name@example.com"), Phone, Location*, LinkedIn, GitHub or website.
 - Work rights: Work rights (optional section; required only when completing this step) (select from `WorkRightsStatus`), Notice period, Notes.
 - Role: Job title*, Employer*, Location, Start*, End*, plus highlights.
-- Volunteer role: same fields as Role, with Organisation instead of Employer.
+- Volunteer role: same fields as Role, with Organisation instead of Employer, and Start and End optional.
 - Additional section: Title*, Details* (multiline), with internal `referenceOnly` flag for original source text.
 - Portfolio item: Name*, One-line summary*, Link, plus highlights.
 - Education: Qualification*, Institution*, Year completed, Notes.

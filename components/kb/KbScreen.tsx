@@ -61,8 +61,9 @@ export function KbScreen({ kb, section }: { kb: KnowledgeBase; section: KbSectio
               />
             )}
           </div>
+          {/* Work rights may be unset (SPEC §14.1), so it falls back to an empty card. */}
           {def.single ? (
-            <SingleCard section={section} entry={kb[section as "contact" | "workRights"] as Entry} />
+            <SingleCard section={section} entry={(kb[section as "contact" | "workRights"] ?? { id: "kb-rights" }) as Entry} />
           ) : list.length ? (
             list.map((e) => <EntryCard key={e.id} section={section} entry={e} />)
           ) : (

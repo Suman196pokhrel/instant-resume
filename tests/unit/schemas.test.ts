@@ -38,6 +38,12 @@ describe("required fields (AC3)", () => {
     expect(kbSchema.safeParse(k).success).toBe(false);
   });
 
+  it("work rights may be missing (SPEC §14.1: the step is optional, never inferred)", () => {
+    const k = kb();
+    delete k.workRights;
+    expect(kbSchema.safeParse(k).success).toBe(true);
+  });
+
   it("optional fields may be empty", () => {
     const k = kb();
     k.roles[0].highlights[0].metric = "";

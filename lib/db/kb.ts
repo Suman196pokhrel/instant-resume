@@ -22,7 +22,7 @@ export async function writeKb(db: Db, input: unknown): Promise<KnowledgeBase> {
   const updatedAt = new Date().toISOString();
   const rows = [
     { id: kb.contact.id, type: "contact" as const, position: 0, data: kb.contact as unknown },
-    { id: kb.workRights.id, type: "workRights" as const, position: 0, data: kb.workRights as unknown },
+    ...(kb.workRights ? [{ id: kb.workRights.id, type: "workRights" as const, position: 0, data: kb.workRights as unknown }] : []),
     ...Object.entries(LISTS).flatMap(([type, key]) =>
       kb[key].map((data, position) => ({ id: data.id, type: type as keyof typeof LISTS, position, data: data as unknown }))
     ),
