@@ -1,10 +1,10 @@
 ---
 id: TASK-33
 title: Form controls and overlays
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:51:00Z'
-updated_date: '2026-11-17T09:36:00Z'
+updated_date: '2026-11-17T09:44:00Z'
 labels:
   - m0
 dependencies:
@@ -20,17 +20,17 @@ As a job seeker, every choice, toggle and dialog behaves the same everywhere and
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Segmented control and inspector tabs slide their thumb or underline to the active option with the spring, and work with arrow keys
-- [ ] #2 Switch (with On/Off label), checkbox (spring press) and range slider (accent fill, label and tabular value) match §11.5
-- [ ] #3 Disclosure turns its chevron 90° and fades its content in
-- [ ] #4 Dialog (480px, 720px wide variant) traps focus, closes on Escape, returns focus to the trigger, and springs in over a fading backdrop
-- [ ] #5 Menu pops from the corner nearest its button with menu/menuitemradio semantics; every control is on /dev/ui and respects reduced motion
+- [x] #1 Segmented control and inspector tabs slide their thumb or underline to the active option with the spring, and work with arrow keys
+- [x] #2 Switch (with On/Off label), checkbox (spring press) and range slider (accent fill, label and tabular value) match §11.5
+- [x] #3 Disclosure turns its chevron 90° and fades its content in
+- [x] #4 Dialog (480px, 720px wide variant) traps focus, closes on Escape, returns focus to the trigger, and springs in over a fading backdrop
+- [x] #5 Menu pops from the corner nearest its button with menu/menuitemradio semantics; every control is on /dev/ui and respects reduced motion
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -72,6 +72,14 @@ created: 2026-11-17T09:35:00Z
 ---
 
 Spec approved by owner 2026-11-17; next: build.
+
+---
+
+created: 2026-11-17T09:44:00Z
+
+---
+
+Built in one commit (eb9d6c1). Deviations: tests in tests/e2e/controls.spec.ts (not ui.spec.ts); Slider takes unit prop (Intl has no 'point'); RadioItem closes menu on pick by default; Button now sets data-variant (dialog footer pushes danger-ghost left); radio-group.tsx from shadcn add dropped (Segmented uses Base UI directly). Three test fixes during build were test assumptions (offscreen mouse, keyboard-open highlights first item, fade timing), not component changes.
 
 ---
 <!-- COMMENTS:END -->
