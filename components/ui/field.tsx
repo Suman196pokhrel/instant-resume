@@ -12,6 +12,7 @@ function Field({
   label,
   optional,
   error,
+  aside,
   className,
   children,
 }: {
@@ -19,17 +20,27 @@ function Field({
   label: React.ReactNode
   optional?: boolean
   error?: string
+  /** Sits beside the control, such as a Show/Hide button. */
+  aside?: React.ReactNode
   className?: string
   children: React.ReactElement<ControlProps>
 }) {
   const errorId = `${id}-error`
+  const control = React.cloneElement(children, { id, "aria-invalid": error ? true : undefined, "aria-describedby": error ? errorId : undefined })
   return (
     <div data-slot="field" className={cn("flex flex-col gap-[5px]", className)}>
       <label htmlFor={id} className="text-[13px] font-medium text-ink">
         {label}
         {optional && <span className="ml-1 text-xs font-normal text-muted-foreground">optional</span>}
       </label>
-      {React.cloneElement(children, { id, "aria-invalid": error ? true : undefined, "aria-describedby": error ? errorId : undefined })}
+      {aside ? (
+        <div className="flex gap-1.5">
+          {control}
+          {aside}
+        </div>
+      ) : (
+        control
+      )}
       {error && (
         <p id={errorId} className="text-[12.5px] text-danger">
           {error}

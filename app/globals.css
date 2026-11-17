@@ -72,6 +72,9 @@
   --animate-draw-tick: draw 350ms var(--ease) 500ms forwards;
 
   --color-on-ink: var(--on-ink);
+  --color-prov-anthropic: var(--prov-anthropic);
+  --color-prov-openai: var(--prov-openai);
+  --color-prov-gemini: var(--prov-gemini);
   --color-toast-action: var(--toast-action);
 
   --ease-standard: var(--ease);
@@ -100,6 +103,9 @@
   --ok: #2f7a3a;
   --on-ink: #eef2f0; /* light text on ink: tooltips */
   --toast-action: #8fd6c6; /* toast action text on ink */
+  --prov-anthropic: #c46a3a; /* provider dots (mock .prov-*) */
+  --prov-openai: #1a2320;
+  --prov-gemini: #3b6fd8;
 
   /* shadcn variables mapped onto the palette */
   --background: var(--bg);
