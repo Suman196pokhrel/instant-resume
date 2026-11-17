@@ -121,3 +121,16 @@ describe("schemaVersion migration hook (AC4)", () => {
     expect(() => upgrade({ schemaVersion: 7 })).toThrow(/newer version/);
   });
 });
+
+describe("unique ids (TASK-4)", () => {
+  it("rejects a reused entry or highlight id, naming it", () => {
+    const k = kb();
+    k.portfolio[0].highlights[0].id = "hl-bw-1";
+    const r = kbSchema.safeParse(k);
+    expect(r.success).toBe(false);
+    expect(r.error?.issues[0].message).toMatch(/hl-bw-1/);
+    const k2 = kb();
+    k2.education[0].id = "role-civic";
+    expect(kbSchema.safeParse(k2).success).toBe(false);
+  });
+});

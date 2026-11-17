@@ -1,4 +1,4 @@
-import { mkdtempSync } from "node:fs";
+import { mkdtempSync, readdirSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
@@ -138,5 +138,28 @@ describe("password lock (AC2–AC5)", () => {
     const proxied = req("/api/kb", { method: "PUT", cookie, origin: "https://resume.example", headers: { "x-forwarded-host": "resume.example" } });
     expect(passes(await proxy(proxied))).toBe(true);
     expect(passes(await proxy(req("/api/kb", { cookie, origin: "https://evil.example" })))).toBe(true);
+  });
+});
+
+describe("every /api route is locked (TASK-4 AC1)", () => {
+  // Found on disk, so routes added later are covered too.
+  const routes = (dir: string): string[] =>
+    readdirSync(dir, { withFileTypes: true }).flatMap((e) =>
+      e.isDirectory() ? routes(join(dir, e.name)) : e.name === "route.ts" ? [dir] : []
+    );
+  const API = join(__dirname, "../../app/api");
+
+  it("returns 401 without a session for each exported method", async () => {
+    process.env.APP_PASSWORD = PASSWORD;
+    const found = routes(API);
+    expect(found.length).toBeGreaterThan(5);
+    for (const dir of found) {
+      const path = "/api" + dir.slice(API.length).replace(/\[[^\]]+\]/g, "x");
+      const methods = Object.keys(await import(join(dir, "route.ts"))).filter((m) => /^(GET|POST|PUT|PATCH|DELETE)$/.test(m));
+      for (const method of methods) {
+        if (path === "/api/unlock" && method === "POST") continue;
+        expect((await proxy(req(path, { method }))).status, `${method} ${path}`).toBe(401);
+      }
+    }
   });
 });

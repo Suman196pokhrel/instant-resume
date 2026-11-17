@@ -46,7 +46,8 @@ export const refereeSchema = z.object({ id: req, name: req, title: opt, company:
 /** referenceOnly: original resume text kept for reference, never picked automatically. */
 export const additionalSectionSchema = z.object({ id: req, title: req, notes: z.string(), referenceOnly: z.boolean().optional() });
 
-export const kbSchema = z.object({
+/** The KB fields without the cross-entry checks (for partial drafts). */
+export const kbObjectSchema = z.object({
   schemaVersion: z.literal(1),
   contact: contactSchema,
   workRights: workRightsSchema,
@@ -58,6 +59,23 @@ export const kbSchema = z.object({
   credentials: z.array(credentialSchema),
   referees: z.array(refereeSchema),
   additional: z.array(additionalSectionSchema).default([]),
+});
+
+const LIST_KEYS = ["roles", "volunteering", "portfolio", "education", "skills", "credentials", "referees", "additional"] as const;
+
+/** Entry and highlight IDs are unique across the whole KB: bullets reference highlights by ID. */
+export const kbSchema = kbObjectSchema.superRefine((kb, ctx) => {
+  const seen = new Set<string>([kb.contact.id, kb.workRights.id]);
+  const claim = (id: string, path: (string | number)[]) => {
+    if (seen.has(id)) ctx.addIssue({ code: "custom", message: `The ID "${id}" is already used`, path });
+    seen.add(id);
+  };
+  for (const key of LIST_KEYS) {
+    kb[key].forEach((entry, i) => {
+      claim(entry.id, [key, i, "id"]);
+      if ("highlights" in entry) entry.highlights.forEach((h, j) => claim(h.id, [key, i, "highlights", j, "id"]));
+    });
+  }
 });
 
 export type KnowledgeBase = z.infer<typeof kbSchema>;

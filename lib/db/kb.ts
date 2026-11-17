@@ -2,6 +2,7 @@ import { kbEntries, type KB_TYPES } from "./schema";
 import type { Db } from "./client";
 import { kbSchema, type KnowledgeBase } from "../schemas/kb";
 import { upgrade } from "../schemas/migrate";
+import { ApiError } from "../api";
 
 // The knowledge base is stored one row per entry (SPEC §7.1); contact and workRights are single rows.
 const LISTS = {
@@ -46,4 +47,28 @@ export async function readKb(db: Db): Promise<KnowledgeBase | null> {
     else (kb[LISTS[row.type]] as unknown[]).push(row.data);
   }
   return kbSchema.parse(upgrade(kb));
+}
+
+/** URL list types (SPEC §7.2 /api/kb/:type) and the prefix of the IDs generated for them. */
+export const KB_LIST_PREFIX = {
+  roles: "role",
+  volunteering: "vol",
+  portfolio: "pf",
+  education: "ed",
+  skills: "sk",
+  credentials: "cr",
+  referees: "ref",
+  additional: "add",
+} as const;
+export type KbListKey = keyof typeof KB_LIST_PREFIX;
+
+export const isKbList = (type: string): type is KbListKey => Object.hasOwn(KB_LIST_PREFIX, type);
+export const newId = (prefix: string) => `${prefix}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
+
+/** Read, change, then save the whole KB, so every change is validated as a whole (the KB is small). */
+export async function updateKb(db: Db, change: (kb: KnowledgeBase) => void): Promise<KnowledgeBase> {
+  const kb = await readKb(db);
+  if (!kb) throw new ApiError(409, "no_knowledge_base");
+  change(kb);
+  return writeKb(db, kb);
 }

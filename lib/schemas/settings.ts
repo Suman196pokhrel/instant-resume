@@ -1,5 +1,5 @@
 import { z } from "zod";
-import { kbSchema } from "./kb";
+import { kbObjectSchema } from "./kb";
 
 // Settings (SPEC §6.5): stored in the DB settings table, except connections and the active model (browser only).
 export const prefsSchema = z.object({
@@ -19,7 +19,7 @@ export const prefsSchema = z.object({
 export const onboardingStateSchema = z.object({
   step: z.number().int().min(0),
   maxStep: z.number().int().min(0),
-  draft: kbSchema.partial(),
+  draft: kbObjectSchema.partial(),
   completed: z.boolean(),
   imported: z.string().optional(),
   saveMode: z.enum(["merge", "replace"]).default("merge"),
