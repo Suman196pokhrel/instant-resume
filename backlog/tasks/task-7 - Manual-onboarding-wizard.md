@@ -4,7 +4,7 @@ title: Manual onboarding wizard
 status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T11:09:00Z'
+updated_date: '2026-11-17T11:13:00Z'
 labels:
   - m3
 dependencies:
@@ -79,6 +79,14 @@ created: 2026-11-17T10:03:00Z
 ---
 
 From the TASK-4 split: GET/PUT /api/onboarding and POST /api/onboarding/complete (merge/replace) are built in this card.
+
+---
+
+created: 2026-11-17T11:13:00Z
+
+---
+
+Post-review fix: removing the entry being edited left it in the inline form, so Continue re-added it (or pushed a copy with duplicate highlight IDs that failed at Review). The form now resets; e2e covers it.
 
 ---
 <!-- COMMENTS:END -->
