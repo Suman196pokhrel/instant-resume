@@ -4,7 +4,7 @@ title: Revisions and undo
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-17T10:03:00Z'
 labels:
   - m6
 dependencies:
@@ -31,3 +31,15 @@ As a job seeker, I can undo any change and rely on automatic revisions. Refs: SP
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-17T10:03:00Z
+
+---
+
+From the TASK-4 split: PUT /api/documents/:id (TASK-35) only appends revisions; coalescing by coalesceKey within 60 s is built here.
+
+---
+<!-- COMMENTS:END -->

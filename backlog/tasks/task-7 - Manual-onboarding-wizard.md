@@ -4,7 +4,7 @@ title: Manual onboarding wizard
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:00:00Z'
+updated_date: '2026-11-17T10:03:00Z'
 labels:
   - m3
 dependencies:
@@ -42,6 +42,14 @@ created: 2026-11-17T10:00:00Z
 ---
 
 From TASK-3 review: onboardingStateSchema.draft is kbSchema.partial(), which is shallow: a half-filled contact or role in a wizard draft fails validation. Loosen the draft shape when building the wizard.
+
+---
+
+created: 2026-11-17T10:03:00Z
+
+---
+
+From the TASK-4 split: GET/PUT /api/onboarding and POST /api/onboarding/complete (merge/replace) are built in this card.
 
 ---
 <!-- COMMENTS:END -->
