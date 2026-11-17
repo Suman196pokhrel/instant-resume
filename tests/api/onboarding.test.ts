@@ -104,6 +104,13 @@ describe("complete (AC2, AC3)", () => {
     expect((await db.all<{ n: number }>(sql`select count(*) as n from projects`))[0].n).toBe(1);
   });
 
+  it("merge takes the draft's work rights when the KB has none", async () => {
+    // The previous test left a KB without work rights.
+    await put(state({ contact: CONTACT, workRights: { status: "Requires sponsorship", noticePeriod: "2 weeks" } }));
+    expect(await (await finish("merge")).json()).toEqual({ added: 1 });
+    expect((await readKb(await getDb()))!.workRights).toEqual({ id: "kb-rights", status: "Requires sponsorship", noticePeriod: "2 weeks" });
+  });
+
   it("rejects an unknown mode", async () => {
     expect((await complete.POST(req("POST", { mode: "overwrite" }))).status).toBe(422);
   });

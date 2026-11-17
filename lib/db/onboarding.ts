@@ -48,6 +48,10 @@ export async function completeOnboarding(db: Db, mode: "merge" | "replace"): Pro
     ...Object.fromEntries(LISTS.map((k) => [k, []])),
   }) as KnowledgeBase;
   if (!existing) added += kb.workRights ? 2 : 1;
+  else if (!existing.workRights && draft.workRights?.status) {
+    kb.workRights = { ...draft.workRights, id: "kb-rights" } as KnowledgeBase["workRights"];
+    added++;
+  }
   for (const key of LISTS) {
     const list = kb[key] as { id: string }[];
     for (const entry of draft[key] ?? []) {
