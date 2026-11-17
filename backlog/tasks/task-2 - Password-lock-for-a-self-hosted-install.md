@@ -1,10 +1,10 @@
 ---
 id: TASK-2
 title: Password lock for a self-hosted install
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T09:51:00Z'
+updated_date: '2026-11-17T09:53:00Z'
 labels:
   - m1
 dependencies:
@@ -61,6 +61,13 @@ Out of scope
 - The unlock screen UI, Settings → Access, the sidebar footer copy (TASK-28).
 - Host-header / DNS-rebinding checks (to be parked).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Password lock: proxy.ts gate (pages 307 /unlock?next=, API 401 locked, Origin 403 in both modes), HMAC ir_session cookie keyed on data/session-secret + scrypt hash, /api/unlock (5/min rate limit, 422/401/429) and /api/lock, safeNext.
+Review fixes: attempts counted before awaiting (parallel brute force), relative redirect Location. 46 unit/api + 30 e2e green.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
