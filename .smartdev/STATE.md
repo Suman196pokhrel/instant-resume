@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
 stage: spec
-task: TASK-6
-next: write the spec for TASK-6 (knowledge base screen) on the TASK-4 /api/kb routes and TASK-33 controls, matched to mock views-app.js
+task: TASK-10
+next: write the spec for TASK-10 (LLM adapter, mock provider, model picker) on lib/llm/providers.ts and lib/keystore.ts readKey; verify the model IDs against each provider's models endpoint first
 blockers: none
-updated: 2026-11-17 20:56 · session 4
+updated: 2026-11-17 22:06 · session 5
 
 ## Numbers
-stories: 8 done · 0 review · 0 in progress · 24 to do · 3 parked | tests: 99 unit/api + 36 e2e pass | commits last session: 22
+stories: 13 done · 0 review · 0 in progress · 21 to do · 4 parked | tests: 135 unit/api + 60 e2e pass | commits last session: 33
 
 ## Last session
-- done: TASK-33 controls/overlays (Segmented = radio group for values, Tabs for views), TASK-2 password lock (proxy gate, HMAC ir_session, Origin 403 in both modes), TASK-3 Zod schemas + Drizzle + db:migrate/db:seed (seed refuses without --force), TASK-4 KB/settings API (split: TASK-35 projects/documents API, also done), TASK-5 Typst spike (WASM 10.8 MB gzip, theme re-render 13 ms)
-- decisions: KB changes read-modify-write the whole KB (unique IDs validated); getDb() migrates on first use; lib/render worker warmed only on /projects/[id] and /new/quick; TASK-13/14/15/19/27 now depend on TASK-35; follow-up notes left on TASK-7, 14, 15, 19
-- gotchas: tsx runs lib/db scripts as CJS (no top-level await); Base UI menu radio items need closeOnClick; Next's route announcer is role=alert; owner edits SPEC/README/AGENTS/mock in parallel and AGENTS.md still says db:migrate/db:seed "to come"
-- correction: keep going across stages in one session until ~50% context; correction: never git add -A, stage only the task's paths (both saved to memory)
+- done: TASK-6 KB screen (shared kb-fields schema, EntryForm), TASK-37 onboarding API (split from TASK-7), TASK-7 onboarding wizard, TASK-8 TXT/paste import (lib/import/parse.ts), TASK-9 provider connections (AES-GCM keystore in IndexedDB); new cards TASK-36 (parked: undo KB delete), TASK-38 (Settings preferences)
+- decisions: workRights optional in the KB (SPEC §6.1); onboarding drafts hold incomplete entries, complete validates via writeKb; DB access server-side only (SPEC §3); key test = GET provider models endpoint (CORS verified; Gemini rejects with 400 API_KEY_INVALID); model lists are still mock fixtures; PDF/DOCX show a "arrives with provider" message until TASK-11
+- gotchas: e2e uses IR_DB_URL (seeded tmp DB); flows that change the KB run on their own empty-DB server (tests/e2e/server.ts runOnEmptyServer, ports 3103/3104); API requests from tests need an Origin header (403 otherwise); token guard reads copy like "900ms" as a duration (keep such copy in lib/); stale next-servers from Nov 16 on 3110-3113
+- correction: user wants DB edits server-side only, never callable loosely from the front end (SPEC §3 updated); TASK-37/7/8/9 were reviewed in the building session, not a fresh one
