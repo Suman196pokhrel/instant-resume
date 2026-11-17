@@ -1,10 +1,10 @@
 ---
 id: TASK-33
 title: Form controls and overlays
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:51:00Z'
-updated_date: '2026-11-17T09:44:00Z'
+updated_date: '2026-11-17T09:45:00Z'
 labels:
   - m0
 dependencies:
@@ -63,6 +63,13 @@ Out of scope
 - Select, inputs/textarea, chips, pills, callouts, stepper, swatches, font cards, model picker (TASK-10).
 - Wiring the controls into real screens (their own cards).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Segmented (radio group), tabs (segmented/underline), switch, checkbox, slider, disclosure, dialog and menu restyled to SPEC §11.5 with spring motion per §12, all on /dev/ui; 13 new e2e tests.
+Review: all ACs verified (21 unit + 30 e2e green), no on-load animation; fast-lane fix for Segmented style merge and control mode.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
