@@ -4,7 +4,7 @@ title: Workspace preview, hand edits and autosave
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T01:26:00Z'
+updated_date: '2026-11-17T10:22:00Z'
 labels:
   - m6
 dependencies:
@@ -41,6 +41,14 @@ created: 2026-11-16T01:26:00Z
 ---
 
 From TASK-32 review: the shell's page <ViewTransition> (components/shell/AppShell.tsx) crossfades on ANY transition inside it unless the transition carries a type it maps to none (forward/back/fade). If the live preview uses useDeferredValue or startTransition without a type, the whole page crossfades on every keystroke (SPEC §12 forbids). Tag those transitions or exclude them.
+
+---
+
+created: 2026-11-17T10:22:00Z
+
+---
+
+From TASK-5: preview needs @myriaddreamin/typst-ts-renderer 0.7.0 (vector → SVG); compile format 'vector' to be added to lib/render/worker.ts. Calibrate resume.typ/letter.typ spacing against the mock here. Loader card: real WASM is 10.8 MB gzip, not 6.4 MB.
 
 ---
 <!-- COMMENTS:END -->
