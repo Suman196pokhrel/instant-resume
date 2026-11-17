@@ -1,10 +1,10 @@
 ---
 id: TASK-37
 title: Onboarding API, optional work rights and first-run redirect
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-17T10:57:00Z'
-updated_date: '2026-11-17T10:58:00Z'
+updated_date: '2026-11-17T11:00:00Z'
 labels:
   - m3
 dependencies: []
@@ -19,9 +19,9 @@ As a new user, my wizard progress is saved on the server and my reviewed backgro
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 GET/PUT /api/onboarding store wizard progress and a loose draft, filling entry and highlight IDs
-- [ ] #2 POST /api/onboarding/complete saves the draft in merge or replace mode, keeping existing contact/work rights in merge, never duplicating IDs, and leaving projects untouched
-- [ ] #3 A KB without work rights is valid, and an empty database sends / to /onboarding
+- [x] #1 GET/PUT /api/onboarding store wizard progress and a loose draft, filling entry and highlight IDs
+- [x] #2 POST /api/onboarding/complete saves the draft in merge or replace mode, keeping existing contact/work rights in merge, never duplicating IDs, and leaving projects untouched
+- [x] #3 A KB without work rights is valid, and an empty database sends / to /onboarding
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -44,3 +44,10 @@ Tests
 
 Out of scope: the wizard UI (TASK-7), `imported` and replace-draft confirmation (TASK-8)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Onboarding state in settings (loose draft, IDs filled on PUT, step clamped); complete merges or replaces via writeKb (projects untouched, existing IDs skipped, returns added); workRights optional in the KB; / redirects an empty DB to /onboarding.
+Review: 118 unit/api tests green; self-review found merge ignored draft work rights when the KB had none, fixed with a test. Not separately re-reviewed by a fresh session.
+<!-- SECTION:NOTES:END -->
