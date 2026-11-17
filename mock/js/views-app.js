@@ -6,7 +6,7 @@ const KB_SCHEMA = {
     { k: 'name', label: 'Full name', req: true, ph: 'Jordan Whitlock' },
     { k: 'email', label: 'Email', req: true, type: 'email', ph: 'you@example.com' },
     { k: 'phone', label: 'Phone', ph: '04xx xxx xxx' },
-    { k: 'location', label: 'Location', ph: 'Sydney NSW' },
+    { k: 'location', label: 'Location', req: true, ph: 'Sydney NSW' },
     { k: 'linkedin', label: 'LinkedIn', ph: 'linkedin.com/in/…' },
     { k: 'github', label: 'GitHub or website', ph: 'github.com/…' },
   ] },
@@ -227,7 +227,7 @@ Views.dashboard = function (root) {
 };
 
 /* ---------- Knowledge base ---------- */
-KB_SCHEMA.volunteering = { ...KB_SCHEMA.roles, label: 'Volunteer work', noun: 'volunteer role', fields: KB_SCHEMA.roles.fields.map(f => f.k === 'company' ? {...f, label:'Organisation'} : f) };
+KB_SCHEMA.volunteering = { ...KB_SCHEMA.roles, label: 'Volunteer work', noun: 'volunteer role', fields: KB_SCHEMA.roles.fields.map(f => f.k === 'company' ? {...f, label:'Organisation'} : f.k === 'start' || f.k === 'end' ? {...f, req:false} : f) }; // SPEC §6.1: dates optional
 KB_SCHEMA.additional = {label:'Additional sections', noun:'section', fields:[{k:'title',label:'Section title',req:true},{k:'notes',label:'Details',req:true,wide:true,type:'textarea'}]};
 
 const KB_ORDER = ['contact', 'workRights', 'roles', 'volunteering', 'portfolio', 'education', 'skills', 'credentials', 'referees', 'additional'];

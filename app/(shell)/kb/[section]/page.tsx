@@ -1,20 +1,30 @@
-import { notFound } from "next/navigation";
+import Link from "next/link";
+import { notFound, redirect } from "next/navigation";
+import { Upload } from "lucide-react";
+import { KbScreen } from "@/components/kb/KbScreen";
 import { Content, TopBar } from "@/components/shell/TopBar";
+import { buttonVariants } from "@/components/ui/button";
+import { getDb } from "@/lib/db/client";
+import { readKb } from "@/lib/db/kb";
+import { isKbSection } from "@/lib/schemas/kb-fields";
 
-// SPEC §13 section slugs. shortcut: hard-coded until TASK-3 adds the KB schema; move it there then.
-const SECTIONS = ["contact", "workRights", "roles", "portfolio", "education", "skills", "credentials", "referees", "volunteering", "additional"];
-
+// SPEC §13.2. Import backup and Export backup join the top bar with TASK-27.
 export default async function Page({ params }: PageProps<"/kb/[section]">) {
   const { section } = await params;
-  if (!SECTIONS.includes(section)) notFound();
+  if (!isKbSection(section)) notFound();
+  const kb = await readKb(await getDb());
+  if (!kb) redirect("/onboarding"); // no knowledge base yet: build one first
   return (
     <>
-      <TopBar title="Knowledge base" />
+      <TopBar
+        actions={
+          <Link href="/import" className={buttonVariants()}>
+            <Upload /> Import resume
+          </Link>
+        }
+      />
       <Content>
-        <h1>Knowledge base</h1>
-        <p className="mt-2 text-muted-foreground">
-          Every fact here is entered once. Resumes and cover letters can only use what&apos;s stored here. Arrives with TASK-6.
-        </p>
+        <KbScreen kb={kb} section={section} />
       </Content>
     </>
   );

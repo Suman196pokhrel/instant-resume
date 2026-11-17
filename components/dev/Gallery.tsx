@@ -6,6 +6,10 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogClose, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { EmptyState } from "@/components/ui/empty-state";
+import { Field } from "@/components/ui/field";
+import { Input, NativeSelect, Textarea } from "@/components/ui/input";
+import { Chip, Count, Pill } from "@/components/ui/pill";
 import {
   DropdownMenu,
   DropdownMenuContent,
@@ -208,6 +212,46 @@ export function Gallery() {
             </DropdownMenuContent>
           </DropdownMenu>
         </div>
+      </Section>
+      <Section title="Form fields">
+        <div className="grid w-full grid-cols-2 gap-x-4 gap-y-3.5 max-[900px]:grid-cols-1">
+          <Field id="g-title" label="Job title">
+            <Input placeholder="Senior Software Engineer" />
+          </Field>
+          <Field id="g-loc" label="Location" optional>
+            <Input placeholder="Sydney NSW" />
+          </Field>
+          <Field id="g-email" label="Email" error="Enter an email like name@example.com">
+            <Input type="email" defaultValue="nope" />
+          </Field>
+          <Field id="g-rights" label="Work rights">
+            <NativeSelect defaultValue="">
+              <option value="">Choose…</option>
+              <option>Australian citizen</option>
+            </NativeSelect>
+          </Field>
+          <Field id="g-notes" label="Details" className="col-span-full">
+            <Textarea rows={3} />
+          </Field>
+        </div>
+      </Section>
+
+      <Section title="Pills, chips and counts">
+        <Pill>Default</Pill>
+        <Pill variant="ok">In use</Pill>
+        <Pill variant="warn">Gap</Pill>
+        <Pill variant="metric">2M quotes a month</Pill>
+        <Chip>React</Chip>
+        <Count>3</Count>
+      </Section>
+
+      <Section title="Empty state">
+        <EmptyState title="No applications yet" icon={<FileText />} action={<Button>New application</Button>} className="w-full">
+          An application holds the job description, your tailored resume and your cover letter for one job.
+        </EmptyState>
+        <EmptyState size="sm" title="No volunteer work yet" className="w-full">
+          Add one and it becomes available to every application.
+        </EmptyState>
       </Section>
       <div aria-hidden className="h-[120vh]" />
     </>

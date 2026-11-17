@@ -111,6 +111,13 @@ export const KB_SECTIONS: Record<KbSection, SectionDef> = {
   },
 };
 
+/** Highlights editor copy (mock highlightsEditorHtml); kept here because the token guard reads "900ms" as a duration. */
+export const HIGHLIGHT_COPY = {
+  help: "Each highlight becomes a possible resume bullet. Include numbers where you have them.",
+  text: "What you did and the result, e.g. Cut API latency from 900ms to 220ms with Redis caching",
+  metric: "Metric, e.g. 900ms to 220ms",
+};
+
 export type FormValues = Record<string, string | undefined>;
 
 /** Field errors keyed by field, empty when valid (mock validateFields copy). */

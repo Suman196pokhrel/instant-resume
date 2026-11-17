@@ -883,6 +883,8 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 - Entry card: title, sub, meta, the KB ID (small monospace) and an Edit button. Roles and portfolio items list their highlights in rows, each with a metric pill on the right. Skill groups show chips.
 - Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base".
 - Empty section: "No {section} yet" and "Add one and it becomes available to every application."
+- Field rules follow §6.1: contact location is required; volunteer start and end are optional; additional section details and at least one skill per group are required. Errors use "Enter your {field}" and "Enter an email like name@example.com", and focus moves to the first one. The fields live in `lib/schemas/kb-fields.ts`, shared with onboarding.
+- With no knowledge base yet (before onboarding), `/kb/*` redirects to `/onboarding`.
 
 ### 13.3 Settings
 
@@ -1227,6 +1229,8 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 CRUD for the KB and projects; 422 on invalid bodies; cascade delete removes documents and revisions; backup export contains no `connections`, `key` or `apiKey` fields (deep scan); import round-trips the data unchanged; onboarding complete supports explicit merge and replace modes, preserves existing documents, retains existing contact/work-rights in merge mode and does not duplicate stable IDs. With `APP_PASSWORD` set: every `/api/*` route returns `401` without a session; `POST /api/unlock` returns `401` for a wrong password and `429` after 5 failures; a state-changing request with a foreign `Origin` returns `403`; `POST /api/lock` clears the cookie. With it unset, no route asks for a session.
 
 ### 18.4 End-to-end (`tests/e2e`, Playwright, mock provider, seeded DB)
+
+The e2e server runs `pnpm db:seed --force` against a throwaway database named by `IR_DB_URL` (a libSQL URL, set in `playwright.config.ts`), so tests never touch `./data`.
 
 1. **First run:** an empty DB redirects to `/onboarding`. Fill the required steps, skip the optional ones, reload mid-way to confirm it resumes, then finish and see the done screen. The KB screen shows the entries.
 2. **Connection:** a wrong-prefix error, a rejected key (the mock rejects keys containing "bad"), then success shows the masked key and the model appears in the picker.
