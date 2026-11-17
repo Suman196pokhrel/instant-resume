@@ -1,10 +1,10 @@
 ---
 id: TASK-4
 title: Knowledge base and settings API
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:08:00Z'
+updated_date: '2026-11-17T10:09:00Z'
 labels:
   - m1
 dependencies:
@@ -64,6 +64,13 @@ Tests
 Out of scope
 - Projects, documents and revisions (TASK-35); onboarding routes (TASK-7); backup (TASK-27); any UI.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+KB and settings routes on getDb() (migrations on first use), handle()/readJson 422 with field paths, whole-KB validation incl. unique IDs, AU default prefs; every /api route checked behind the lock; e2e proves libSQL works in the production bundle.
+Review: fast-lane fix so PATCH fills new highlight IDs; read-modify-write race noted as a shortcut.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
