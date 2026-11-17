@@ -1,10 +1,10 @@
 ---
 id: TASK-7
 title: Manual onboarding wizard
-status: To Do
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:58:00Z'
+updated_date: '2026-11-17T11:09:00Z'
 labels:
   - m3
 dependencies:
@@ -20,17 +20,17 @@ As a new user, I can enter my background step by step and come back where I left
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 An empty database redirects / to /onboarding, which offers manual entry or resume import
-- [ ] #2 The wizard covers the §14.1 steps with a progress bar showing the current step and steps left
-- [ ] #3 Required fields show errors; only optional steps offer Skip this step
-- [ ] #4 Each step saves on completion, and reloading resumes at the same step
-- [ ] #5 A volunteer-only background reaches Review and saves to the KB
+- [x] #1 An empty database redirects / to /onboarding, which offers manual entry or resume import
+- [x] #2 The wizard covers the §14.1 steps with a progress bar showing the current step and steps left
+- [x] #3 Required fields show errors; only optional steps offer Skip this step
+- [x] #4 Each step saves on completion, and reloading resumes at the same step
+- [x] #5 A volunteer-only background reaches Review and saves to the KB
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -55,6 +55,13 @@ Tests (e2e on its own empty server: spawn `pnpm start` on port 3103 with a fresh
 
 Out of scope: import (TASK-8); the setup checklist (TASK-29)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Chooser (/onboarding, resumes an unfinished wizard), full-screen 11-step wizard with progress, rail, per-step PUT /api/onboarding (resumes after reload), inline entry forms shared with the KB dialog (EntryForm), Skip on optional steps, Review (merge/replace only when a KB exists) and the animated done screen. Built on TASK-37.
+Review: 118 unit + 51 e2e green (onboarding e2e on its own empty-DB server, port 3103). Contact and Experience steps match the mock. Fixed in review: focus was lost to <body> on every step change (now the heading), '1 highlights' grammar (mock too). Also fixed a 1-in-1000 flaky session unit test. Not re-reviewed by a fresh session.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
