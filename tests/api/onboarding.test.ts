@@ -48,7 +48,7 @@ describe("progress (AC1)", () => {
 
   it("PUT rejects an invalid body with 422 and keeps the saved state", async () => {
     const before = await get();
-    expect((await put(state({ roles: [{ title: "No employer" }] }))).status).toBe(422);
+    expect((await put(state({ roles: [{ title: 42 }] }))).status).toBe(422); // drafts may be incomplete, not malformed
     expect((await put({ step: "two" })).status).toBe(422);
     expect(await get()).toEqual(before);
   });
@@ -109,6 +109,18 @@ describe("complete (AC2, AC3)", () => {
     await put(state({ contact: CONTACT, workRights: { status: "Requires sponsorship", noticePeriod: "2 weeks" } }));
     expect(await (await finish("merge")).json()).toEqual({ added: 1 });
     expect((await readKb(await getDb()))!.workRights).toEqual({ id: "kb-rights", status: "Requires sponsorship", noticePeriod: "2 weeks" });
+  });
+
+  it("keeps an imported entry with missing details in the draft, but won't save it until it's fixed", async () => {
+    const role = { title: "Support Engineer", company: "Harbour Health", highlights: [{ text: "Answered 40 tickets a day", skills: [] }] };
+    expect((await put(state({ contact: CONTACT, roles: [role] }, { imported: "Pasted resume text" }))).status).toBe(200);
+    const saved = await get();
+    expect(saved.imported).toBe("Pasted resume text");
+    expect((await finish("replace")).status).toBe(422);
+    expect((await readKb(await getDb()))!.contact.name).toBe("Riley Ng"); // unchanged
+    saved.draft.roles[0] = { ...saved.draft.roles[0], start: "2015", end: "2016" };
+    await put(saved);
+    expect((await finish("replace")).status).toBe(200);
   });
 
   it("rejects an unknown mode", async () => {

@@ -31,18 +31,22 @@ export const prefsSchema = z.object({
 export const ONBOARDING_LAST_STEP = 10;
 const stepIndex = z.number().int().min(0).transform((n) => Math.min(n, ONBOARDING_LAST_STEP));
 
-/** A wizard draft: contact and work rights may be half done; list entries are whole (the form validates each first). */
+/**
+ * A wizard draft. Everything may be incomplete: an import keeps what it found and leaves missing facts blank for
+ * Review (SPEC §14.1). Completing it validates the whole knowledge base, so nothing incomplete is saved.
+ */
+const draftList = <T extends z.ZodObject>(entry: T) => z.array(entry.partial()).optional();
 export const onboardingDraftSchema = z.object({
   contact: contactSchema.partial().optional(),
   workRights: workRightsSchema.partial().optional(),
-  roles: z.array(roleSchema).optional(),
-  volunteering: z.array(volunteerRoleSchema).optional(),
-  portfolio: z.array(portfolioItemSchema).optional(),
-  education: z.array(educationSchema).optional(),
-  skills: z.array(skillGroupSchema).optional(),
-  credentials: z.array(credentialSchema).optional(),
-  referees: z.array(refereeSchema).optional(),
-  additional: z.array(additionalSectionSchema).optional(),
+  roles: draftList(roleSchema),
+  volunteering: draftList(volunteerRoleSchema),
+  portfolio: draftList(portfolioItemSchema),
+  education: draftList(educationSchema),
+  skills: draftList(skillGroupSchema),
+  credentials: draftList(credentialSchema),
+  referees: draftList(refereeSchema),
+  additional: draftList(additionalSectionSchema),
 });
 
 export const onboardingStateSchema = z.object({

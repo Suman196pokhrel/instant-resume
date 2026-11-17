@@ -56,7 +56,7 @@ export async function completeOnboarding(db: Db, mode: "merge" | "replace"): Pro
     const list = kb[key] as { id: string }[];
     for (const entry of draft[key] ?? []) {
       if (list.some((e) => e.id === entry.id)) continue;
-      list.push(entry);
+      list.push(entry as { id: string }); // PUT gave it an id; writeKb checks the rest
       added++;
     }
   }
