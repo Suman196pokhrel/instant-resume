@@ -4,7 +4,7 @@ title: Knowledge base screen
 status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:44:00Z'
+updated_date: '2026-11-17T10:48:00Z'
 labels:
   - m3
 dependencies:
@@ -74,6 +74,14 @@ created: 2026-11-17T10:44:00Z
 ---
 
 Build done. Unit 107/107 (incl. kb-fields, kb-page redirect); e2e 42/43: the one failure is startup.spec 'pnpm dev refuses a non-loopback HOST', because the owner's own next dev was running (Next allows one dev server per project), unrelated. Visual check against mock #/kb/roles and the Edit role dialog: matches; backup buttons and model picker arrive with TASK-27/TASK-10. Mutation check: dropping the preserved highlight fields fails the AC2 e2e. Mock fix: contact location required, volunteer dates optional (SPEC §6.1).
+
+---
+
+created: 2026-11-17T10:48:00Z
+
+---
+
+Correction to the previous note: the startup.spec failure came from a stray next dev process that has since exited; full e2e now 44/44 green, unit 107/107. Also fixed: /kb redirects to /kb/roles, focus moves to Add {noun} after a delete, mock kbEntrySummary no longer shows ' to ' or a trailing comma for missing optional fields. Four stale next-server processes from Nov 16 still listen on 127.0.0.1:3110-3113 (not touched). Open: SPEC §3 says the DB is accessed only from route handlers; the KB page reads it in a server component (asked the owner). Review should visually compare the contact card, an empty section, the error state and skill chips.
 
 ---
 <!-- COMMENTS:END -->
