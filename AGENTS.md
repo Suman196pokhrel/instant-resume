@@ -10,7 +10,7 @@ Instant Resume: a source-available (PolyForm Noncommercial 1.0.0), local-first (
 
 - The Next.js app (M0 scaffold) lives at the repo root: `app/`, `components/`, `lib/`, `tests/`, `proxy.ts` (CSP nonce; later the access gate), `instrumentation.ts` (startup check).
 - Run it: `pnpm install && pnpm dev` (binds `127.0.0.1:3000`). Checks: `pnpm typecheck`, `pnpm lint`, `pnpm test` (Vitest), `pnpm test:e2e` (Playwright, builds and serves on port 3100; first run needs `pnpm exec playwright install chromium`).
-- Still to come (SPEC §5): `db:migrate`, `db:seed`.
+- Data: `pnpm db:migrate` creates `./data/instant-resume.db` (the app also migrates on first use); `pnpm db:seed` loads the synthetic Jordan Whitlock KB and refuses to overwrite one without `--force`. `/dev/render` (like `/dev/ui`) compiles the sample resume with Typst.
 - `mock/`: the static interactive demo with simulated AI; the visual reference. Run it: `xdg-open mock/index.html`.
 - Build plan: Smart Dev board in `backlog/` (`backlog task list --plain`), session state in `.smartdev/STATE.md`.
 - Shared UI: `components/ui` (shadcn on Base UI, restyled to SPEC §11.5; keep shadcn's built-in animations, custom motion only where SPEC §12 says), `lib/toast.ts` (use instead of sonner directly), `lib/motion.ts`. See them all at `/dev/ui` in `pnpm dev`. `tests/unit/tokens-guard.test.ts` fails on raw colours, durations or easings.
