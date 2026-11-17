@@ -15,22 +15,26 @@ export function RenderProbe() {
   const [error, setError] = useState("");
   const [busy, setBusy] = useState(false);
 
-  async function run(kind: RenderKind, bump = 0) {
+  async function one(kind: RenderKind, bump = 0) {
+    const { render } = await import("@/lib/render/client");
+    const doc = DOCS[kind];
+    const document = { ...doc, theme: { ...doc.theme, baseSize: doc.theme.baseSize + bump } };
+    const result = await render(kind, {
+      document,
+      kb: { contact: kb.contact, workRights: kb.workRights },
+      brief: { title: "Senior Full Stack Engineer" },
+      paper: "A4",
+      spelling: "en-AU",
+    });
+    const url = URL.createObjectURL(new Blob([result.artifact as BlobPart], { type: "application/pdf" }));
+    setShown((s) => [{ kind, url, pages: result.pages, ms: result.ms }, ...s]);
+  }
+
+  async function run(...jobs: [RenderKind, number?][]) {
     setBusy(true);
     setError("");
     try {
-      const { render } = await import("@/lib/render/client");
-      const doc = DOCS[kind];
-      const document = { ...doc, theme: { ...doc.theme, baseSize: doc.theme.baseSize + bump } };
-      const result = await render(kind, {
-        document,
-        kb: { contact: kb.contact, workRights: kb.workRights },
-        brief: { title: "Senior Full Stack Engineer" },
-        paper: "A4",
-        spelling: "en-AU",
-      });
-      const url = URL.createObjectURL(new Blob([result.artifact as BlobPart], { type: "application/pdf" }));
-      setShown((s) => [{ kind, url, pages: result.pages, ms: result.ms }, ...s]);
+      await Promise.all(jobs.map(([kind, bump]) => one(kind, bump)));
     } catch (e) {
       setError(e instanceof Error ? e.message : String(e));
     } finally {
@@ -41,9 +45,10 @@ export function RenderProbe() {
   return (
     <div className="flex flex-col gap-4">
       <div className="flex flex-wrap gap-2">
-        <Button disabled={busy} onClick={() => run("resume")}>Render resume</Button>
-        <Button variant="ghost" disabled={busy} onClick={() => run("coverLetter")}>Render cover letter</Button>
-        <Button variant="ghost" disabled={busy} onClick={() => run("resume", 0.5)}>Change theme</Button>
+        <Button disabled={busy} onClick={() => run(["resume"])}>Render resume</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => run(["coverLetter"])}>Render cover letter</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => run(["resume", 0.5])}>Change theme</Button>
+        <Button variant="ghost" disabled={busy} onClick={() => run(["resume"], ["coverLetter"])}>Render both at once</Button>
       </div>
       {error && <pre role="alert" className="text-danger whitespace-pre-wrap">{error}</pre>}
       <ol aria-label="Renders" className="flex flex-col gap-1.5">

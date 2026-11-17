@@ -77,6 +77,23 @@ test("compiles the sample resume and cover letter to PDFs with embedded fonts, a
   expect(letterText.indexOf("Kind regards,")).toBeGreaterThan(letterText.indexOf("Dear Hiring Manager,"));
 });
 
+test("two renders at once each get their own document", async ({ page }) => {
+  test.skip(!has("pdftotext"), "poppler-utils not installed");
+  await page.goto("/dev/render");
+  await page.getByRole("button", { name: "Render both at once" }).click();
+  await expect(renders(page)).toHaveCount(2, { timeout: 60_000 });
+  for (const kind of ["resume", "coverLetter"]) {
+    const row = page.locator(`li[data-kind=${kind}]`);
+    const download = page.waitForEvent("download");
+    await row.getByRole("link").click();
+    const file = join(dir, `both-${kind}.pdf`);
+    await (await download).saveAs(file);
+    const text = execFileSync("pdftotext", [file, "-"], { encoding: "utf8" });
+    expect(text.includes("Dear Hiring Manager,"), kind).toBe(kind === "coverLetter");
+    expect(text.includes("Experience"), kind).toBe(kind === "resume");
+  }
+});
+
 test.describe("lazy loading (AC4)", () => {
   async function track(page: Page) {
     const wasm: string[] = [];
