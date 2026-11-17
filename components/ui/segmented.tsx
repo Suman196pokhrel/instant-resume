@@ -15,6 +15,7 @@ function Segmented<V extends string>({
   defaultValue,
   onValueChange,
   className,
+  style,
   ...props
 }: Omit<RadioGroup.Props<V>, "value" | "defaultValue" | "onValueChange" | "children"> & {
   options: Option<V>[]
@@ -28,13 +29,14 @@ function Segmented<V extends string>({
   return (
     <RadioGroup
       data-slot="segmented"
-      value={current}
+      value={value}
+      defaultValue={defaultValue}
       onValueChange={(v) => {
         setInner(v as V)
         onValueChange?.(v as V)
       }}
       className={cn("relative inline-grid w-fit auto-cols-fr grid-flow-col rounded-md bg-sunken p-[3px]", className)}
-      style={{ "--n": options.length, "--i": Math.max(i, 0) } as React.CSSProperties}
+      style={{ ...style, "--n": options.length, "--i": Math.max(i, 0) } as React.CSSProperties}
       {...props}
     >
       <span
