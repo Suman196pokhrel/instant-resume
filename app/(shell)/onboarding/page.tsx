@@ -5,15 +5,14 @@ import { Content, TopBar } from "@/components/shell/TopBar";
 import { buttonVariants } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
 import { getDb } from "@/lib/db/client";
-import { readOnboarding } from "@/lib/db/onboarding";
+import { isUnfinished, readOnboarding } from "@/lib/db/onboarding";
 
 const choice = "flex flex-col gap-2 rounded-lg border border-line bg-surface p-[22px] text-ink no-underline transition-[border-color,box-shadow] duration-(--t) hover:border-line-2 hover:shadow-card-hover";
 const icon = "grid size-10 place-items-center rounded-[10px] border border-line bg-surface-2 text-ink-2";
 
 // Onboarding chooser (SPEC §13, §14.1a): import (recommended) or manual. An unfinished wizard resumes instead.
 export default async function Page() {
-  const state = await readOnboarding(await getDb());
-  if (!state.completed && (state.step > 0 || Object.keys(state.draft).length)) redirect("/onboarding/manual");
+  if (isUnfinished(await readOnboarding(await getDb()))) redirect("/onboarding/manual");
   return (
     <>
       <TopBar title="Set up your background" />

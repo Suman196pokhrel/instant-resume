@@ -11,7 +11,7 @@ const ResumeImport = {
       'volunteer work':'volunteering','volunteering':'volunteering','volunteer experience':'volunteering',
       'education':'education','qualifications':'education','skills':'skills','technical skills':'skills',
       'projects':'portfolio','portfolio':'portfolio','certifications':'credentials','awards':'credentials','publications':'credentials',
-      'references':'referees','referees':'referees','work rights':'workRights',
+      'references':'referees','referees':'referees','work rights':'additional', // never inferred: kept as text (SPEC §14.1a)
     };
     const sections = []; let current = {title:'Contact and introductory details',kind:'additional',lines:[]};
     for (const line of lines) {

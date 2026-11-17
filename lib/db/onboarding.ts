@@ -10,6 +10,9 @@ const KEY = "onboarding";
 export const ONBOARDING_START: OnboardingState = { step: 0, maxStep: 0, draft: {}, completed: false, saveMode: "merge" };
 const LISTS = Object.keys(KB_LIST_PREFIX) as KbListKey[];
 
+/** A wizard that was started (moved on, or holds a draft) and not yet saved to the knowledge base. */
+export const isUnfinished = (s: OnboardingState) => !s.completed && (s.step > 0 || Object.keys(s.draft).length > 0);
+
 /** The saved state, or the start state (also when an older saved shape no longer parses). */
 export async function readOnboarding(db: Db): Promise<OnboardingState> {
   const row = await db.select().from(settings).where(eq(settings.key, KEY)).get();

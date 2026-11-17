@@ -2,15 +2,16 @@
 
 import { addTransitionType, startTransition, useEffect, useId, useRef, useState, ViewTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Plus, Trash2, Zap } from "lucide-react";
+import { Check, ChevronLeft, Plus, Trash2, Upload, Zap } from "lucide-react";
 import { cn } from "cn";
 import { EntryFields, formHasContent, readEntry, type Entry } from "@/components/kb/EntryForm";
 import { BrandMark } from "@/components/shell/Brand";
 import { Button, buttonVariants } from "@/components/ui/button";
+import { Callout } from "@/components/ui/callout";
 import { Field } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/input";
 import { Pill } from "@/components/ui/pill";
-import { entrySummary, KB_SECTIONS, type KbSection } from "@/lib/schemas/kb-fields";
+import { entrySummary, KB_SECTIONS, toValues, validateFields, type KbSection } from "@/lib/schemas/kb-fields";
 import type { OnboardingState } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
 
@@ -35,7 +36,16 @@ const LAST = STEPS.length - 1;
 
 type Draft = Record<string, unknown>;
 const listOf = (draft: Draft, key: KbSection) => (draft[key] as Entry[] | undefined) ?? [];
-const EMAIL = /^\S+@\S+\.\S+$/;
+/** An entry missing required details (an import leaves gaps blank rather than inventing them, SPEC §14.1). */
+const incomplete = (key: KbSection, e: Entry | undefined) => Object.keys(validateFields(key, toValues(key, e))).length > 0;
+/**
+ * Contact is required unless merging into an existing KB (which keeps its own); list steps need every entry
+ * complete; work rights is only saved when complete, so it never blocks.
+ */
+const needsDetails = (key: KbSection, draft: Draft, keepContact: boolean) =>
+  key === "contact"
+    ? !keepContact && incomplete(key, draft.contact as Entry | undefined)
+    : key !== "workRights" && listOf(draft, key).some((e) => incomplete(key, e));
 
 async function putState(state: OnboardingState): Promise<OnboardingState | null> {
   try {
@@ -142,10 +152,10 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
   }
 
   async function finish() {
-    const c = (draft.contact ?? {}) as Record<string, string>;
-    if (!c.name || !EMAIL.test(c.email ?? "")) {
-      toast("Review your name and a valid email in Contact details before saving.", { kind: "error" });
-      return go(0);
+    const bad = STEPS.findIndex((s) => s.key !== "review" && needsDetails(s.key, draft, kbExists && mode === "merge"));
+    if (bad >= 0) {
+      toast(`${STEPS[bad].title} needs details before saving.`, { kind: "error" });
+      return go(bad);
     }
     setBusy(true);
     try {
@@ -247,7 +257,7 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
             </div>
 
             {step.key === "review" ? (
-              <Review draft={draft} kbExists={kbExists} mode={mode} setMode={setMode} onEdit={(i) => go(i)} />
+              <Review draft={draft} imported={st.imported} kbExists={kbExists} mode={mode} setMode={setMode} onEdit={(i) => go(i)} />
             ) : KB_SECTIONS[step.key].single ? (
               <form key={formKey} ref={form} noValidate onSubmit={(e) => (e.preventDefault(), next())}>
                 <EntryFields section={step.key} entry={draft[step.key] as Entry | undefined} errors={errors} idPrefix={idPrefix} />
@@ -340,6 +350,11 @@ function ListStep({
               <div key={e.id ?? i} className={cn("flex items-center justify-between gap-3 rounded-md border border-line bg-surface-2 px-3.5 py-3", i === editing && "border-primary")}>
                 <div>
                   <strong>{s.title}</strong>
+                  {incomplete(section, e) && (
+                    <Pill variant="warn" className="ml-2">
+                      Needs details
+                    </Pill>
+                  )}
                   <div className="text-[13px] text-muted-foreground">{s.sub || s.chips?.join(", ")}</div>
                   {e.highlights && <div className="text-[13px] text-muted-foreground">{`${e.highlights.length} ${e.highlights.length === 1 ? "highlight" : "highlights"}`}</div>}
                 </div>
@@ -361,9 +376,32 @@ function ListStep({
   );
 }
 
-function Review({ draft, kbExists, mode, setMode, onEdit }: { draft: Draft; kbExists: boolean; mode: string; setMode: (m: "merge" | "replace") => void; onEdit: (i: number) => void }) {
+function Review({
+  draft,
+  imported,
+  kbExists,
+  mode,
+  setMode,
+  onEdit,
+}: {
+  draft: Draft;
+  imported?: string;
+  kbExists: boolean;
+  mode: string;
+  setMode: (m: "merge" | "replace") => void;
+  onEdit: (i: number) => void;
+}) {
   return (
     <>
+      {imported && (
+        <Callout className="mb-3">
+          <Upload />
+          <div>
+            <strong>{imported}</strong>
+            <p className="mt-1">Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p>
+          </div>
+        </Callout>
+      )}
       <div className="mb-3 flex flex-col rounded-md border border-line">
         {STEPS.slice(0, LAST).map((s, i) => {
           const key = s.key as KbSection;
@@ -377,7 +415,11 @@ function Review({ draft, kbExists, mode, setMode, onEdit }: { draft: Draft; kbEx
                 <strong>{s.title}</strong>
                 <div className="text-[13px] text-muted-foreground">{n ? desc : "Skipped"}</div>
               </div>
-              <Pill variant={n ? "ok" : "default"}>{list ? `${n} added` : n ? "Done" : "Empty"}</Pill>
+              {needsDetails(key, draft, kbExists && mode === "merge") ? (
+                <Pill variant="warn">Needs details</Pill>
+              ) : (
+                <Pill variant={n ? "ok" : "default"}>{list ? `${n} added` : n ? "Done" : "Empty"}</Pill>
+              )}
               <Button variant="ghost" size="sm" aria-label={`Edit ${s.title}`} onClick={() => onEdit(i)} className="max-[900px]:col-span-full max-[900px]:justify-self-start">
                 Edit
               </Button>

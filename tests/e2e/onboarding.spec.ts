@@ -1,32 +1,8 @@
-import { spawn, type ChildProcess } from "node:child_process";
-import { rmSync } from "node:fs";
-import { tmpdir } from "node:os";
-import { join } from "node:path";
 import { expect, test, type Page } from "@playwright/test";
+import { runOnEmptyServer } from "./server";
 
-// SPEC §14.1 manual onboarding and §18.4 #1 (first run). Runs on its own server with an empty database (the shared
-// e2e server is seeded), using the production build the Playwright web server made.
-const PORT = 3103;
-const DB = join(tmpdir(), "ir-e2e-onboarding.db");
-let server: ChildProcess;
-
-test.describe.configure({ mode: "serial" });
-test.use({ baseURL: `http://127.0.0.1:${PORT}` });
-
-test.beforeAll(async () => {
-  test.setTimeout(60_000);
-  rmSync(DB, { force: true });
-  server = spawn("pnpm", ["start"], { env: { ...process.env, PORT: String(PORT), IR_DB_URL: `file:${DB}`, IR_DEV_UI: "1" }, detached: true, stdio: "ignore" });
-  for (let i = 0; i < 100; i++) {
-    if (await fetch(`http://127.0.0.1:${PORT}/api/settings`).then((r) => r.ok, () => false)) return;
-    await new Promise((r) => setTimeout(r, 300));
-  }
-  throw new Error("onboarding test server did not start");
-});
-
-test.afterAll(() => {
-  if (server?.pid) process.kill(-server.pid, "SIGTERM"); // the whole group: pnpm and next-server
-});
+// SPEC §14.1 manual onboarding and §18.4 #1 (first run), on its own empty-database server.
+runOnEmptyServer(3103);
 
 const progress = (page: Page) => page.getByRole("progressbar", { name: "Onboarding progress" });
 const cont = (page: Page) => page.getByRole("button", { name: "Save and continue" });

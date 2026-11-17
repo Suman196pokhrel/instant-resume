@@ -74,6 +74,10 @@ describe("parseResume", () => {
     ]);
   });
 
+  it("recognises a plain 'Work rights' heading", () => {
+    expect(parseResume("Riley Ng\n\nWork rights\nPermanent resident\n").additional[1]).toEqual({ title: "Work rights", notes: "Permanent resident" });
+  });
+
   it("keeps only the original text when nothing is recognised", () => {
     const only = parseResume("just some words here, nothing else at all");
     expect(only.roles).toEqual([]);

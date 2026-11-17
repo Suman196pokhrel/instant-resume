@@ -6,6 +6,7 @@ import { Button } from "@/components/ui/button";
 import { Checkbox } from "@/components/ui/checkbox";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Dialog, DialogBody, DialogContent, DialogDescription, DialogFooter, DialogHeader, DialogClose, DialogTitle, DialogTrigger } from "@/components/ui/dialog";
+import { Callout } from "@/components/ui/callout";
 import { EmptyState } from "@/components/ui/empty-state";
 import { Field } from "@/components/ui/field";
 import { Input, NativeSelect, Textarea } from "@/components/ui/input";
@@ -243,6 +244,21 @@ export function Gallery() {
         <Pill variant="metric">2M quotes a month</Pill>
         <Chip>React</Chip>
         <Count>3</Count>
+      </Section>
+
+      <Section title="Callouts">
+        <Callout className="w-full">
+          <FileText />
+          <div>Default: a note with an icon.</div>
+        </Callout>
+        <Callout variant="warn" className="w-full">
+          <FileText />
+          <div>Warn: something to check.</div>
+        </Callout>
+        <Callout variant="error" className="w-full">
+          <FileText />
+          <div>Error: something went wrong.</div>
+        </Callout>
       </Section>
 
       <Section title="Empty state">

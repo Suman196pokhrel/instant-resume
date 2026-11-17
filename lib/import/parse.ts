@@ -18,8 +18,8 @@ export type ParsedDraft = {
 };
 type Kind = "roles" | "volunteering" | "portfolio" | "education" | "skills" | "credentials" | "referees" | "additional";
 
-// "Work rights" is deliberately absent: a work-rights entry needs a status, which is never inferred, so that
-// section is kept as an Additional section instead (where its text can't be lost).
+// "Work rights" maps to an Additional section: a work-rights entry needs a status, which is never inferred, so
+// its text is kept there instead of being lost.
 const HEADINGS: Record<string, Kind> = {
   experience: "roles",
   "work experience": "roles",
@@ -39,6 +39,7 @@ const HEADINGS: Record<string, Kind> = {
   publications: "credentials",
   references: "referees",
   referees: "referees",
+  "work rights": "additional",
 };
 
 /** Keeps only the fields that have a value. */
