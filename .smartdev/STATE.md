@@ -1,7 +1,7 @@
 # Smart Dev state: Instant Resume
 stage: spec
-task: TASK-42
-next: fast lane TASK-42 (pnpm dev reload loop) first, since dev is unusable; then spec TASK-12 (Studio setup: job brief and entry selection), proving the brief call live on Anthropic
+task: TASK-13
+next: spec TASK-13 (generate documents with patch validation): Studio step 4, the match call, skeleton builder, generate ops validated by lib/patch/validate.ts, project saved with notes/brief/selection; prove live on Anthropic; consider prompt caching (TASK-41) since match+generate both send the KB
 blockers: none
 updated: 2026-11-17 22:06 · session 5
 

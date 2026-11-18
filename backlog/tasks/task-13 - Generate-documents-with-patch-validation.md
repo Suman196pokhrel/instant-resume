@@ -4,7 +4,7 @@ title: Generate documents with patch validation
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:26:00Z'
+updated_date: '2026-11-18T08:20:00Z'
 labels:
   - m5
 dependencies:
@@ -26,6 +26,7 @@ As a job seeker, I get a tailored resume and cover letter built only from my cho
 - [ ] #2 Every generated bullet carries a valid source highlight ID; unknown or cross-entry sources are rejected
 - [ ] #3 The patch validator rejects paths outside the target section and changes to id, kind, hidden, theme or order, and mutates nothing on rejection
 - [ ] #4 Generation creates a project and opens the Workspace with the rendered preview
+- [ ] #5 Notes, brief and selection from the Studio draft are saved with the project (moved from TASK-12)
 <!-- AC:END -->
 
 ## Definition of Done
