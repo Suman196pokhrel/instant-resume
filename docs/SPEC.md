@@ -655,7 +655,7 @@ PDF requirements: selectable text in reading order, no images, no tables, no col
 
 ### 9.3 Export
 
-The Export dialog has checkboxes for Resume and Cover letter (the active one pre-ticked), showing file names:
+The Export dialog has checkboxes for Resume and Cover letter (the active one pre-ticked), showing file names (Export PDF is disabled while neither is ticked):
 - `{First}-{Last}-Resume-{Company}.pdf`
 - `{First}-{Last}-Cover-Letter-{Company}.pdf`
 

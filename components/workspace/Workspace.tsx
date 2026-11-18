@@ -18,6 +18,7 @@ import { Count } from "@/components/ui/pill";
 import { ChecksTab, useChecks } from "./ChecksTab";
 import { ContentInspector } from "./ContentInspector";
 import { DesignTab } from "./DesignTab";
+import { ExportDialog } from "./ExportDialog";
 import { HistoryDrawer } from "./HistoryDrawer";
 import { JobPanel } from "./JobPanel";
 import { Preview } from "./Preview";
@@ -121,6 +122,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
               <History /> History
             </Button>
           </div>
+          <ExportDialog project={project} kb={kb} prefs={prefs} />
           <ModelPicker />
         </div>
       </header>

@@ -774,7 +774,6 @@ Views.project = function (root, params) {
         <p class="muted small">${esc(st.prefs.paper)}, single column, selectable text in reading order. In this mock your browser's print dialog opens; choose "Save as PDF". The real app writes the file directly.</p>`,
       actions: [{ label: 'Cancel' }, { label: 'Export PDF', kind: 'btn-primary', fn: (r) => {
         const kinds = $$('.export-opt input:checked', r).map((x) => x.value);
-        if (!kinds.length) { toast('Choose at least one document', { kind: 'error' }); return false; }
         const btn = $('.modal-foot .btn-primary', r);
         btn.disabled = true; btn.innerHTML = '<span class="spinner spinner-light"></span> Compiling with Typst';
         setTimeout(() => {
@@ -790,6 +789,10 @@ Views.project = function (root, params) {
         return false;
       } }],
     });
+    // Export PDF is disabled while nothing is ticked (SPEC §9.3)
+    const root = $('#modal-root'), go = $('.modal-foot .btn-primary', root);
+    const sync = () => { go.disabled = !$$('.export-opt input:checked', root).length; };
+    $$('.export-opt input', root).forEach((x) => (x.onchange = sync));
   }
 
   renderAll();
