@@ -300,6 +300,12 @@
   }
 }
 
+/* Application card monogram (mock .monogram): the hue comes from the company name (--h, set inline). */
+@utility monogram {
+  color: hsl(var(--h) 45% 26%);
+  background: hsl(var(--h) 40% 92%);
+}
+
 /* Reduced motion (SPEC §12): one global rule; JS uses lib/motion.ts for delays and smooth scrolling. */
 @media (prefers-reduced-motion: reduce) {
   *,

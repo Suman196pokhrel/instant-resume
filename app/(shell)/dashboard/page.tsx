@@ -1,12 +1,25 @@
+import Link from "next/link";
+import { Plus } from "lucide-react";
+import { Dashboard } from "@/components/dashboard/Dashboard";
 import { Content, TopBar } from "@/components/shell/TopBar";
+import { buttonVariants } from "@/components/ui/button";
+import { getDb } from "@/lib/db/client";
+import { listProjects } from "@/lib/db/projects";
 
-export default function Page() {
+// Applications (SPEC §13.1). The setup checklist arrives with TASK-29.
+export default async function Page() {
+  const projects = await listProjects(await getDb());
   return (
     <>
-      <TopBar title="Applications" />
+      <TopBar
+        actions={
+          <Link href="/new" className={buttonVariants()}>
+            <Plus /> New application
+          </Link>
+        }
+      />
       <Content>
-        <h1>Applications</h1>
-        <p className="mt-2 text-muted-foreground">One job description, a tailored resume and a cover letter. Everything saves automatically.</p>
+        <Dashboard projects={projects} />
       </Content>
     </>
   );
