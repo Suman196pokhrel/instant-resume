@@ -93,10 +93,16 @@ export async function readKey(provider: ProviderId): Promise<string | null> {
 const ACTIVE = "instant-resume-active-model";
 let inMemory: ActiveModel | null = null; // used when storage is blocked: the choice lasts until reload
 export function getActiveModel(): ActiveModel | null {
+  let raw: string | null;
   try {
-    return activeModelSchema.parse(JSON.parse(localStorage.getItem(ACTIVE) ?? "null"));
+    raw = localStorage.getItem(ACTIVE);
   } catch {
     return inMemory;
+  }
+  try {
+    return activeModelSchema.parse(JSON.parse(raw ?? "null"));
+  } catch {
+    return null; // none saved, or not a valid choice
   }
 }
 export function setActiveModel(active: ActiveModel | null) {

@@ -27,8 +27,11 @@ const SERVER: Choice = { connections: null, active: null };
 let snapshot: Choice = SERVER;
 const listeners = new Set<() => void>();
 
+let latest = 0;
 async function refresh() {
+  const run = ++latest;
   const connections = await listConnections().catch(() => [] as Connection[]); // IndexedDB unavailable: nothing connected
+  if (run !== latest) return; // a newer refresh started: its answer wins
   snapshot = { connections, active: resolveChoice(getActiveModel(), connections) };
   listeners.forEach((l) => l());
 }
