@@ -31,9 +31,10 @@ function useDebounced<T>(value: T, ms: number) {
 export function useChecks(kb: KnowledgeBase, brief: JobBrief) {
   const doc = useWorkspace((s) => s.docs[s.kind]);
   const notes = useWorkspace((s) => s.notes);
-  const late = useDebounced({ doc, notes }, CHECK_DELAY);
-  const now = late.doc?.kind === doc?.kind ? late : { doc, notes };
-  return useMemo(() => (now.doc ? runChecks(now.doc, brief, kb, now.notes) : null), [now.doc, now.notes, brief, kb]);
+  const lateDoc = useDebounced(doc, CHECK_DELAY); // each value on its own, so a re-render never restarts the wait
+  const lateNotes = useDebounced(notes, CHECK_DELAY);
+  const shown = lateDoc?.kind === doc?.kind ? lateDoc : doc;
+  return useMemo(() => (shown ? runChecks(shown, brief, kb, lateNotes) : null), [shown, lateNotes, brief, kb]);
 }
 
 function Ring({ pct }: { pct: number }) {
@@ -78,7 +79,10 @@ export function ChecksTab({ kb, brief }: { kb: KnowledgeBase; brief: JobBrief })
   const pct = Math.round((ch.matched.length / Math.max(1, total)) * 100);
   const parseOk = ch.parse.filter((p) => p.ok).length;
   const titleOf = (id: string) => sections.find((s) => s.id === id)?.title ?? "section";
-  const emphasise = (kw: string) => goTo((sections.find((s) => s.kind === "experience") ?? sections[0]).id, `Emphasise ${kw}`);
+  const emphasise = (kw: string) => {
+    const target = sections.find((s) => s.kind === "experience") ?? sections[0];
+    if (target) goTo(target.id, `Emphasise ${kw}`);
+  };
   const group = (type: Finding["type"], label: string, clean: string) => {
     const fs = ch.findings.filter((f) => f.type === type);
     if (!fs.length) return <OkRow>{clean}</OkRow>;
