@@ -49,6 +49,12 @@ describe("testKey", () => {
     expect(await testKey("openai", "k", reply(200, { data: [{ id: "gpt-4o" }] }))).toEqual({ ok: true, available: [] });
   });
 
+  it("counts a dated or versioned snapshot of a model, but not a different model that shares its name", async () => {
+    const list = { data: [{ id: "claude-opus-5-5-20261015" }, { id: "claude-sonnet-5-5-mini" }, { id: "claude-haiku-5-5-001" }] };
+    expect(await testKey("anthropic", "k", reply(200, list))).toEqual({ ok: true, available: ["claude-opus-5-5", "claude-haiku-5-5"] });
+    expect(await testKey("gemini", "k", reply(200, { models: [{ name: "models/gemini-3.8-flash-2026-10-01" }] }))).toEqual({ ok: true, available: ["gemini-3.8-flash"] });
+  });
+
   it("offers every listed model when the list can't be read", async () => {
     expect(await testKey("openai", "k", reply(200, { unexpected: true }))).toEqual({ ok: true, available: PROVIDERS[1].models });
   });

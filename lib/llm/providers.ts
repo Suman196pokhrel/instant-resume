@@ -50,11 +50,14 @@ export const errorCode = (b: ErrorBody) =>
 
 type ModelsBody = { data?: { id?: unknown }[]; models?: { name?: unknown }[] };
 
+/** The model itself, or a dated or numbered snapshot of it ("-20261015", "-2026-10-01", "-001"); never "-mini" and the like. */
+const isModel = (listed: unknown, m: string) => listed === m || (typeof listed === "string" && listed.startsWith(`${m}-`) && /^(\d{8}|\d{4}-\d{2}-\d{2}|\d{3})$/.test(listed.slice(m.length + 1)));
+
 /** Our models that the provider's list offers; all of them when the list can't be read. */
 function offered(id: ProviderId, body: ModelsBody): string[] {
   const { models } = provider(id);
   const list = Array.isArray(body.data) ? body.data.map((m) => m.id) : Array.isArray(body.models) ? body.models.map((m) => String(m.name).replace(/^models\//, "")) : null;
-  return list ? models.filter((m) => list.includes(m)) : models;
+  return list ? models.filter((m) => list.some((l) => isModel(l, m))) : models;
 }
 
 /** Checks the key with the provider. Gemini answers a bad key with 400 API_KEY_INVALID rather than 401. */

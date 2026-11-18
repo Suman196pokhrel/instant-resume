@@ -24,6 +24,7 @@ const DOT = { anthropic: "bg-prov-anthropic", openai: "bg-prov-openai", gemini: 
 export function ModelPicker() {
   const { connections, active } = useLlmChoice();
   const label = active ? provider(active.provider).name : null;
+  const loading = connections === null; // until IndexedDB answers: same size, no "No model connected" flash
 
   function choose(value: string) {
     const [p, model] = value.split(":") as [ProviderId, string];
@@ -35,10 +36,10 @@ export function ModelPicker() {
     <DropdownMenu>
       <DropdownMenuTrigger
         className="inline-flex h-8 max-w-[52vw] items-center gap-2 rounded-sm border border-line-2 bg-surface px-2.5 text-[13px] font-medium whitespace-nowrap text-ink hover:border-muted-foreground"
-        aria-label={active ? `Model: ${label} ${active.model}. Change model` : "No model connected. Change model"}
+        aria-label={loading ? "Change model" : active ? `Model: ${label} ${active.model}. Change model` : "No model connected. Change model"}
       >
-        <span className={cn("size-2 flex-none rounded-full", active ? DOT[active.provider] : "shadow-[inset_0_0_0_1.5px_var(--line-2)]")} />
-        <span className="overflow-hidden text-ellipsis">
+        <span className={cn("size-2 flex-none rounded-full", active ? DOT[active.provider] : loading ? "" : "shadow-[inset_0_0_0_1.5px_var(--line-2)]")} />
+        <span className={cn("overflow-hidden text-ellipsis", loading && "invisible")}>
           {active ? (
             <>
               <span className="font-normal text-muted-foreground max-[900px]:hidden">{label}</span> {active.model}
