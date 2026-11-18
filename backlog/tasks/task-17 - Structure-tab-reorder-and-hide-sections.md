@@ -1,10 +1,10 @@
 ---
 id: TASK-17
 title: 'Structure tab: reorder and hide sections'
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:38:00Z'
+updated_date: '2026-11-18T10:41:00Z'
 labels:
   - m6
 dependencies:
@@ -57,6 +57,13 @@ Tests
 Out of scope
 - Preview glide and flash of the moved section (TASK-46, positions), undo (TASK-19), revision coalescing (TASK-19), touch drag
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Structure tab: native drag, Alt+Arrow (focus kept both ways), buttons, hide/show, aria-live, view-transition glide; each change saves at once as a structure revision; mock adapter spy proves no LLM call.
+Review fixed a test race (reorders apply inside the view transition, so the e2e polls). Deferred: preview glide/flash (TASK-46), undo/coalescing (TASK-19), touch drag.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
