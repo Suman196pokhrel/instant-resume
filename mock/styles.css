@@ -681,6 +681,8 @@ input[readonly] { background: var(--surface-2); color: var(--ink-2); }
 .patch summary { font-size: 12px; color: var(--muted); cursor: pointer; }
 .patch pre { font: 11px/1.45 ui-monospace, Menlo, monospace; background: var(--ink); color: #D8E6E1; border-radius: var(--r-sm); padding: 10px; overflow: auto; max-height: 200px; margin: 6px 0 0; }
 .manual { display: flex; flex-direction: column; gap: 10px; padding-top: 4px; }
+fieldset.manual { border: 0; margin: 0; padding: 4px 0 0; min-width: 0; }
+.manual:disabled { opacity: .6; }
 .sub-label { font-size: 13px; font-weight: 600; color: var(--ink-2); }
 .manual-head { display: flex; justify-content: space-between; align-items: baseline; gap: 8px; }
 .manual textarea { font-size: 13px; resize: none; overflow: hidden; }

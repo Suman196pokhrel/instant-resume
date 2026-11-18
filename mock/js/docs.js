@@ -449,7 +449,9 @@ const Docs = (function () {
     return { section: next, changed, warnings };
   }
 
-  function estimateTokens(section) { return Math.round(sectionPlainText(section).length / 4) + 380; }
+  // The real app counts the request it would send (SPEC §8.3): ~380 plus a token per 2 characters. The mock stands in
+  // ~4,300 characters for the system prompt and the section's knowledge base entries.
+  function estimateTokens(section) { return Math.round((380 + (sectionPlainText(section).length + 4300) / 2) / 10) * 10; }
 
   /* ---------- Word diff ---------- */
   function wordDiff(a, b) {

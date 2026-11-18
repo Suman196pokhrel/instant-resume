@@ -416,11 +416,12 @@ Views.project = function (root, params) {
         <button class="icon-btn" data-copy-sec aria-label="Copy text" data-tip="Copy this ${isLetter ? 'paragraph' : 'section'} as plain text">${icon('copy', 15)}</button>
       </div>
       <div class="instruction" data-instr-area></div>
-      <div class="manual">
+      <fieldset class="manual">
+        <legend class="sr-only">Edit by hand</legend>
         <div class="manual-head"><span class="sub-label">Edit by hand</span><span class="muted small">Updates the preview as you type</span></div>
         ${isLetter ? '' : `<div class="field"><label for="sec-title">Section heading</label><input id="sec-title" data-sec-title value="${esc(s.title)}"></div>`}
         <div data-manual></div>
-      </div>`;
+      </fieldset>`;
     $('[data-all]', body).onclick = () => { ui.selected = null; ui.pending = null; renderPreview(); renderInspector(); };
     $('[data-copy-sec]', body).onclick = () => copyText(Docs.sectionCopyText(s), s.title);
     const ti = $('[data-sec-title]', body);
@@ -432,6 +433,8 @@ Views.project = function (root, params) {
   function renderInstruction(s) {
     const area = $('[data-instr-area]', root);
     if (!area) return;
+    // Hand edits wait while a rewrite runs or its proposal is open, so Accept never overwrites them
+    const manual = $('.manual', root); if (manual) manual.disabled = !!(ui.busy || (ui.pending && ui.pending.sectionId === s.id));
     if (ui.pending && ui.pending.sectionId === s.id) {
       const pd = ui.pending;
       area.innerHTML = `
@@ -479,6 +482,7 @@ Views.project = function (root, params) {
     await sleep(1600 + Math.random() * 1000);
     if (!alive) return;
     ui.busy = false;
+    if (ui.selected !== sectionId || !section(sectionId)) { renderInspector(); renderPreview(); return; } // left the section: the rewrite is dropped
     const res = Docs.rewriteSection(s, instruction, st.kb);
     if (!res.changed) {
       renderInstruction(s); renderPreview();
