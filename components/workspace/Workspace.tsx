@@ -1,8 +1,8 @@
 "use client";
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Copy, Loader2, TriangleAlert, Undo2 } from "lucide-react";
+import { Check, ChevronLeft, Copy, History, Loader2, TriangleAlert, Undo2 } from "lucide-react";
 import { ModelPicker } from "@/components/shell/ModelPicker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -18,6 +18,7 @@ import { Count } from "@/components/ui/pill";
 import { ChecksTab, useChecks } from "./ChecksTab";
 import { ContentInspector } from "./ContentInspector";
 import { DesignTab } from "./DesignTab";
+import { HistoryDrawer } from "./HistoryDrawer";
 import { JobPanel } from "./JobPanel";
 import { Preview } from "./Preview";
 import { StructureTab } from "./StructureTab";
@@ -76,6 +77,15 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
   const setLeftTab = useWorkspace((s) => s.setLeftTab);
   const tab = useWorkspace((s) => s.tab);
   const setTab = useWorkspace((s) => s.setTab);
+  const viewing = useWorkspace((s) => !!s.viewing);
+  const view = useWorkspace((s) => s.view);
+  const [history, setHistory] = useState(false);
+  const historyBtn = useRef<HTMLButtonElement>(null);
+  const closeHistory = useCallback(() => {
+    setHistory(false);
+    view(null); // closing leaves preview mode
+    historyBtn.current?.focus();
+  }, [view]);
   return (
     <div className="grid h-dvh grid-rows-[54px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:overflow-visible">
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-line bg-surface-2 pr-3.5 pl-4 max-[900px]:grid-cols-[1fr_auto]">
@@ -107,6 +117,9 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
               </TooltipTrigger>
               <TooltipContent>Copy as plain text, for job sites that ask you to paste</TooltipContent>
             </Tooltip>
+            <Button ref={historyBtn} variant="quiet" size="sm" aria-expanded={history} onClick={() => (history ? closeHistory() : setHistory(true))}>
+              <History /> History
+            </Button>
           </div>
           <ModelPicker />
         </div>
@@ -114,7 +127,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
       {/* The panel starts open from 1180px wide (CSS, so nothing flashes); the toggle then sets it either way. */}
       <div
         className={cn(
-          "grid min-h-0 max-[900px]:grid-cols-1",
+          "relative grid min-h-0 max-[900px]:grid-cols-1",
           left === false ? "grid-cols-[0_minmax(0,1fr)_372px] max-[1180px]:grid-cols-[0_minmax(0,1fr)_340px]" : "grid-cols-[290px_minmax(0,1fr)_372px]",
           left === true && "max-[1180px]:grid-cols-[270px_minmax(0,1fr)_340px]",
           left === null && "max-[1180px]:grid-cols-[0_minmax(0,1fr)_340px]"
@@ -145,24 +158,32 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
           </Tabs>
         </aside>
         <Preview kb={kb} brief={project.brief} prefs={prefs} />
-        <aside aria-label="Inspector" className="flex min-h-0 flex-col border-l border-line bg-surface max-[900px]:border-t max-[900px]:border-l-0">
-          <Tabs value={tab} onValueChange={(v) => setTab(v as InspectorTab)} className="flex min-h-0 flex-1 flex-col">
-            <TabsList variant="underline" aria-label="Inspector">
-              <TabsTrigger value="content">Content</TabsTrigger>
-              <TabsTrigger value="structure">Structure</TabsTrigger>
-              <TabsTrigger value="design">Design</TabsTrigger>
-            </TabsList>
-            <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
-              <ContentInspector kb={kb} brief={project.brief} prefs={prefs} />
-            </TabsContent>
-            <TabsContent value="structure" className="min-h-0 flex-1 overflow-auto p-4">
-              <StructureTab />
-            </TabsContent>
-            <TabsContent value="design" className="min-h-0 flex-1 overflow-auto p-4">
-              <DesignTab />
-            </TabsContent>
-          </Tabs>
+        <aside aria-label="Inspector" className="relative flex min-h-0 flex-col border-l border-line bg-surface max-[900px]:border-t max-[900px]:border-l-0">
+          {viewing && (
+            <div className="absolute inset-x-0 top-[45px] bottom-0 z-10 grid place-items-center bg-surface/80 p-8 text-center text-ink-2">
+              <p>You&apos;re viewing an older revision. Restore it or go back to the current version to edit.</p>
+            </div>
+          )}
+          <div inert={viewing} className="flex min-h-0 flex-1 flex-col">
+            <Tabs value={tab} onValueChange={(v) => setTab(v as InspectorTab)} className="flex min-h-0 flex-1 flex-col">
+              <TabsList variant="underline" aria-label="Inspector">
+                <TabsTrigger value="content">Content</TabsTrigger>
+                <TabsTrigger value="structure">Structure</TabsTrigger>
+                <TabsTrigger value="design">Design</TabsTrigger>
+              </TabsList>
+              <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
+                <ContentInspector kb={kb} brief={project.brief} prefs={prefs} />
+              </TabsContent>
+              <TabsContent value="structure" className="min-h-0 flex-1 overflow-auto p-4">
+                <StructureTab />
+              </TabsContent>
+              <TabsContent value="design" className="min-h-0 flex-1 overflow-auto p-4">
+                <DesignTab />
+              </TabsContent>
+            </Tabs>
+          </div>
         </aside>
+        <HistoryDrawer open={history} onClose={closeHistory} />
       </div>
     </div>
   );
@@ -177,9 +198,10 @@ function CheckCount({ kb, project }: Pick<WorkspaceProps, "kb"> & { project: Wor
 function UndoButton() {
   const label = useWorkspace((s) => s.undoStack[s.kind].at(-1)?.label);
   const undo = useWorkspace((s) => s.undo);
+  const viewing = useWorkspace((s) => !!s.viewing);
   return (
     <Tooltip>
-      <TooltipTrigger render={<Button size="icon" aria-label="Undo" disabled={!label} onClick={() => undo()} />}>
+      <TooltipTrigger render={<Button size="icon" aria-label="Undo" disabled={!label || viewing} onClick={() => undo()} />}>
         <Undo2 />
       </TooltipTrigger>
       <TooltipContent>{label ? `Undo: ${label} (Ctrl+Z)` : "Nothing to undo"}</TooltipContent>

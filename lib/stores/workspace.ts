@@ -255,7 +255,7 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       regenerating: false,
       setRegenerating: (regenerating) => set({ regenerating }),
       regenerate: (out) => {
-        set({ selected: null, pending: null, busy: null, regenerating: false });
+        set({ selected: null, pending: null, busy: null, regenerating: false, viewing: null });
         for (const kind of ["resume", "coverLetter"] as const) commit(kind, { sections: out[kind].sections, recipient: out[kind].recipient }, { kind: "generation", label: "Regenerated from job brief" });
       },
     };

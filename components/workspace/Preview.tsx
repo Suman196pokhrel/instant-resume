@@ -4,9 +4,10 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
-import { PanelLeft, Zap } from "lucide-react";
+import { History, PanelLeft, Zap } from "lucide-react";
 import { cn } from "cn";
 import { useWorkspace } from "@/lib/stores/workspace";
+import { clockTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
@@ -21,7 +22,11 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const kind = useWorkspace((s) => s.kind);
   const saved = useWorkspace((s) => s.docs[s.kind]);
   const pending = useWorkspace((s) => (s.pending?.kind === s.kind ? s.pending : null));
-  const doc = useMemo(() => saved && pending ? { ...saved, sections: saved.sections.map((x) => (x.id === pending.sectionId ? pending.after : x)) } : saved, [saved, pending]); // a proposal shows before it is accepted
+  const viewing = useWorkspace((s) => s.viewing);
+  const view = useWorkspace((s) => s.view);
+  const restore = useWorkspace((s) => s.restore);
+  const live = useMemo(() => saved && pending ? { ...saved, sections: saved.sections.map((x) => (x.id === pending.sectionId ? pending.after : x)) } : saved, [saved, pending]); // a proposal shows before it is accepted
+  const doc = viewing?.snapshot ?? live; // History shows an older revision instead
   const zoom = useWorkspace((s) => s.zoom);
   const setZoom = useWorkspace((s) => s.setZoom);
   const setRenderMs = useWorkspace((s) => s.setRenderMs);
@@ -99,6 +104,18 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
         </span>
       </div>
       <div ref={scroll} className="relative min-h-0 flex-1 overflow-auto p-6">
+        {viewing && (
+          <div className="sticky -top-6 z-[5] -mx-6 -mt-6 mb-5 flex flex-wrap items-center gap-2.5 bg-ink px-4 py-2.5 text-[13px] text-background">
+            <History aria-hidden className="size-[15px]" />
+            <span className="flex-1">{`Viewing the revision from ${clockTime(viewing.ts)}: ${viewing.label}`}</span>
+            <Button size="sm" onClick={restore}>
+              Restore this version
+            </Button>
+            <Button size="sm" variant="ghost" onClick={() => view(null)} className="border-background/30 bg-transparent text-background hover:not-disabled:border-background/50 hover:not-disabled:bg-background/10">
+              Back to current
+            </Button>
+          </div>
+        )}
         {out ? (
           <div style={{ zoom: z }} className="mx-auto w-fit">
             <div data-sheet className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease) [&_svg]:block [&_svg]:h-auto [&_svg]:w-full", regenerating && "opacity-35")} dangerouslySetInnerHTML={{ __html: out.svg }} />

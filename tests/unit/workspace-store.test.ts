@@ -293,10 +293,11 @@ describe("workspace store: job panel (TASK-45)", () => {
     const fresh: Section = { id: "s-new", kind: "summary", title: "Summary", hidden: false, text: "Fresh." };
     const recipient = { name: "Hiring team", company: "Mintleaf", location: "Sydney" };
     store.getState().setBusy(new AbortController());
+    store.getState().view({ id: "r-0", documentId: "d-1", ts: "2026-11-18T00:00:00Z", kind: "edit", label: "Edited Summary", snapshot: resume });
     const drafts = { resume: { ...resume, id: "draft", theme: THEME_DEFAULTS, sections: [fresh] }, coverLetter: { ...letter, id: "draft", sections: [fresh], recipient } }; // as generateDocuments returns them
     store.getState().regenerate(drafts);
     const s = store.getState();
-    expect([s.selected, s.pending, s.busy, s.regenerating]).toEqual([null, null, null, false]);
+    expect([s.selected, s.pending, s.busy, s.regenerating, s.viewing]).toEqual([null, null, null, false, null]);
     expect(s.docs.resume).toMatchObject({ id: "d-1", theme: { margin: 22 }, sections: [fresh] });
     expect(s.docs.coverLetter).toMatchObject({ id: "d-2", recipient });
     await settle();
