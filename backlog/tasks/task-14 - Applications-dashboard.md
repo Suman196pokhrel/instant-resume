@@ -1,7 +1,7 @@
 ---
 id: TASK-14
 title: Applications dashboard
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
 updated_date: '2026-11-18T09:24:00Z'
@@ -56,6 +56,13 @@ Tests
 Out of scope
 - Setup checklist (TASK-29); keyword match counts on cards (the TASK-4 comment: not in SPEC §13.1 or the mock, so dropped); the Workspace (TASK-15)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Dashboard with cards (monogram, role, company, location, Edited {time ago}), live search, ⋯ menu (Open, Duplicate, Delete), dashed New application tile and empty state; lib/time.ts timeAgo.
+Delete is deferred until its Undo toast closes or the page is left (keepalive); a failed DELETE leaves the application in place. Setup checklist stays with TASK-29.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
