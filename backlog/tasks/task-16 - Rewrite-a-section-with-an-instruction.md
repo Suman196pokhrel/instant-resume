@@ -1,10 +1,10 @@
 ---
 id: TASK-16
 title: Rewrite a section with an instruction
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:19:00Z'
+updated_date: '2026-11-18T10:23:00Z'
 labels:
   - m6
 dependencies:
@@ -68,6 +68,13 @@ Tests
 Out of scope
 - Undo on the Accept toast (TASK-19; shortcut comment), Proposed/shimmer/flash styling in the preview (TASK-46), Emphasise from Checks (TASK-21), cancel button
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Rewrite one section: lib/generate/rewrite.ts (validated with rewriteRules, retry once, no-change detection, live-proven on Sonnet 5.5), word diff, Instruction box + Proposal card, Accept saves a rewrite revision, Reject saves nothing.
+Deferred: Accept toast Undo (TASK-19), preview Proposed/shimmer/flash (TASK-46); e2e can't assert the model name in the busy strip (no connection in e2e).
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
