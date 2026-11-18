@@ -116,6 +116,14 @@ describe("workspace store: structure (TASK-17)", () => {
     expect(store.getState().docs.resume!.sections[1].hidden).toBe(false);
   });
 
+  it("accepting a proposal keeps a hide made in Structure meanwhile", () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().propose(proposal());
+    store.getState().toggleHidden("s-sum");
+    store.getState().accept();
+    expect(store.getState().docs.resume!.sections[0]).toMatchObject({ text: "New.", hidden: true });
+  });
+
   it("a pending hand edit is sent first with its own revision", async () => {
     const store = createWorkspaceStore([resume, letter]);
     store.getState().editSection("s-sum", (s) => ({ ...s, title: "Profile" }), true);

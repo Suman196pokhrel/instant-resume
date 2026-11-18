@@ -15,6 +15,7 @@ import { createWorkspaceStore, useWorkspace, WorkspaceContext, type Kind } from 
 import { toast } from "@/lib/toast";
 import { ContentInspector } from "./ContentInspector";
 import { Preview } from "./Preview";
+import { StructureTab } from "./StructureTab";
 
 // The Workspace (SPEC §14.5, mock views-workspace.js): bar, preview and inspector. The job panel is TASK-45; undo,
 // history and export join the bar with their cards.
@@ -99,10 +100,10 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
             <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
               <ContentInspector kb={kb} brief={project.brief} prefs={prefs} notes={project.notes} />
             </TabsContent>
-            {/* shortcut: placeholders until TASK-17 (Structure) and TASK-18 (Design) */}
-            <TabsContent value="structure" className="p-4 text-muted-foreground">
-              Reordering and hiding sections arrive with the next update.
+            <TabsContent value="structure" className="min-h-0 flex-1 overflow-auto p-4">
+              <StructureTab />
             </TabsContent>
+            {/* shortcut: placeholder until TASK-18 (Design) */}
             <TabsContent value="design" className="p-4 text-muted-foreground">
               Fonts, sizes and colours arrive with the next update.
             </TabsContent>

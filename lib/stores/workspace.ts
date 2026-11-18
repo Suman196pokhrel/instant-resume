@@ -114,7 +114,7 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
         const doc = p && docs[p.kind];
         if (!p || !doc) return;
         set({ pending: null });
-        commit(p.kind, doc.sections.map((s) => (s.id === p.sectionId ? p.after : s)), { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
+        commit(p.kind, doc.sections.map((s) => (s.id === p.sectionId ? { ...p.after, hidden: s.hidden } : s)) /* hidden may have changed in Structure meanwhile */, { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
       },
       reject: () => set({ pending: null }),
       moveSection: (id, to, drag = false) => {

@@ -161,6 +161,7 @@ const wait = (ms: number, signal?: AbortSignal) =>
 export function createMockAdapter({ fixtures, scenario, delayMs = 0 }: { fixtures: Record<string, Fixture>; scenario: Scenario; delayMs?: number }): LlmAdapter {
   return {
     async generateObject(args) {
+      (globalThis as { __llmCalls?: string[] }).__llmCalls?.push(args.name); // an adapter spy, only where a test defines it (SPEC §18.4 #7)
       await wait(delayMs, args.signal);
       const fixture = fixtures[args.name];
       if (!fixture) throw new LlmError("other", "Something went wrong with the mock provider", "Try again in a moment.", `no mock fixture for ${args.name}`);

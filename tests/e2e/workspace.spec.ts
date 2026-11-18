@@ -137,6 +137,7 @@ test("Reject leaves the section untouched and saves nothing (AC3)", async ({ pag
 
 test("a cover letter paragraph: a suggestion chip rewrites it and Accept applies it (AC3)", async ({ page }) => {
   test.setTimeout(60_000);
+  await page.addInitScript(() => ((window as { __llmCalls?: string[] }).__llmCalls = []));
   const { id } = await makeProject(page);
   await page.goto(`/projects/${id}`);
   await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
@@ -150,6 +151,7 @@ test("a cover letter paragraph: a suggestion chip rewrites it and Accept applies
   await inspector.getByRole("button", { name: "Accept" }).click();
   await expect(page.getByText("Change applied to Opening")).toBeVisible();
   await expect(inspector.getByRole("textbox", { name: "Opening text" })).toHaveValue("Opening paragraph, with a particular focus on Go.");
+  expect(await page.evaluate(() => (window as { __llmCalls?: string[] }).__llmCalls)).toEqual(["rewrite"]); // the spy sees real calls
 });
 
 test("no change shows the §8 message with a different example; an empty instruction asks for one (AC4)", async ({ page }) => {
@@ -163,4 +165,62 @@ test("no change shows the §8 message with a different example; an empty instruc
   await expect(inspector.getByText('No change suggested for "make it sparkle". Try a different instruction, like "emphasise Go".')).toBeVisible({ timeout: 10_000 });
   await expect(box).toBeFocused();
   await expect(inspector.getByText("Proposed change")).toHaveCount(0);
+});
+
+// TASK-17: Structure tab (SPEC §14.5): reorder and hide sections, with no LLM call.
+async function openStructure(page: Page) {
+  await page.addInitScript(() => ((window as { __llmCalls?: string[] }).__llmCalls = [])); // the mock adapter's spy
+  const { id } = await makeProject(page);
+  await page.goto(`/projects/${id}`);
+  await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
+  await inspectorOf(page).getByRole("tab", { name: "Structure" }).click();
+  return inspectorOf(page).getByRole("list", { name: "Sections" });
+}
+const order = (list: ReturnType<Page["getByRole"]>) => list.getByRole("listitem").evaluateAll((li) => li.map((x) => x.getAttribute("aria-label")));
+const llmCalls = (page: Page) => page.evaluate(() => (window as { __llmCalls?: string[] }).__llmCalls);
+
+test("Alt+ArrowDown moves the focused section, announces it, keeps focus and saves (AC1, DoD)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const list = await openStructure(page);
+  await expect(inspectorOf(page).getByText("Drag to reorder, or focus a row and press Alt with the up or down arrow. Hidden sections stay in the document.")).toBeVisible();
+  const summary = list.getByRole("listitem", { name: /^Summary/ });
+  await expect(summary.getByRole("button", { name: "Move up" })).toBeDisabled();
+  await expect(list.getByRole("listitem", { name: /^Experience/ }).getByRole("button", { name: "Move down" })).toBeDisabled();
+  await summary.focus();
+  await page.keyboard.press("Alt+ArrowDown");
+  expect(await order(list)).toEqual(["Experience, position 1 of 2", "Summary, position 2 of 2"]);
+  await expect(page.getByText("Summary moved to position 2")).toBeAttached();
+  await expect(list.getByRole("listitem", { name: /^Summary/ })).toBeFocused();
+  await expect.poll(() => puts.map((p) => p.revision)).toEqual([{ kind: "structure", label: "Moved Summary down" }]);
+  await page.keyboard.press("Alt+ArrowUp");
+  expect(await order(list)).toEqual(["Summary, position 1 of 2", "Experience, position 2 of 2"]);
+  expect(await llmCalls(page)).toEqual([]); // AC3
+});
+
+test("dragging a row onto the top half of another puts it above (AC1)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const list = await openStructure(page);
+  await list.getByRole("listitem", { name: /^Experience/ }).dragTo(list.getByRole("listitem", { name: /^Summary/ }), { targetPosition: { x: 40, y: 3 } });
+  await expect.poll(() => order(list)).toEqual(["Experience, position 1 of 2", "Summary, position 2 of 2"]);
+  expect(await llmCalls(page)).toEqual([]); // AC3
+});
+
+test("a hidden section leaves the preview but stays listed, and can be shown again (AC2, AC3)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const list = await openStructure(page);
+  const before = await sheet(page).innerHTML();
+  await list.getByRole("button", { name: "Hide Summary" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(list.getByRole("listitem", { name: "Summary, position 1 of 2, hidden" })).toContainText("Hidden");
+  await expect.poll(() => sheet(page).innerHTML()).not.toBe(before);
+  await inspectorOf(page).getByRole("tab", { name: "Content" }).click();
+  await expect(inspectorOf(page).getByRole("button", { name: /Summary/ })).toContainText("Hidden");
+  await inspectorOf(page).getByRole("tab", { name: "Structure" }).click();
+  await list.getByRole("button", { name: "Show Summary" }).click();
+  await expect(list.getByRole("listitem", { name: "Summary, position 1 of 2" })).not.toContainText("Hidden");
+  await expect.poll(() => sheet(page).innerHTML()).toBe(before);
+  await expect.poll(() => puts.map((p) => p.revision.label)).toEqual(["Hid Summary", "Showed Summary"]);
+  expect(await llmCalls(page)).toEqual([]);
 });

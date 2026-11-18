@@ -211,6 +211,18 @@
 ::view-transition-new(.page) {
   animation-duration: 160ms;
 }
+/* Structure reorder (components/workspace/StructureTab.tsx): only the rows glide; names apply during that transition only. */
+html:not([data-vt="reorder"]) [data-struct-row] {
+  view-transition-name: none !important;
+}
+html[data-vt="reorder"]::view-transition-old(root),
+html[data-vt="reorder"]::view-transition-new(root) {
+  animation: none;
+}
+::view-transition-group(.struct) {
+  animation-duration: var(--t-slow);
+  animation-timing-function: var(--ease);
+}
 /* Step changes: the panel slides 24px in the direction of travel (out 200ms, in 280ms). */
 ::view-transition-old(.step-out-forward) {
   animation: 200ms var(--ease) both vt-out-left;
