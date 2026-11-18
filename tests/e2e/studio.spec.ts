@@ -138,8 +138,16 @@ function saves(page: Page) {
 test("Generate saves the project with notes, brief and selection, then opens it (AC1-AC3)", async ({ page }) => {
   test.setTimeout(90_000);
   await toEntries(page);
-  await page.getByRole("button", { name: "Generate resume and cover letter" }).click();
+  const posts = saves(page);
+  await page.route("**/api/projects", async (route) => {
+    await new Promise((r) => setTimeout(r, 1500)); // hold the save so the finished stages can be read
+    await route.continue();
+  });
+  await page.getByRole("button", { name: "Generate resume and cover letter" }).focus();
+  await page.keyboard.press("Enter");
   await expect(h1(page)).toHaveText("Generating for Mintleaf");
+  await expect(h1(page)).toBeFocused();
+  await expect(page.getByRole("status").filter({ hasText: "Drafting the resume and cover letter…" })).toBeAttached();
   await expect(page.getByText("Using claude-sonnet-5-5. Only facts from the entries you chose can be used.")).toBeVisible();
   const stages = page.getByRole("list", { name: "Generation stages" }).getByRole("listitem");
   await expect(stages).toHaveText([/^Matching knowledge base entries to the brief\s*on device/, /^Drafting the resume and cover letter/, /^Validating the response\s*on device/, /^Running checks\s*on device/, /^Rendering the PDF preview\s*on device/]);
@@ -151,6 +159,9 @@ test("Generate saves the project with notes, brief and selection, then opens it 
   await page.waitForURL(/\/projects\/p-/, { timeout: 60_000 });
   await expect(page.getByText(/^Generated in \d+(\.\d)?s\. Review the checks before you export\.$/)).toBeVisible();
   const id = page.url().split("/").pop();
+  await page.goBack(); // Back never starts a second, paid generation
+  await expect(h1(page)).toHaveText("Paste the job description");
+  expect(posts).toHaveLength(1);
   const { project, documents } = await (await page.request.get(`/api/projects/${id}`)).json();
   expect(project).toMatchObject({ company: "Mintleaf", role: "Senior Full Stack Engineer", source: "studio", notes: "Referred by Dana Okafor", jdText: MINTLEAF });
   expect(project.brief.keywords).toContain("React");
@@ -178,13 +189,19 @@ test("a failed generation saves nothing; Switch model opens the picker and Try a
   await expect(alert).toContainText("Generation stopped while drafting the resume and cover letter.");
   await expect(alert).toContainText("Nothing was saved, and your job description, brief and selections are kept.");
   await expect(alert).toContainText("Anthropic is having trouble right now");
+  await expect(page.locator(":focus")).toContainText("Generation stopped"); // focus moves to the failure
+  await page.keyboard.press("Tab");
+  await expect(alert.getByRole("button", { name: "Try again" })).toBeFocused();
   await expect(page.getByRole("list", { name: "Generation stages" }).getByRole("listitem").nth(1)).toHaveAttribute("data-state", "failed");
   expect(posts).toHaveLength(0);
 
   await alert.getByRole("button", { name: "Switch model" }).click();
   await expect(page.getByRole("menu")).toBeVisible();
   await page.keyboard.press("Escape");
-  await alert.getByRole("button", { name: "Try again" }).focus();
+  await alert.getByRole("button", { name: "Back to entries" }).focus();
+  await page.keyboard.press("Shift+Tab");
+  await page.keyboard.press("Shift+Tab");
+  await expect(alert.getByRole("button", { name: "Try again" })).toBeFocused();
   await page.keyboard.press("Enter");
   await page.waitForURL(/\/projects\/p-/, { timeout: 60_000 });
   expect(posts).toHaveLength(1);

@@ -6,9 +6,10 @@ import { generateDocuments } from "@/lib/generate/generate";
 import { createAdapter, languageModel, type LlmAdapter, type Usage } from "@/lib/llm/adapter";
 import { kbSchema } from "@/lib/schemas/kb";
 
-// Opt-in live check of the generate call on Anthropic (SPEC §8.3; TASK-43 AC4). Skipped without a key:
-//   set -a; . ./.env.keys; set +a; pnpm vitest run tests/unit/generate-live.test.ts
-const key = process.env.ANTHROPIC_API_KEY;
+// Opt-in live check of the generate call on Anthropic (SPEC §8.3; TASK-43 AC4): about 7,500 tokens a run, so it
+// needs IR_LIVE=1 as well as the key:
+//   set -a; . ./.env.keys; set +a; IR_LIVE=1 pnpm vitest run tests/unit/generate-live.test.ts
+const key = process.env.IR_LIVE === "1" ? process.env.ANTHROPIC_API_KEY : undefined;
 const model = process.env.IR_LIVE_MODEL ?? "claude-sonnet-5-5";
 
 it.skipIf(!key)(`generates validated documents for Mintleaf on ${model}`, async () => {
@@ -36,4 +37,5 @@ it.skipIf(!key)(`generates validated documents for Mintleaf on ${model}`, async 
   console.log(JSON.stringify({ model, calls, count: out.count }, null, 1));
   console.log(JSON.stringify({ resume: out.resume.sections, coverLetter: out.coverLetter.sections.map((s) => "text" in s && s.text) }, null, 1));
   expect(out.count).toBeGreaterThan(8);
+  expect(calls.filter((c) => c.name === "generate")).toHaveLength(1); // validated first time, no silent retry
 }, 180_000);

@@ -39,6 +39,12 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
   const [ghost, setGhost] = useState(1);
   const [error, setError] = useState<LlmError | null>(null);
   const run = useRef({ kb, draft, prefs, onDone }); // one run per mount, whatever the parent re-renders
+  const heading = useRef<HTMLHeadingElement>(null);
+  const failure = useRef<HTMLDivElement>(null);
+  useEffect(() => heading.current?.focus(), []); // the Generate button is gone, so focus starts here
+  useEffect(() => {
+    if (error) failure.current?.focus();
+  }, [error]);
 
   useEffect(() => {
     const { kb, draft, prefs, onDone } = run.current;
@@ -47,10 +53,11 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
     let at = started;
     const next = (i: number) => {
       const now = performance.now();
-      setTimes((t) => [...t, `${((now - at) / 1000).toFixed(1)}s`]);
+      setTimes((t) => Object.assign([...t], { [i - 1]: `${((now - at) / 1000).toFixed(1)}s` })); // by index: StrictMode runs this effect twice in dev
       at = now;
       setStage(i);
     };
+    void import("@/lib/render/client").then((m) => m.warmUp()); // the Typst download overlaps the LLM call
     const tick = setInterval(() => setElapsed((performance.now() - started) / 1000), 100);
     const grow = setInterval(() => setGhost((g) => Math.min(g + 1, GHOST_GROUPS)), 1500);
     (async () => {
@@ -102,7 +109,9 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
   return (
     <div className="grid grid-cols-[1fr_300px] gap-8 max-[860px]:grid-cols-1">
       <div>
-        <h1>Generating for {draft.brief.company}</h1>
+        <h1 ref={heading} tabIndex={-1} className="outline-none">
+          Generating for {draft.brief.company}
+        </h1>
         <p className="mt-1 text-muted-foreground">Using {model}. Only facts from the entries you chose can be used.</p>
         <ol aria-label="Generation stages" className="mt-[22px] mb-3.5 flex flex-col gap-1">
           {STAGES.map((s, i) => (
@@ -135,11 +144,14 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
             </li>
           ))}
         </ol>
-        <p className="text-[13px] text-muted-foreground" aria-live="off">
+        <p role="status" className="sr-only">
+          {error ? "" : `${STAGES[stage]?.label ?? "Opening the documents"}…`}
+        </p>
+        <p className="text-[13px] text-muted-foreground">
           {elapsed.toFixed(1)}s elapsed
         </p>
         {error && (
-          <div className="mt-4">
+          <div ref={failure} tabIndex={-1} className="mt-4 outline-none">
             <LlmErrorCallout
               error={error}
               onRetry={onRetry}
