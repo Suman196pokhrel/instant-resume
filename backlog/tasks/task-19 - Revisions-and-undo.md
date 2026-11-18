@@ -1,10 +1,10 @@
 ---
 id: TASK-19
 title: Revisions and undo
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T11:14:00Z'
+updated_date: '2026-11-18T11:23:00Z'
 labels:
   - m6
 dependencies:
@@ -22,9 +22,9 @@ As a job seeker, I can undo any change and rely on automatic revisions. Refs: SP
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Ctrl+Z undoes edits, rewrites, structure and design changes, with bursts grouped
-- [ ] #2 The undo stack caps at 50
-- [ ] #3 Revisions coalesce within 60 seconds per key, and a new one starts after that, with a readable label
+- [x] #1 Ctrl+Z undoes edits, rewrites, structure and design changes, with bursts grouped
+- [x] #2 The undo stack caps at 50
+- [x] #3 Revisions coalesce within 60 seconds per key, and a new one starts after that, with a readable label
 <!-- AC:END -->
 
 ## Definition of Done
@@ -81,6 +81,14 @@ created: 2026-11-18T11:07:00Z
 ---
 
 From TASK-18 review: lib/stores/workspace.ts keeps one pending revision label per document, so a hand edit followed within SAVE_DELAY by a design change (or an edit to another section) is saved as one PUT under the later label; content is kept, the earlier label is lost. Coalescing per key should give each its own revision.
+
+---
+
+created: 2026-11-18T11:23:00Z
+
+---
+
+Build done: server coalescing (same key < 60 s updates the latest revision), per-document undo stack (50, bursts under one key with < 1.5 s pauses), Undo button + Ctrl/Cmd+Z outside text fields + rewrite toast Undo, restore revision 'Undid: {label}', per-key flush (TASK-18 note). Undo labels are the revision labels (SPEC and mock updated). 279 unit + 97 e2e pass.
 
 ---
 <!-- COMMENTS:END -->
