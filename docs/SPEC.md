@@ -665,7 +665,7 @@ Name parts are hyphen-joined; the company is sanitised to `[A-Za-z0-9-]`. If che
 
 Deterministic loop, maximum 8 compiles:
 1. Compile. If `pages ≤ budget`, done.
-2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role); drop the last sentence of the summary; hide Portfolio, then Certifications and awards, then Referees (1-page budget only).
+2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role); drop the last sentence of the summary; hide Portfolio, Certifications and awards, and Referees (1-page budget only; one step, so the whole list fits in 8 compiles). An adjustment already at its floor, or with nothing to drop, is skipped (`lib/generate/fit.ts`).
 3. Emit progress events `{ value: pagesEstimate, action }` after each compile, for example "Tightening line spacing" or "Shortening the summary", ending with "Fits on 2 pages".
 
 If it still doesn't fit after the loop, finish with a warning: "Still {n} pages. Trim content in Studio."

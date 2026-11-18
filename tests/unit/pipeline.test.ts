@@ -81,3 +81,21 @@ describe("pipeline", () => {
     expect(save.mock.calls[0][0]).toMatchObject({ coverLetterOff: true });
   });
 });
+
+describe("pipeline: page fit (TASK-25)", () => {
+  it("fits the resume through the loop and saves the fitted version", async () => {
+    let n = 3;
+    const { p, events, save } = setup({ compile: async (kind) => (kind === "resume" ? n-- : 1) });
+    await p.run();
+    const steps = events.flatMap((e) => (e.type === "pages" && e.kind === "resume" ? [[e.value, e.action]] : []));
+    expect(steps).toEqual([[3, "Laid out at the template defaults"], [2, "Tightening line spacing"], [2, "Fits on 2 pages"]]);
+    expect(save.mock.calls[0][1][0]).toMatchObject({ theme: { lineHeight: 1.3 } });
+  });
+
+  it("warns when the resume can't fit", async () => {
+    const { p, events } = setup({ compile: async (kind) => (kind === "resume" ? 3 : 1) });
+    await p.run();
+    expect(events.find((e) => e.type === "stage" && e.id === "fit" && e.status !== "active")).toMatchObject({ status: "warning", note: "Still 3 pages. Trim content in Studio." });
+    expect(events.at(-1)).toMatchObject({ type: "done" });
+  });
+});

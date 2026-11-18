@@ -1,5 +1,6 @@
 import { extractBrief } from "@/lib/brief/extract";
 import { runChecks, type Finding } from "@/lib/checks/run";
+import { fitPages } from "@/lib/generate/fit";
 import { generateDocuments } from "@/lib/generate/generate";
 import type { LlmAdapter } from "@/lib/llm/adapter";
 import { LlmError } from "@/lib/llm/errors";
@@ -106,13 +107,17 @@ export function createPipeline(input: { jdText: string; notes: string }, deps: P
       return { note: `${out.count} changes, all validated` };
     },
     async () => {
-      ctx.pages = {};
-      for (const d of ctx.docs!) {
-        const n = await deps.compile(d.kind, d);
+      const budget = prefs.quick.pages;
+      const [resume, letter] = ctx.docs!;
+      const fit = await fitPages(resume, { budget, keywords: ctx.brief!.keywords, compile: (d) => deps.compile("resume", d), onStep: (s) => emit({ type: "pages", kind: "resume", ...s, budget }), signal: controller.signal });
+      ctx.docs = letter ? [fit.doc, letter] : [fit.doc];
+      ctx.pages = { resume: fit.pages };
+      if (letter) {
+        ctx.pages.coverLetter = await deps.compile("coverLetter", letter);
         if (controller.signal.aborted) throw new DOMException("cancelled", "AbortError");
-        ctx.pages[d.kind] = n;
-        emit({ type: "pages", kind: d.kind, value: n, action: `Laid out on ${prefs.paper}`, done: true, budget: prefs.quick.pages });
+        emit({ type: "pages", kind: "coverLetter", value: ctx.pages.coverLetter, action: `Laid out on ${prefs.paper}`, done: true, budget: 1 });
       }
+      if (!fit.fits) return { status: "warning", note: `Still ${fit.pages} pages. Trim content in Studio.` };
       const p = ctx.pages;
       return { note: [`Resume ${pages(p.resume!)}`, p.coverLetter ? `cover letter ${pages(p.coverLetter)}` : ""].filter(Boolean).join(", ") };
     },
