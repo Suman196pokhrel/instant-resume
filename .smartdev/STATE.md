@@ -1,5 +1,5 @@
 # Smart Dev state: Instant Resume
-stage: spec
+stage: review
 task: TASK-10
 next: write the spec for TASK-10 (LLM adapter, mock provider, model picker) on lib/llm/providers.ts and lib/keystore.ts readKey; verify the model IDs against each provider's models endpoint first
 blockers: none
