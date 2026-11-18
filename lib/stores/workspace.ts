@@ -44,6 +44,15 @@ type State = {
   undo: (kind?: Kind) => void; // a toast's Undo names its document
   setRenderMs: (ms: number) => void;
   flush: () => void;
+  /** Job panel (TASK-45): the application's notes, saved to the project after a pause. */
+  notes: string;
+  setNotes: (notes: string) => void;
+  leftOpen: boolean | null; // null = the CSS default (open from 1180px wide)
+  toggleLeft: (shown: boolean) => void;
+  regenerating: boolean;
+  setRegenerating: (on: boolean) => void;
+  /** Replaces both documents with a fresh generation, keeping each theme; one revision and undo step each. */
+  regenerate: (out: Record<Kind, Pick<ResumeDocument, "sections" | "recipient">>) => void;
 };
 
 export const SAVE_DELAY = 800;
@@ -51,8 +60,9 @@ export const UNDO_LIMIT = 50;
 export const BURST_IDLE = 1500; // typing or dragging with pauses shorter than this is one undo step
 type RevisionIn = Pick<Revision, "kind" | "label" | "coalesceKey">;
 
-export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
+export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: string; notes?: string }): StoreApi<State> {
   const timers = new Map<Kind, ReturnType<typeof setTimeout>>();
+  let notesTimer: ReturnType<typeof setTimeout> | undefined;
   const labels = new Map<Kind, RevisionIn>();
   let inflight = 0;
   let queue = Promise.resolve(); // saves go out in order, so an older snapshot never lands last
@@ -64,21 +74,28 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       const doc = get().docs[kind];
       const revision = labels.get(kind);
       if (!doc || !revision) return;
+      send(`/api/documents/${doc.id}`, "PUT", { theme: doc.theme, sections: doc.sections, recipient: doc.recipient, revision }, keepalive);
+    }
+    function saveNotes(keepalive = false) {
+      notesTimer = undefined;
+      if (project) send(`/api/projects/${project.id}`, "PATCH", { notes: get().notes }, keepalive);
+    }
+    function send(url: string, method: string, data: unknown, keepalive: boolean) {
       inflight++;
-      const body = JSON.stringify({ theme: doc.theme, sections: doc.sections, recipient: doc.recipient, revision });
-      const send = async () => {
+      const body = JSON.stringify(data);
+      const go = async () => {
         try {
-          const res = await fetch(`/api/documents/${doc.id}`, { method: "PUT", headers: { "content-type": "application/json" }, body, keepalive });
+          const res = await fetch(url, { method, headers: { "content-type": "application/json" }, body, keepalive });
           if (!res.ok) throw new Error(String(res.status));
-          if (--inflight === 0 && !timers.size) set({ save: "saved" });
+          if (--inflight === 0 && !timers.size && !notesTimer) set({ save: "saved" });
         } catch {
           inflight--;
           set({ save: "error" });
           toast("Couldn't save your changes. They'll be saved with your next change.", { kind: "error" });
         }
       };
-      if (keepalive) void send(); // the page is going: no waiting behind earlier saves
-      else queue = queue.then(send);
+      if (keepalive) void go(); // the page is going: no waiting behind earlier saves
+      else queue = queue.then(go);
     }
     function pushUndo(kind: Kind, doc: ResumeDocument, label: string) {
       const stack = [...get().undoStack[kind], { label, doc }].slice(-UNDO_LIMIT);
@@ -190,6 +207,24 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
           clearTimeout(t);
           save(kind, true);
         }
+        if (notesTimer) {
+          clearTimeout(notesTimer);
+          saveNotes(true);
+        }
+      },
+      notes: project?.notes ?? "",
+      setNotes: (notes) => {
+        set({ notes, save: "saving" });
+        clearTimeout(notesTimer);
+        notesTimer = setTimeout(() => saveNotes(), SAVE_DELAY);
+      },
+      leftOpen: null,
+      toggleLeft: (shown) => set({ leftOpen: !shown }),
+      regenerating: false,
+      setRegenerating: (regenerating) => set({ regenerating }),
+      regenerate: (out) => {
+        set({ selected: null, pending: null, busy: null, regenerating: false });
+        for (const kind of ["resume", "coverLetter"] as const) commit(kind, { sections: out[kind].sections, recipient: out[kind].recipient }, { kind: "generation", label: "Regenerated from job brief" });
       },
     };
   });

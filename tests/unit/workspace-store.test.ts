@@ -16,13 +16,16 @@ const proposal = (over: Partial<Proposal> = {}): Proposal => ({ sectionId: "s-su
 
 let bodies: { sections: Section[]; revision: { kind: string; label: string } }[];
 let release: (() => void)[];
+let urls: string[];
 beforeEach(() => {
   vi.useFakeTimers();
   bodies = [];
+  urls = [];
   release = [];
   vi.stubGlobal(
     "fetch",
-    vi.fn((_url: string, init: RequestInit) => {
+    vi.fn((url: string, init: RequestInit) => {
+      urls.push(`${init.method} ${url}${init.keepalive ? " keepalive" : ""}`);
       bodies.push(JSON.parse(init.body as string));
       return new Promise((resolve) => release.push(() => resolve({ ok: true })));
     })
@@ -33,6 +36,9 @@ afterEach(() => {
   vi.unstubAllGlobals();
 });
 const settle = () => vi.advanceTimersByTimeAsync(0);
+const text = (store: ReturnType<typeof createWorkspaceStore>) => (store.getState().docs.resume!.sections[0] as { text: string }).text;
+const typeInSummary = (store: ReturnType<typeof createWorkspaceStore>, t: string) => store.getState().editSection("s-sum", (s) => ({ ...s, text: t }));
+const steps = (store: ReturnType<typeof createWorkspaceStore>, kind: "resume" | "coverLetter" = "resume") => store.getState().undoStack[kind].map((u) => u.label);
 
 describe("workspace store: rewrite", () => {
   it("Accept sends a pending hand edit first with its own revision, then the rewrite, one after the other", async () => {
@@ -162,9 +168,6 @@ describe("workspace store: design (TASK-18)", () => {
 });
 
 describe("workspace store: undo (TASK-19)", () => {
-  const text = (store: ReturnType<typeof createWorkspaceStore>) => (store.getState().docs.resume!.sections[0] as { text: string }).text;
-  const typeInSummary = (store: ReturnType<typeof createWorkspaceStore>, t: string) => store.getState().editSection("s-sum", (s) => ({ ...s, text: t }));
-  const steps = (store: ReturnType<typeof createWorkspaceStore>, kind: "resume" | "coverLetter" = "resume") => store.getState().undoStack[kind].map((u) => u.label);
 
   it("a burst of typing is one step; a pause over 1.5 s starts another", async () => {
     const store = createWorkspaceStore([resume, letter]);
@@ -257,5 +260,60 @@ describe("workspace store: undo (TASK-19)", () => {
     release.forEach((r) => r());
     await vi.advanceTimersByTimeAsync(SAVE_DELAY);
     expect(bodies.map((b) => b.revision.label)).toEqual(["Edited Summary", "Adjusted design"]);
+  });
+});
+
+describe("workspace store: job panel (TASK-45)", () => {
+  const project = { id: "p-1", notes: "Old notes" };
+
+  it("saves notes once after a pause, and flush sends a waiting one at once", async () => {
+    const store = createWorkspaceStore([resume, letter], project);
+    expect(store.getState().notes).toBe("Old notes");
+    store.getState().setNotes("N");
+    store.getState().setNotes("New notes");
+    expect(store.getState().notes).toBe("New notes");
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY);
+    expect(urls).toEqual(["PATCH /api/projects/p-1"]);
+    expect(bodies).toEqual([{ notes: "New notes" }]);
+    release.shift()!();
+    await settle();
+    expect(store.getState().save).toBe("saved");
+    store.getState().setNotes("Leaving");
+    store.getState().flush();
+    expect(urls[1]).toBe("PATCH /api/projects/p-1 keepalive");
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY);
+    expect(urls).toHaveLength(2);
+  });
+
+  it("regenerate saves both documents as generation revisions, keeps their themes, and Undo restores each", async () => {
+    const store = createWorkspaceStore([{ ...resume, theme: { ...THEME_DEFAULTS, margin: 22 } }, letter], project);
+    store.getState().select("s-sum");
+    store.getState().propose(proposal());
+    const fresh: Section = { id: "s-new", kind: "summary", title: "Summary", hidden: false, text: "Fresh." };
+    const recipient = { name: "Hiring team", company: "Mintleaf", location: "Sydney" };
+    store.getState().setBusy(new AbortController());
+    const drafts = { resume: { ...resume, id: "draft", theme: THEME_DEFAULTS, sections: [fresh] }, coverLetter: { ...letter, id: "draft", sections: [fresh], recipient } }; // as generateDocuments returns them
+    store.getState().regenerate(drafts);
+    const s = store.getState();
+    expect([s.selected, s.pending, s.busy, s.regenerating]).toEqual([null, null, null, false]);
+    expect(s.docs.resume).toMatchObject({ id: "d-1", theme: { margin: 22 }, sections: [fresh] });
+    expect(s.docs.coverLetter).toMatchObject({ id: "d-2", recipient });
+    await settle();
+    release.forEach((r) => r());
+    await settle();
+    expect(urls).toEqual(["PUT /api/documents/d-1", "PUT /api/documents/d-2"]);
+    expect(bodies.map((b) => b.revision)).toEqual([0, 1].map(() => ({ kind: "generation", label: "Regenerated from job brief" })));
+    expect([steps(store, "resume"), steps(store, "coverLetter")]).toEqual([["Regenerated from job brief"], ["Regenerated from job brief"]]);
+    store.getState().undo("resume");
+    expect(text(store)).toBe("Old.");
+  });
+
+  it("toggleLeft sets the opposite of what is shown", () => {
+    const store = createWorkspaceStore([resume, letter], project);
+    expect(store.getState().leftOpen).toBeNull();
+    store.getState().toggleLeft(true);
+    expect(store.getState().leftOpen).toBe(false);
+    store.getState().toggleLeft(false);
+    expect(store.getState().leftOpen).toBe(true);
   });
 });
