@@ -50,6 +50,25 @@ function briefFor(ad: string) {
 const block = (prompt: string, tag: string) => prompt.match(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`))?.[1] ?? "";
 
 /** Fills whatever skeleton the prompt carries from its own knowledge base, so it fits any KB (the shared e2e one changes). */
+const SCENARIO_GAPS = [
+  ["Payments or financial services experience", "Payments"],
+  ["Kubernetes in production", "Kubernetes"],
+] as const;
+
+/** Evidence by keyword: highlights that mention a brief keyword the must-have names; else the first highlight, so only the scenario gaps are gaps. */
+function matchFor(prompt: string) {
+  const brief = JSON.parse(block(prompt, "brief") || "{}") as { mustHaves?: string[]; keywords?: string[] };
+  const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { entries?: { id: string; highlights?: { id: string; text: string; skills?: string[] }[] }[] };
+  const highlights = (kb.entries ?? []).flatMap((e) => e.highlights ?? []);
+  const scenarioGap = new Map<string, string>(SCENARIO_GAPS.map(([r, k]) => [r, k]));
+  const requirements = (brief.mustHaves ?? []).map((requirement) => {
+    const kws = scenarioGap.has(requirement) ? [scenarioGap.get(requirement)!] : (brief.keywords ?? []).filter((k) => kwMatch(requirement, k));
+    const hits = highlights.filter((h) => kws.some((k) => kwMatch(`${h.text} ${(h.skills ?? []).join(" ")}`, k))).map((h) => h.id);
+    return { requirement, evidence: hits.length || scenarioGap.has(requirement) ? hits.slice(0, 3) : highlights.slice(0, 1).map((h) => h.id) };
+  });
+  return { requirements, suggestedEntryIds: (kb.entries ?? []).filter((e) => e.highlights?.some((h) => requirements.some((r) => r.evidence.includes(h.id)))).map((e) => e.id) };
+}
+
 function generationFor(prompt: string) {
   const brief = JSON.parse(block(prompt, "brief") || "{}");
   const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { name?: string; entries?: { id: string; highlights?: { id: string; text: string }[] }[] };
@@ -132,8 +151,12 @@ export const MOCK_FIXTURES: Record<string, Fixture> = {
       briefFailed = true;
       throw busy();
     }
-    return briefFor(prompt.match(/^<job-ad>\n([\s\S]*)\n<\/job-ad>$/)?.[1] ?? "");
+    const brief = briefFor(prompt.match(/^<job-ad>\n([\s\S]*)\n<\/job-ad>$/)?.[1] ?? "");
+    if (scenario !== "gaps") return brief;
+    // Must-haves the seed KB can't back (mock views-quick.js SCENARIO_GAPS); they clear once the KB has the keyword
+    return { ...brief, requirements: [...brief.requirements.slice(0, 4), ...SCENARIO_GAPS.map(([r]) => r)], keywords: [...brief.keywords, ...SCENARIO_GAPS.map(([, k]) => k)] };
   },
+  match: ({ prompt }) => matchFor(prompt),
   generate: ({ prompt }, scenario) => {
     if (scenario === "generate-error" && !generateFailed) {
       generateFailed = true;
