@@ -1,10 +1,10 @@
 ---
 id: TASK-19
 title: Revisions and undo
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T11:23:00Z'
+updated_date: '2026-11-18T11:31:00Z'
 labels:
   - m6
 dependencies:
@@ -56,6 +56,13 @@ Tests
 Out of scope
 - History drawer and restore (TASK-22), regeneration (TASK-45), redo (not in SPEC), undo surviving a reload (stack is in memory, as SPEC)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Revisions coalesce on the server (same key < 60 s updates the latest); per-document in-memory undo stack (50, bursts per key, 1.5 s idle) via button, Ctrl/Cmd+Z outside text fields and the rewrite toast; restore revision 'Undid: {label}'; each change keeps its own revision.
+Review fixed: Ctrl+Z on a focused slider/radio was swallowed; the toast's Undo now targets its own document.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
