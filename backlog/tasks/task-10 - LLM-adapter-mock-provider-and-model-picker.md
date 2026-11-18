@@ -4,7 +4,7 @@ title: LLM adapter, mock provider and model picker
 status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T07:11:00Z'
+updated_date: '2026-11-18T07:24:00Z'
 labels:
   - m4
 dependencies:
@@ -91,6 +91,14 @@ created: 2026-11-18T07:11:00Z
 ---
 
 AC4: check built (tests/e2e/cors.spec.ts + /dev/llm) but not yet run against live providers; waiting on a run with real keys.
+
+---
+
+created: 2026-11-18T07:24:00Z
+
+---
+
+AC4 run 2026-11-18: Anthropic passes live (structured call from Chromium through CSP; all 3 model IDs listed). OpenAI and Gemini still need keys in .env.keys.
 
 ---
 <!-- COMMENTS:END -->
