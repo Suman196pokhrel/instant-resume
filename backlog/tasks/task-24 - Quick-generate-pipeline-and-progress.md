@@ -4,12 +4,11 @@ title: Quick generate pipeline and progress
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-18T12:30:00Z'
 labels:
   - m9
 dependencies:
-  - TASK-32
-  - TASK-33
+  - TASK-50
 ordinal: 24000
 ---
 
