@@ -13,13 +13,16 @@ export const PROVIDERS: Provider[] = [
 ];
 export const provider = (id: ProviderId) => PROVIDERS.find((p) => p.id === id)!;
 
+/** "an OpenAI", "an Anthropic", "a Gemini". */
+export const withArticle = (name: string) => `${/^[AEIOU]/.test(name) ? "an" : "a"} ${name}`;
+
 /** The first problem with a pasted key, before any request (SPEC §8.2 validation order), or null. */
 export function keyFormatError(id: ProviderId, raw: string): string | null {
   const key = raw.trim();
   const p = provider(id);
   if (!key) return "Paste your API key first";
   if (!key.startsWith(p.prefix) || (id === "openai" && key.startsWith("sk-ant-"))) {
-    return `That doesn't look like ${/^[AEIOU]/.test(p.name) ? "an" : "a"} ${p.name} key. ${p.name} keys start with "${p.prefix}".`;
+    return `That doesn't look like ${withArticle(p.name)} key. ${p.name} keys start with "${p.prefix}".`;
   }
   if (key.length < 20) return "That key looks too short. Copy the whole key from your provider dashboard.";
   return null;

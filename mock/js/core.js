@@ -365,7 +365,7 @@ function renderModelMenu(menu) {
   menu.innerHTML = MOCK.providers.map((p) => {
     const conn = connections[p.id];
     if (!conn) {
-      return `<div class="mm-group"><div class="mm-head">${esc(p.name)}</div><a class="mm-add" href="#/settings">${icon('key', 14)} Add a ${esc(p.name)} key</a></div>`;
+      return `<div class="mm-group"><div class="mm-head">${esc(p.name)}</div><a class="mm-add" href="#/settings">${icon('key', 14)} Add ${/^[AEIOU]/.test(p.name) ? 'an' : 'a'} ${esc(p.name)} key</a></div>`;
     }
     return `<div class="mm-group"><div class="mm-head">${esc(p.name)} <span class="muted">${esc(conn.masked)}</span></div>
       ${p.models.map((m) => `<button role="menuitemradio" aria-checked="${activeModel.provider === p.id && activeModel.model === m}" class="mm-item" data-prov="${p.id}" data-model="${m}">

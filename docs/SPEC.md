@@ -196,7 +196,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | Editor state | Zustand (one store per open project; see 14.5) |
 | UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. Motion: shadcn components keep their built-in animations (`tw-animate-css`) as shipped; a shared component gets custom CSS motion only where the mock calls for it (section 12). Page, step and document transitions use React's `<ViewTransition>` (React 19.3; it drives the browser's View Transitions API). No Framer Motion or other JS animation libraries. |
 | Drag and drop | dnd-kit (with keyboard sensor) |
-| LLM | Vercel AI SDK, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. Use `generateObject` with Zod schemas. |
+| LLM | Vercel AI SDK v7, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. `generateObject` is deprecated in v7: the adapter calls `generateText` with `output: Output.object({ schema })` and Zod schemas. |
 | Patching | `fast-json-patch` (RFC 6902) |
 | PDF | Typst via typst.ts (WASM) in a Web Worker, lazy-loaded on the Workspace and Quick generate pages only |
 | Key encryption | Web Crypto API, AES-GCM, non-extractable key in IndexedDB (see 8.2) |
@@ -496,21 +496,21 @@ Saving from the client: debounce document saves by 600 ms. Show "Saving" then "S
 
 | Provider | Key prefix | Models shown in picker |
 |---|---|---|
-| Anthropic | `sk-ant-` | Verified supported model IDs configured during implementation; mock labels are fixtures |
-| OpenAI | `sk-` | the provider's current flagship and a small model (configurable list in `lib/llm/providers.ts`) |
-| Gemini | `AIza` | the provider's current pro and flash models (configurable) |
+| Anthropic | `sk-ant-` | `claude-sonnet-5-5`, `claude-opus-5-5`, `claude-haiku-5-5` |
+| OpenAI | `sk-` | `gpt-6.2-sol`, `gpt-6.2-astra`, `gpt-6-luna` |
+| Gemini | `AIza` | `gemini-3.8-flash`, `gemini-3.1-pro-preview` |
 
-Keep the model lists in one config file so they're easy to update. One adapter interface hides the providers:
+IDs checked against each provider's model page on 2026-11-18; the first is the default. Models change often, so the lists live in one file (`lib/llm/providers.ts`), and the key test keeps only the ones the key's models list still offers (§8.2). One adapter interface (`lib/llm/adapter.ts`) hides the providers; `name` names the call (`brief`, `match`, `generate`, `rewrite`, `extract`) so the mock can pick its fixture:
 
 ```ts
 interface LlmAdapter {
-  generateObject<T>(args: { schema: ZodSchema<T>; system: string; prompt: string; signal?: AbortSignal }): Promise<{ object: T; usage: { inputTokens: number; outputTokens: number } }>;
+  generateObject<T>(args: { name: string; schema: ZodType<T>; system: string; prompt: string; signal?: AbortSignal }): Promise<{ object: T; usage: { inputTokens: number; outputTokens: number } }>;
 }
 ```
 
-Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true`. Verify CORS for all three providers in the first spike. If a provider can't be called from the browser, report it; don't proxy keys through the server.
+Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true` (the SDK doesn't add it). All three providers accept browser calls; the opt-in check is `ANTHROPIC_API_KEY=… OPENAI_API_KEY=… GEMINI_API_KEY=… pnpm test:e2e tests/e2e/cors.spec.ts`, which makes one structured call per provider from Chromium through `/dev/llm` and confirms every listed model ID still exists. If a provider can't be called from the browser, report it; don't proxy keys through the server.
 
-**Mock provider:** implement `MockLlmAdapter`, enabled when `NEXT_PUBLIC_LLM_MOCK=1` or when the active connection is the built-in "Mock" provider in development builds. It returns deterministic fixture outputs with realistic delays (stages of 2–3.6 s), and supports scenarios `happy | gaps | findings | error-stage-1…5` via a `?mock=` query param or a dev-only setting. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
+**Mock provider:** `createMockAdapter` (`lib/llm/mock.ts`), enabled when `NEXT_PUBLIC_LLM_MOCK=1` (inlined at build time; the e2e build sets it). It returns deterministic fixtures keyed by call `name`, validated with the call's schema like a real answer, and supports scenarios `happy | gaps | findings | error-stage-1…5` via a `?mock=` query param. Each call's fixtures, and the stage delays (2–3.6 s), arrive with that call and the pipeline. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
 
 ### 8.2 Connections and key storage
 
@@ -521,7 +521,8 @@ Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-bro
   3. Shorter than 20 characters: "That key looks too short. Copy the whole key from your provider dashboard."
   4. Then a real test call: GET the provider's models list (free, needs no model ID; all three allow it from the browser). A rejection uses the provider's own status and code: `{Provider} rejected this key ({status} {code}). Check the key is active and copied in full.` (Anthropic 401 `authentication_error`, OpenAI 401 `invalid_api_key`, Gemini **400** `API_KEY_INVALID`). A network failure: "Couldn't reach {Provider}. Check your connection and try again."; another error: "{Provider} couldn't check the key right now ({status}). Try again in a moment." On success: "Key works. Saved and encrypted on this device."
 - **Storage:** generate a non-extractable AES-GCM 256 `CryptoKey` once and keep it in IndexedDB (`instant-resume-keystore`). Encrypt each API key with a random 12-byte IV and store `{ provider, iv, ciphertext, masked, model, addedAt }` in IndexedDB. Decrypt only right before a call. Never send keys to the Next.js server, never log them, never include them in backups.
-- **Active model:** `{ provider, model }` in localStorage. Model picker in the top bar (and Workspace bar): a dropdown grouped by provider listing connected providers' models with a check on the active one. Not-connected providers show "Add a {provider} key", linking to Settings. Footer note: "Calls go straight from this browser to the provider." Switching shows the toast "Switched to {model}".
+- **Available models:** the key test's models list decides which listed models a connection offers (`available` on the stored connection; connections saved before this offer every listed model). If none is offered, the key is still saved and its card says "None of our listed {Provider} models are available to this key. Update Instant Resume, or try another key." A saved or active model that is no longer offered falls back to the provider's first offered model.
+- **Active model:** `{ provider, model }` in localStorage. Model picker in the top bar (and Workspace bar): a dropdown grouped by provider listing connected providers' available models with a check on the active one. Not-connected providers show "Add a/an {provider} key", linking to Settings. Footer note: "Calls go straight from this browser to the provider." Switching shows the toast "Switched to {model}". Every picker and Settings update together, without a reload.
 
 ### 8.3 LLM contract
 
@@ -561,6 +562,21 @@ Allowed operations for generation:
 3. Validate the result with the `Document` Zod schema.
 4. Every bullet's `source` exists in the KB and belongs to the item's `ref` entry (or, for generation, to a selected entry).
 5. IDs, `kind`, `hidden`, section order, theme and `recipient` are unchanged.
+
+**Errors** (`lib/llm/errors.ts`): every failed call becomes an `LlmError` with a title, one sentence on what to do, the provider's status and code as "Details", and a next step; screens show it with `LlmErrorCallout`. The provider's own message is never shown (it can echo the key). A cancel stays an abort, not an error.
+
+| Kind | When | Title / message | Action |
+|---|---|---|---|
+| key | 401, 403, `API_KEY_INVALID` | "{Provider} didn't accept your API key" / "The key may have been revoked, expired or deleted. Add a new key in Settings to keep going." | Open Settings |
+| model | 404, `model_not_found`, a 400 naming the model as deprecated or unknown | "{model} isn't available any more" / "{Provider} may have retired or renamed this model, or your key can't use it. Choose another model and try again." | Choose a model |
+| quota | `insufficient_quota`, "credit balance" | "Your {Provider} account is out of credit" / "Check your plan and billing with {Provider}, or switch to another provider." | Open {Provider} console |
+| rate | other 429 | "{Provider} is getting too many requests" / "Wait a minute, then try again. If this keeps happening, check your usage limits with {Provider}." | Try again |
+| busy | 5xx, 529 | "{Provider} is having trouble right now" / "This is on {Provider}'s side. Try again in a few minutes, or switch to another model." | Try again |
+| network | no response | "Couldn't reach {Provider}" / "Check your internet connection and try again." | Try again |
+| output | invalid after one retry | "The model's answer couldn't be used" / "Nothing was changed. Try again, or switch to another model if it keeps happening." | Try again |
+| setup | no active model or key | "No model connected" / "Add an API key in Settings to start generating." | Open Settings |
+
+The SDK retries 429 and 5xx itself (twice) before the adapter maps the error.
 
 Any failure rejects the whole patch: "The model returned changes we couldn't apply safely. Nothing was changed. Try again." The rewrite flow then shows the diff of the validated result. A rewrite that produces no change shows `No change suggested for "{instruction}". Try a different instruction, like "{example}".`, where the example is the first of "emphasise {keyword}", "lead with metrics" and "more concise" that differs from the instruction just sent.
 
@@ -1217,7 +1233,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 ### 18.2 Component (`tests/component`, Testing Library + jsdom)
 
 - Onboarding: required field errors appear and focus moves; "Skip this step" only on optional steps; the progress label updates; every background step can be skipped and a volunteer-only background reaches Review; resume-at-step after a remount.
-- Model picker: lists only connected providers' models; switching updates the store and the label.
+- Model picker: lists only connected providers' models; switching updates the store and the label (covered end to end in `tests/e2e/model-picker.spec.ts`).
 - Structure tab: Alt+ArrowUp/Down reorders and announces; the hide toggle keeps the section in the list as "Hidden".
 - Design tab: a slider change updates the theme without calling the LLM adapter (assert the adapter spy wasn't called); Reset is disabled at defaults.
 - Content tab: typing in a bullet updates the store and the save state goes Saving → Saved; a rewrite shows the proposal, then Accept applies it (or Reject leaves it untouched); Undo reverts.

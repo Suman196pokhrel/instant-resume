@@ -22,7 +22,7 @@ export default defineConfig({
   webServer: {
     command: "pnpm db:seed --force && pnpm build && pnpm start",
     url: `http://127.0.0.1:${PORT}/dashboard`,
-    env: { PORT: String(PORT), IR_DEV_UI: "1", IR_DB_URL },
+    env: { PORT: String(PORT), IR_DEV_UI: "1", IR_DB_URL, NEXT_PUBLIC_LLM_MOCK: "1" }, // inlined at build: every e2e test runs on the mock provider
     reuseExistingServer: false, // always test a fresh production build
     timeout: 180_000,
   },
