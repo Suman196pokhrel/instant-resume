@@ -1,5 +1,7 @@
 import { toExtraction } from "@/lib/import/extract";
+import { emphasisTerm } from "@/lib/generate/rewrite";
 import { parseResume } from "@/lib/import/parse";
+import { kwMatch } from "@/lib/match/keywords";
 import type { GenerateArgs, LlmAdapter } from "./adapter";
 import { LlmError, outputError } from "./errors";
 
@@ -69,6 +71,52 @@ function generationFor(prompt: string) {
   return { resumeOps: ops(block(prompt, "resume-skeleton")), coverLetterOps: ops(block(prompt, "cover-letter-skeleton")) };
 }
 
+/** Shorter: drop the last sentence, else the last clause, else keep the first 8 words. */
+function shorten(text: string) {
+  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text];
+  if (sentences.length > 1) return sentences.slice(0, -1).join("").trim();
+  const end = /[.!?]$/.test(text) ? text.slice(-1) : "";
+  const cut = text.lastIndexOf(", ");
+  if (cut > 0) return text.slice(0, cut) + end;
+  const words = text.split(/\s+/);
+  return words.length > 8 ? words.slice(0, 8).join(" ") + end : text;
+}
+
+/** Deterministic rewrites from the prompt's own section: "emphasise X" brings in or moves up a highlight that
+ * mentions X (a paragraph gets a clause), "concise" shortens each text, anything else changes nothing. */
+function rewriteFor(prompt: string) {
+  const instruction = block(prompt, "instruction").trim();
+  const section = block(prompt, "section").split("\n");
+  const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { entries?: { id: string; highlights?: { id: string; text: string; skills?: string[] }[] }[] };
+  const highlights = new Map((kb.entries ?? []).map((e) => [e.id, e.highlights ?? []]));
+  const texts = section.flatMap((l) => {
+    const m = l.match(/^\s*(\/sections\/\S+\/text)  (?:\[\S+\]|\(.+?\))  (".*")$/);
+    return m ? [{ path: m[1], text: JSON.parse(m[2]) as string }] : [];
+  });
+  const term = emphasisTerm(instruction);
+  if (term) {
+    let item = "";
+    const used = new Set<string>();
+    for (const l of section) {
+      const entry = l.match(/^ {2}(\/sections\/\d+\/items\/\d+)  entry (\S+):/);
+      if (entry) {
+        item = entry[1];
+        section.filter((x) => x.includes(`${item}/bullets/`)).forEach((x) => used.add(x.match(/\[(\S+)\]/)?.[1] ?? ""));
+        const h = (highlights.get(entry[2]) ?? []).find((h) => !used.has(h.id) && kwMatch(`${h.text} ${(h.skills ?? []).join(" ")}`, term));
+        if (h) return { ops: [{ op: "add", path: `${item}/bullets/0`, value: { text: h.text, source: h.id } }], note: "" };
+      }
+    }
+    const hit = texts.find((t) => /\/bullets\/[1-9]\d*\/text$/.test(t.path) && kwMatch(t.text, term));
+    if (hit) return { ops: [{ op: "move", from: hit.path.replace(/\/text$/, ""), path: hit.path.replace(/\d+\/text$/, "0") }], note: "" };
+    const para = texts.find((t) => /^\/sections\/\d+\/text$/.test(t.path) && !kwMatch(t.text, term));
+    if (para) return { ops: [{ op: "replace", path: para.path, value: para.text.replace(/[.!?]?$/, `, with a particular focus on ${term}.`) }], note: "" };
+    return { ops: [], note: `Nothing in this section mentions ${term}.` };
+  }
+  if (/concise|shorter|tighten|trim/i.test(instruction))
+    return { ops: texts.map((t) => ({ op: "replace", path: t.path, value: shorten(t.text) })).filter((o, n) => o.value !== texts[n].text), note: "" };
+  return { ops: [], note: "" };
+}
+
 export const MOCK_FIXTURES: Record<string, Fixture> = {
   ping: (_args, scenario) => ({ ok: true, scenario }),
   // The on-device parser's reading of the resume, so tests see the uploaded file's own details reach Review.
@@ -93,6 +141,7 @@ export const MOCK_FIXTURES: Record<string, Fixture> = {
     }
     return generationFor(prompt);
   },
+  rewrite: ({ prompt }) => rewriteFor(prompt),
 };
 
 /** The scenario from `?mock=` (SPEC §17), or "happy". */
