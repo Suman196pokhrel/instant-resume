@@ -701,7 +701,7 @@ For each visible bullet:
 
 Skills section: each skill must exist in the KB skills (case-insensitive): `Skill "{x}" isn't in your knowledge base` / `Every claim needs a stored fact. Add the skill to your knowledge base or remove it here.`
 
-Summary and paragraphs: every number must appear somewhere in the KB text or the application's notes (ignore 4-digit years and spelled-out numbers).
+Summary and paragraphs: every number must appear somewhere in the KB text or the application's notes (ignore 4-digit years and spelled-out numbers). A cover letter paragraph may also use numbers from the brief's requirements, since the Fit paragraph quotes the ad ("5+ years").
 
 ### 10.4 Parse safety (shown separately, never as a score)
 

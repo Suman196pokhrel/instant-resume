@@ -27,7 +27,7 @@ const NUM = /\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?/g;
 const numbers = (text: string) =>
   (text.match(NUM) ?? []).map((n) => n.replace(/\s/g, "").replace(/[.,]+$/, "")).filter((n) => !/^(19|20)\d{2}$/.test(n));
 
-export function runChecks(doc: CheckDoc, brief: Pick<JobBrief, "keywords">, kb: KnowledgeBase, notes = ""): Checks {
+export function runChecks(doc: CheckDoc, brief: Pick<JobBrief, "keywords"> & Partial<Pick<JobBrief, "requirements">>, kb: KnowledgeBase, notes = ""): Checks {
   const visible = doc.sections.filter((s) => !s.hidden);
   const matched = matchedKeywords(visible.map(sectionText).join(" "), brief.keywords);
   const facts = `${kbText(kb)} ${notes}`; // notes count as facts the user supplied
@@ -45,11 +45,12 @@ export function runChecks(doc: CheckDoc, brief: Pick<JobBrief, "keywords">, kb: 
   const known = [...new Set([...kbSkills, ...brief.keywords, ...EXTRA_TERMS])].filter((t) => t.length > 2);
   const skillSet = new Set(kbSkills.map((k) => k.toLowerCase()));
   const factNumbers = new Set(numbers(facts));
+  const adNumbers = new Set(numbers((brief.requirements ?? []).join(" "))); // a cover letter's Fit paragraph quotes the ad (SPEC §8.4)
 
   for (const s of visible) {
     const ground = (title: string, detail: string, bulletId?: string) => findings.push({ type: "grounding", sectionId: s.id, ...(bulletId && { bulletId }), title, detail });
     if ("text" in s) {
-      for (const n of numbers(s.text)) if (!factNumbers.has(n)) ground(`"${n}" doesn't appear in your knowledge base`, `In ${s.title}.`);
+      for (const n of numbers(s.text)) if (!factNumbers.has(n) && !(s.kind === "paragraph" && adNumbers.has(n))) ground(`"${n}" doesn't appear in your knowledge base`, `In ${s.title}.`);
       continue;
     }
     if (s.kind === "skills")

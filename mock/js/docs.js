@@ -321,8 +321,9 @@ const Docs = (function () {
       }
       if (s.text) {
         const kbNums = numbers(kbText);
+        const adNums = s.kind === 'paragraph' ? numbers(project.brief.requirements.join(' ')) : []; // the Fit paragraph quotes the ad
         numbers(s.text).forEach((n) => {
-          if (!kbNums.includes(n)) findings.push({ type: 'grounding', sectionId: s.id, title: `"${n}" doesn't appear in your knowledge base`, detail: `In ${s.title}.` });
+          if (!kbNums.includes(n) && !adNums.includes(n)) findings.push({ type: 'grounding', sectionId: s.id, title: `"${n}" doesn't appear in your knowledge base`, detail: `In ${s.title}.` });
         });
       }
     });

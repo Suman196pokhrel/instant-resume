@@ -133,3 +133,12 @@ describe("parse safety (AC4)", () => {
     expect(headings({ kind: "coverLetter", sections: [{ id: "p1", kind: "paragraph", title: "Opening", hidden: false, text: "Hello." }] })?.ok).toBe(true);
   });
 });
+
+describe("quoted requirements (TASK-24 review of §10.3)", () => {
+  it("a cover letter paragraph may quote the ad's numbers; a summary may not", () => {
+    const para = { id: "p-fit", kind: "paragraph", title: "Fit", hidden: false, text: 'Your ad asks for "5+ years building web apps".' } as Section;
+    const brief = { keywords: [], requirements: ["5+ years building production web applications"] };
+    expect(runChecks({ kind: "coverLetter", sections: [para] }, brief, kb).findings).toEqual([]);
+    expect(runChecks(resume(summary("I have 5+ years.")), brief, kb).findings.map((f) => f.title)).toEqual(['"5" doesn\'t appear in your knowledge base']);
+  });
+});
