@@ -1,10 +1,10 @@
 ---
 id: TASK-43
 title: Studio generate screen and project save
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-18T08:31:00Z'
-updated_date: '2026-11-18T09:01:00Z'
+updated_date: '2026-11-18T09:08:00Z'
 labels:
   - m5
 dependencies:
@@ -23,7 +23,7 @@ As a job seeker, I watch my resume and cover letter being generated, then land i
 - [x] #1 Generation creates a project (one generate call, ops validated) and opens /projects/[id]; the resume and cover letter compile with the Typst templates first (showing the preview is TASK-15)
 - [x] #2 Notes, brief and selection from the Studio draft are saved with the project, and the draft is cleared only after the save succeeds
 - [x] #3 Step 4 shows the stages, elapsed time and ghost page as in the mock; a failure shows the stage in red and a callout with Retry, Switch model and Back to entries, and nothing is saved
-- [ ] #4 Proven live on Anthropic: the generated documents pass the validator; tokens and time measured and noted in SPEC §8.3
+- [x] #4 Proven live on Anthropic: the generated documents pass the validator; tokens and time measured and noted in SPEC §8.3
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -64,6 +64,14 @@ created: 2026-11-18T08:40:00Z
 ---
 
 From TASK-13: core is lib/generate/generate.ts generateDocuments(input, adapter, signal) -> { resume, coverLetter, count } (id/projectId 'draft': drop them on POST /api/projects). Decided one call: update SPEC §14.4 step 4 and mock views-new.js STAGES in the same commit: one stage 'Drafting the resume and cover letter', failure 'Generation stopped while drafting.' Validate stage done note uses count. jsonInPrompt not set yet (schema is small): decide in the live proof; maxOutputTokens 8000.
+
+---
+
+created: 2026-11-18T09:08:00Z
+
+---
+
+Build done. Live (Sonnet 5.5, Mintleaf, 8 entries): generate 16-18 s, ~4.7k in / 2.6-2.9k out tokens, strict structured output OK (no jsonInPrompt). First live run exposed a prompt bug (skills line copied with its group name) - fixed. Copy 'about 6,000 tokens' -> 'about 7,500 tokens' in SPEC, app, mock. 224 unit + 76 e2e pass (2 consecutive full runs); tooltip flake parked (TASK-44).
 
 ---
 <!-- COMMENTS:END -->
