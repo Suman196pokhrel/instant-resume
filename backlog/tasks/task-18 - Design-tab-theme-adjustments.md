@@ -4,7 +4,7 @@ title: 'Design tab: theme adjustments'
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-18T09:47:00Z'
 labels:
   - m6
 dependencies:
@@ -31,3 +31,15 @@ As a job seeker, I can adjust font, sizes, margins, spacing and accent colour an
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T09:47:00Z
+
+---
+
+From TASK-15: calibrate resume.typ/letter.typ spacing against the mock (contact block and skills lines sit tight in the Typst preview).
+
+---
+<!-- COMMENTS:END -->

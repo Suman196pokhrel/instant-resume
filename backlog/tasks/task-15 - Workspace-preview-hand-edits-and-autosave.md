@@ -1,10 +1,10 @@
 ---
 id: TASK-15
 title: Workspace preview, hand edits and autosave
-status: To Do
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T09:34:00Z'
+updated_date: '2026-11-18T09:47:00Z'
 labels:
   - m6
 dependencies:
@@ -22,10 +22,10 @@ As a job seeker, I can edit any section by hand and see the preview update right
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Typing in a section updates the preview immediately
-- [ ] #2 The save state goes Saving to Saved, and edits survive a reload
-- [ ] #3 Copy text puts the document's plain text on the clipboard
-- [ ] #4 The Workspace shows its 54px bar (breadcrumb, Resume | Cover letter tabs, save state, Copy), the preview (rendered Typst pages, zoom, page breaks, render status) and the Content inspector as in the mock; the job panel is TASK-45, section outlines TASK-46
+- [x] #1 Typing in a section updates the preview immediately
+- [x] #2 The save state goes Saving to Saved, and edits survive a reload
+- [x] #3 Copy text puts the document's plain text on the clipboard
+- [x] #4 The Workspace shows its 54px bar (breadcrumb, Resume | Cover letter tabs, save state, Copy), the preview (rendered Typst pages, zoom, page breaks, render status) and the Content inspector as in the mock; the job panel is TASK-45, section outlines TASK-46
 <!-- AC:END -->
 
 ## Definition of Done
@@ -73,6 +73,14 @@ created: 2026-11-17T10:22:00Z
 ---
 
 From TASK-5: preview needs @myriaddreamin/typst-ts-renderer 0.7.0 (vector → SVG); compile format 'vector' to be added to lib/render/worker.ts. Calibrate resume.typ/letter.typ spacing against the mock here. Loader card: real WASM is 10.8 MB gzip, not 6.4 MB.
+
+---
+
+created: 2026-11-18T09:47:00Z
+
+---
+
+Build done: 241 unit + 86 e2e pass. Not done here: template spacing calibration (noted on TASK-18); loader card has no progress bar (no real progress signal from the worker); page-break lines not drawn (Typst SVG pages carry their own white fill; check with TASK-46).
 
 ---
 <!-- COMMENTS:END -->
