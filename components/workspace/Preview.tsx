@@ -4,7 +4,8 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
-import { Zap } from "lucide-react";
+import { PanelLeft, Zap } from "lucide-react";
+import { cn } from "cn";
 import { useWorkspace } from "@/lib/stores/workspace";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -24,6 +25,9 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const zoom = useWorkspace((s) => s.zoom);
   const setZoom = useWorkspace((s) => s.setZoom);
   const setRenderMs = useWorkspace((s) => s.setRenderMs);
+  const regenerating = useWorkspace((s) => s.regenerating);
+  const leftOpen = useWorkspace((s) => s.leftOpen);
+  const toggleLeft = useWorkspace((s) => s.toggleLeft);
   const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean } | null>(null);
   const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
@@ -71,6 +75,14 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   return (
     <section aria-label="Preview" className="relative flex min-h-0 min-w-0 flex-col bg-sunken">
       <div className="flex items-center gap-2.5 border-b border-line bg-background px-3 py-2">
+        <Tooltip>
+          <TooltipTrigger
+            render={<Button size="icon" aria-label="Show or hide the job panel" aria-controls="job-panel" aria-expanded={leftOpen ?? undefined} onClick={() => toggleLeft(leftOpen ?? matchMedia("(min-width: 1180px)").matches)} />}
+          >
+            <PanelLeft />
+          </TooltipTrigger>
+          <TooltipContent>Show or hide the job panel</TooltipContent>
+        </Tooltip>
         <div className="inline-flex items-center rounded-sm border border-line bg-surface">
           {icon("Zoom out", () => step(-0.1), "−")}
           <Tooltip>
@@ -89,7 +101,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
       <div ref={scroll} className="relative min-h-0 flex-1 overflow-auto p-6">
         {out ? (
           <div style={{ zoom: z }} className="mx-auto w-fit">
-            <div data-sheet className="w-[210mm] bg-surface shadow-pop [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: out.svg }} />
+            <div data-sheet className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease) [&_svg]:block [&_svg]:h-auto [&_svg]:w-full", regenerating && "opacity-35")} dangerouslySetInnerHTML={{ __html: out.svg }} />
           </div>
         ) : (
           !error && (

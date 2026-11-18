@@ -15,7 +15,7 @@ Views.project = function (root, params) {
     pending: null,           // { sectionId, before, after, instruction, warnings, ops }
     busy: false,             // rewrite in progress
     lastRenderMs: 0,
-    leftOpen: window.innerWidth > 1100,
+    leftOpen: window.innerWidth >= 1180, // SPEC §14.5: open from 1180px wide
     instructionDraft: '',
   };
   const undo = { resume: [], coverLetter: [] };

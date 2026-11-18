@@ -26,7 +26,7 @@ import { toast } from "@/lib/toast";
 // Inspector, Content tab: the Instruction box and the Proposal card that replaces it (SPEC §8.3 call 4, §14.5;
 // mock views-workspace.js renderInstruction).
 
-type Props = { section: Section; kb: KnowledgeBase; brief: JobBrief; prefs: Prefs; notes?: string };
+type Props = { section: Section; kb: KnowledgeBase; brief: JobBrief; prefs: Prefs };
 
 /** Suggestion chips by section kind; {kw} is the first job keyword missing from this document that the KB backs. */
 function suggestions(s: Section, docText: string, kb: KnowledgeBase, brief: JobBrief) {
@@ -38,11 +38,12 @@ function suggestions(s: Section, docText: string, kb: KnowledgeBase, brief: JobB
   return ["More concise", `Emphasise ${kw}`, "Lead with metrics", "Stronger verbs"];
 }
 
-export function Instruction({ section: s, kb, brief, prefs, notes }: Props) {
+export function Instruction({ section: s, kb, brief, prefs }: Props) {
   const kind = useWorkspace((x) => x.kind);
   const doc = useWorkspace((x) => x.docs[x.kind])!;
   const resume = useWorkspace((x) => x.docs.resume);
-  const busy = useWorkspace((x) => !!x.busy);
+  const busy = useWorkspace((x) => !!x.busy || x.regenerating);
+  const notes = useWorkspace((x) => x.notes);
   const pending = useWorkspace((x) => (x.pending?.sectionId === s.id ? x.pending : null));
   const setBusy = useWorkspace((x) => x.setBusy);
   const propose = useWorkspace((x) => x.propose);

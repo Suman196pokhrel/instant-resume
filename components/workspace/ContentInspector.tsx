@@ -20,12 +20,12 @@ import { copyText } from "./Workspace";
 
 type Item = Extract<Section, { items: unknown }>["items"][number];
 
-export function ContentInspector(props: { kb: KnowledgeBase; brief: JobBrief; prefs: Prefs; notes?: string }) {
+export function ContentInspector(props: { kb: KnowledgeBase; brief: JobBrief; prefs: Prefs }) {
   const doc = useWorkspace((s) => s.docs[s.kind]);
   const selected = useWorkspace((s) => s.selected);
   const select = useWorkspace((s) => s.select);
   const edit = useWorkspace((s) => s.editSection);
-  const locked = useWorkspace((s) => !!s.busy || !!s.pending);
+  const locked = useWorkspace((s) => !!s.busy || !!s.pending || s.regenerating);
   if (!doc) return null;
   const letter = doc.kind === "coverLetter";
   const s = doc.sections.find((x) => x.id === selected);

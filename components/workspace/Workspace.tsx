@@ -13,13 +13,15 @@ import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
 import { createWorkspaceStore, useWorkspace, WorkspaceContext, type Kind } from "@/lib/stores/workspace";
 import { toast } from "@/lib/toast";
+import { cn } from "cn";
 import { ContentInspector } from "./ContentInspector";
 import { DesignTab } from "./DesignTab";
+import { JobPanel } from "./JobPanel";
 import { Preview } from "./Preview";
 import { StructureTab } from "./StructureTab";
 
-// The Workspace (SPEC §14.5, mock views-workspace.js): bar, preview and inspector. The job panel is TASK-45; undo,
-// history and export join the bar with their cards.
+// The Workspace (SPEC §14.5, mock views-workspace.js): bar, job panel, preview and inspector. History and export join
+// the bar with their cards.
 
 /** Fields with their own text undo; a slider, radio or colour input isn't one. */
 const TEXT_FIELD = 'textarea, select, [contenteditable], input:not([type="range"], [type="radio"], [type="checkbox"], [type="color"], [type="button"])';
@@ -37,7 +39,7 @@ export async function copyText(text: string, label: string) {
 }
 
 export function Workspace(props: WorkspaceProps) {
-  const [store] = useState(() => createWorkspaceStore(props.bundle.documents));
+  const [store] = useState(() => createWorkspaceStore(props.bundle.documents, props.bundle.project));
   useEffect(() => {
     const flush = () => store.getState().flush();
     // Ctrl/Cmd+Z undoes the last change, except in a text field, where the browser's own text undo applies.
@@ -67,6 +69,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
   const kind = useWorkspace((s) => s.kind);
   const setKind = useWorkspace((s) => s.setKind);
   const doc = useWorkspace((s) => s.docs[s.kind]);
+  const left = useWorkspace((s) => s.leftOpen);
   return (
     <div className="grid h-dvh grid-rows-[54px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:overflow-visible">
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-line bg-surface-2 pr-3.5 pl-4 max-[900px]:grid-cols-[1fr_auto]">
@@ -102,7 +105,28 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
           <ModelPicker />
         </div>
       </header>
-      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_372px] max-[1180px]:grid-cols-[minmax(0,1fr)_340px] max-[900px]:grid-cols-1">
+      {/* The panel starts open from 1180px wide (CSS, so nothing flashes); the toggle then sets it either way. */}
+      <div
+        className={cn(
+          "grid min-h-0 max-[900px]:grid-cols-1",
+          left === false ? "grid-cols-[0_minmax(0,1fr)_372px] max-[1180px]:grid-cols-[0_minmax(0,1fr)_340px]" : "grid-cols-[290px_minmax(0,1fr)_372px]",
+          left === true && "max-[1180px]:grid-cols-[270px_minmax(0,1fr)_340px]",
+          left === null && "max-[1180px]:grid-cols-[0_minmax(0,1fr)_340px]"
+        )}
+      >
+        <aside
+          id="job-panel"
+          aria-label="Job"
+          className={cn(
+            "flex min-h-0 flex-col overflow-hidden border-r border-line bg-surface-2 max-[900px]:max-h-[420px] max-[900px]:border-r-0 max-[900px]:border-b",
+            left === false && "invisible max-[900px]:hidden",
+            left === null && "max-[1180px]:invisible max-[900px]:hidden"
+          )}
+        >
+          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-3.5 py-4">
+            <JobPanel project={project} kb={kb} prefs={prefs} />
+          </div>
+        </aside>
         <Preview kb={kb} brief={project.brief} prefs={prefs} />
         <aside aria-label="Inspector" className="flex min-h-0 flex-col border-l border-line bg-surface max-[900px]:border-t max-[900px]:border-l-0">
           <Tabs defaultValue="content" className="flex min-h-0 flex-1 flex-col">
@@ -112,7 +136,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
               <TabsTrigger value="design">Design</TabsTrigger>
             </TabsList>
             <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
-              <ContentInspector kb={kb} brief={project.brief} prefs={prefs} notes={project.notes} />
+              <ContentInspector kb={kb} brief={project.brief} prefs={prefs} />
             </TabsContent>
             <TabsContent value="structure" className="min-h-0 flex-1 overflow-auto p-4">
               <StructureTab />
