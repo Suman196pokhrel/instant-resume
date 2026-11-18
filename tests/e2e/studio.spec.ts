@@ -92,7 +92,7 @@ test("suggested entries are pre-ticked and coverage updates live (AC3)", async (
   await expect(brightwater).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Ledgerline/ }).first()).not.toBeChecked();
   await expect(page.getByText(/Matches React, TypeScript/).first()).toBeVisible();
-  await expect(page.getByText("Runs on claude-sonnet-5-5, about 6,000 tokens")).toBeVisible();
+  await expect(page.getByText("Runs on claude-sonnet-5-5, about 7,500 tokens")).toBeVisible();
 
   await brightwater.click();
   await expect.poll(count).toBe(before - 1);

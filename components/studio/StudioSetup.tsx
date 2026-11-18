@@ -428,7 +428,7 @@ function SelectStep(props: { kb: KnowledgeBase; brief: JobBrief; selected: strin
           <ChevronLeft /> Back to brief
         </Button>
         <div className="flex items-center gap-3">
-          <span className="text-[13px] text-muted-foreground">{model ? `Runs on ${model}, about 6,000 tokens` : "Connect a provider in Settings to generate"}</span>
+          <span className="text-[13px] text-muted-foreground">{model ? `Runs on ${model}, about 7,500 tokens` : "Connect a provider in Settings to generate"}</span>
           <Button disabled={!model} onClick={() => (selected.length ? onGenerate() : setError("Select at least one knowledge base entry"))}>
             <Sparkles /> Generate resume and cover letter
           </Button>

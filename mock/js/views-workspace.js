@@ -731,7 +731,7 @@ Views.project = function (root, params) {
   function regenerate() {
     openModal({
       title: 'Regenerate both documents?',
-      body: `<p>This replaces the resume and cover letter with a fresh generation from the job brief, using about 6,000 tokens on ${esc(st.activeModel.model)}.</p><p class="muted">Your current versions stay in history, so you can restore them.</p>
+      body: `<p>This replaces the resume and cover letter with a fresh generation from the job brief, using about 7,500 tokens on ${esc(st.activeModel.model)}.</p><p class="muted">Your current versions stay in history, so you can restore them.</p>
         <p class="muted small">For small changes, rewriting one section is quicker and cheaper.</p>`,
       actions: [{ label: 'Cancel' }, { label: 'Regenerate', kind: 'btn-primary', fn: async () => {
         $('[data-sheet]', root).classList.add('regenerating');

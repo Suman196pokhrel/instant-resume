@@ -176,7 +176,7 @@ function studioSetupView(root) {
         </div>
         <div class="new-foot sticky-foot">
           <button class="btn btn-ghost" data-back>${icon('chevLeft', 15)} Job brief</button>
-          <div class="row-gap"><span class="muted small">Runs on ${esc(model())}, about 6,000 tokens</span>
+          <div class="row-gap"><span class="muted small">Runs on ${esc(model())}, about 7,500 tokens</span>
           <button class="btn btn-primary" data-generate>${icon('spark')} Generate resume and cover letter</button></div>
         </div>
       </section>`);

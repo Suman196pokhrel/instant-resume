@@ -31,7 +31,7 @@ const SYSTEM = `You tailor a resume and cover letter to a job, filling the empty
 Allowed operations, and nothing else:
 - {"op":"replace","path":"<a path ending /text>","value":"..."} for the summary and each cover letter paragraph.
 - {"op":"add","path":"<a path ending /bullets/->","value":{"text":"...","source":"<highlight id>"}} for each bullet.
-- {"op":"replace","path":"<a path ending /line>","value":"..."} to reorder a skills line: the same skills, most relevant first.
+- {"op":"replace","path":"<a path ending /line>","value":"..."} to reorder a skills line: the quoted value with the same skills, most relevant first, and nothing else (no group name).
 Rules:
 - Use only facts in the knowledge base. Never invent employers, dates, numbers, skills or tools. Numbers in a bullet must appear in its source highlight.
 - Each bullet comes from exactly one highlight of the entry it sits under, and its source is that highlight's id. Rephrase lightly to bring the job's keywords forward; never add claims the highlight doesn't support.
@@ -62,7 +62,7 @@ function outline(doc: Draft) {
               const at = `/sections/${i}/items/${k}`;
               const name = [item.heading, item.sub].filter(Boolean).join(", ");
               if (item.bullets) return [`  ${at}/bullets/-  entry ${item.ref}: ${name}`];
-              if (s.kind === "skills") return [`  ${at}/line  ${item.heading}: ${item.line}`];
+              if (s.kind === "skills") return [`  ${at}/line  ${JSON.stringify(item.line)}  (group ${item.heading})`];
               return [`  (fixed) entry ${item.ref}: ${name}`];
             }),
           ]
