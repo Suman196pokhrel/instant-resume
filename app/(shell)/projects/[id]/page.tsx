@@ -19,7 +19,7 @@ export default async function Page({ params }: PageProps<"/projects/[id]">) {
   return (
     <>
       <RenderWarmup />
-      <Workspace bundle={bundle} kb={kb} prefs={await readPrefs(db)} />
+      <Workspace key={bundle.project.id} bundle={bundle} kb={kb} prefs={await readPrefs(db)} /> {/* a new store per project */}
     </>
   );
 }
