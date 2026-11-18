@@ -108,3 +108,18 @@ test("below 1180px wide the job panel starts closed and the toggle opens it (AC4
   await toggle(page).click();
   await expect(heading).toBeVisible();
 });
+
+test("a failed regeneration shows the error callout, unlocks editing, and Try again recovers (AC3)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const { id } = await makeProject(page, job);
+  await page.goto(`/projects/${id}?mock=generate-error`);
+  await panel(page).getByRole("button", { name: "Regenerate both documents" }).click();
+  await page.getByRole("dialog").getByRole("button", { name: "Regenerate" }).click();
+  const alert = panel(page).getByRole("alert");
+  await expect(alert).toContainText("Anthropic is having trouble right now", { timeout: 15_000 });
+  await expect(panel(page).getByRole("button", { name: "Regenerate both documents" })).toBeEnabled();
+  await expect(page.getByRole("complementary", { name: "Inspector" }).getByRole("button", { name: /Summary/ })).toBeEnabled();
+  await alert.getByRole("button", { name: "Try again" }).click();
+  await expect(page.getByText("Both documents regenerated")).toBeVisible({ timeout: 15_000 });
+  await expect(alert).toBeHidden();
+});
