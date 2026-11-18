@@ -20,6 +20,7 @@ export type Checks = {
 // Whole words only (policy, SPEC §10.2): "dynamically" and "leveraged" don't match. Hyphens equal spaces.
 const BANNED = BANNED_PHRASES.map((ph) => [ph, new RegExp(`(?<![a-z0-9])${ph.replace(/[- ]/g, "[- ]")}(?![a-z0-9])`, "i")] as const);
 
+export const STANDARD_HEADINGS = ["summary", "profile", "experience", "work experience", "skills", "portfolio", "projects", "education", "certifications and awards", "certifications", "awards", "publications", "referees", "references", "volunteer work", "languages"];
 const EXTRA_TERMS = ["Kubernetes", "Java", "Rust", "Kafka", "Angular", "Vue"];
 const NUM = /\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?/g;
 /** Number tokens as written ("4.2s", "40%", "3,100"), without spaces or a closing full stop; years (19xx, 20xx) don't count. */
@@ -70,5 +71,14 @@ export function runChecks(doc: CheckDoc, brief: Pick<JobBrief, "keywords">, kb: 
     }
   }
 
-  return { matched, missing, findings, parse: [] };
+  // The templates are single-column, selectable text with contact details in the body, so only headings can fail.
+  const standard = doc.kind === "coverLetter" || visible.every((s) => STANDARD_HEADINGS.includes(s.title.trim().toLowerCase()));
+  const parse = [
+    { label: "Single-column layout", ok: true },
+    { label: "Selectable text in reading order", ok: true },
+    { label: "Standard section headings", ok: standard, hint: "Rename unusual headings so job sites can find them" },
+    { label: "No tables, columns or images", ok: true },
+    { label: "Contact details in the page body", ok: true },
+  ];
+  return { matched, missing, findings, parse };
 }

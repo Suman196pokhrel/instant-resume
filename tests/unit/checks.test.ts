@@ -113,3 +113,23 @@ describe("claim grounding (AC3)", () => {
     expect(grounding(resume(summary(text)), "Shipped 75 releases last year")).toEqual([]);
   });
 });
+
+describe("parse safety (AC4)", () => {
+  const headings = (doc: CheckDoc) => check(doc).parse.find((p) => p.label === "Standard section headings");
+
+  it("fails a non-standard resume heading with its hint, and the other checks pass", () => {
+    const { parse } = check(resume(summary("Plain."), summary("Plain.", { id: "s-x", title: "My Journey" })));
+    expect(parse).toEqual([
+      { label: "Single-column layout", ok: true },
+      { label: "Selectable text in reading order", ok: true },
+      { label: "Standard section headings", ok: false, hint: "Rename unusual headings so job sites can find them" },
+      { label: "No tables, columns or images", ok: true },
+      { label: "Contact details in the page body", ok: true },
+    ]);
+  });
+
+  it("passes standard headings in any case, a hidden odd one and any cover letter", () => {
+    expect(headings(resume(summary("x", { title: "Work Experience" }), summary("x", { title: "My Journey", hidden: true })))?.ok).toBe(true);
+    expect(headings({ kind: "coverLetter", sections: [{ id: "p1", kind: "paragraph", title: "Opening", hidden: false, text: "Hello." }] })?.ok).toBe(true);
+  });
+});

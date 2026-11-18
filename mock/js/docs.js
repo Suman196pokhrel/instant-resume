@@ -266,6 +266,8 @@ const Docs = (function () {
 
   /* ---------- Checks (rules engine, no LLM) ---------- */
   const NUM_RE = /\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?/g;
+  // Number tokens without spaces or a closing full stop, so "5%" doesn't pass against "25%"; years don't count.
+  const numbers = (t) => (t.match(NUM_RE) || []).map((n) => n.replace(/\s/g, '').replace(/[.,]+$/, '')).filter((n) => !/^(19|20)\d{2}$/.test(n));
 
   function runChecks(project, kind, kb) {
     const doc = project.docs[kind];
@@ -298,8 +300,9 @@ const Docs = (function () {
             return;
           }
           const srcText = src.text + ' ' + (src.metric || '');
-          (b.text.match(NUM_RE) || []).map((n) => n.trim()).forEach((n) => {
-            if (!srcText.includes(n)) {
+          const srcNums = numbers(srcText);
+          numbers(b.text).forEach((n) => {
+            if (!srcNums.includes(n)) {
               findings.push({ type: 'grounding', sectionId: s.id, bulletId: b.id, title: `"${n}" doesn't match your knowledge base`, detail: `Under ${it.sub || it.heading}. Your knowledge base says: "${src.text}"` });
             }
           });
@@ -317,8 +320,9 @@ const Docs = (function () {
         }));
       }
       if (s.text) {
-        (s.text.match(NUM_RE) || []).map((n) => n.trim()).forEach((n) => {
-          if (!kbText.includes(n) && !/^(eight|\d{4})$/.test(n)) findings.push({ type: 'grounding', sectionId: s.id, title: `"${n}" doesn't appear in your knowledge base`, detail: `In ${s.title}.` });
+        const kbNums = numbers(kbText);
+        numbers(s.text).forEach((n) => {
+          if (!kbNums.includes(n)) findings.push({ type: 'grounding', sectionId: s.id, title: `"${n}" doesn't appear in your knowledge base`, detail: `In ${s.title}.` });
         });
       }
     });

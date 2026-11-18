@@ -678,17 +678,17 @@ Pure functions in `lib/checks/`, no LLM, run after every change (debounced 250 m
 
 ```ts
 { matched: string[]; missing: { keyword: string; inKb: boolean }[];
-  findings: { type: 'grounding'|'banned'|'coverage'; sectionId: string; title: string; detail: string }[];
+  findings: { type: 'grounding'|'banned'|'coverage'; sectionId: string; bulletId?: string; title: string; detail: string }[];
   parse: { label: string; ok: boolean; hint?: string }[] }
 ```
 
 ### 10.1 Keyword coverage
 
-Case-insensitive match of each brief keyword against the visible text of the document. Loose rules: hyphens equal spaces, and a trailing "s" is optional ("Design system" matches "design systems"). For each missing keyword, `inKb` is true if the KB text contains it. In the UI, missing keywords that are in the KB get the action "✦ Emphasise" (tooltip "It's in your knowledge base. Ask for a rewrite that brings it forward."), which opens the Experience section with the instruction prefilled as "Emphasise {keyword}". Missing keywords not in the KB get "+ Add it" (tooltip "Not in your knowledge base yet. Add what you did, then it can be claimed."). Quick generate adds a `coverage` finding when coverage is below 60% (owner to confirm the threshold).
+Case-insensitive match of each brief keyword against the visible text of the document. Loose rules: hyphens equal spaces, and a trailing "s" is optional ("Design system" matches "design systems"). For each missing keyword, `inKb` is true if the KB text or the application's notes contain it. In the UI, missing keywords that are in the KB get the action "✦ Emphasise" (tooltip "It's in your knowledge base. Ask for a rewrite that brings it forward."), which opens the Experience section with the instruction prefilled as "Emphasise {keyword}". Missing keywords not in the KB get "+ Add it" (tooltip "Not in your knowledge base yet. Add what you did, then it can be claimed."). Quick generate adds a `coverage` finding when coverage is below 60% (owner to confirm the threshold).
 
 ### 10.2 Banned phrases
 
-Word-boundary, case-insensitive match. One finding per phrase per section: `"{phrase}" is on the banned-phrase list` / `Found in {section}. Phrases like this read as generic or AI-written.`
+Word-boundary, case-insensitive match; hyphens equal spaces. Whole words only, so "dynamically" and "leveraged" don't match. One finding per phrase per section: `"{phrase}" is on the banned-phrase list` / `Found in {section}. Phrases like this read as generic or AI-written.`
 
 List: passionate, results-driven, synergy, leverage, spearheaded, dynamic, team player, proven track record, fast-paced, go-getter, delve, tapestry, thrilled, cutting-edge, utilise. Keep it in one config file (`lib/rules/banned-phrases.ts`); the generate prompt tells the model to avoid it.
 
@@ -696,7 +696,7 @@ List: passionate, results-driven, synergy, leverage, spearheaded, dynamic, team 
 
 For each visible bullet:
 - No `source`, or the source doesn't exist: "Bullet has no source in your knowledge base".
-- Every number token (regex `\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?`) must appear in the source highlight's text or metric. Otherwise: `"40%" doesn't match your knowledge base` / `Under {employer}. Your knowledge base says: "{source text}"`.
+- Every number token (regex `\b\d[\d,.]*\s?(?:%|ms|s\b|M\b|k\b)?`) must appear as a token in the source highlight's text or metric (compared without spaces or a closing full stop, so "5%" doesn't pass against "25%"; 4-digit years are ignored). Otherwise: `"40%" doesn't match your knowledge base` / `Under {employer}. Your knowledge base says: "{source text}"`.
 - Every known tech term (all KB skills + brief keywords + a small list such as Kubernetes, Java, Rust, Kafka, Angular, Vue) that appears in the bullet but not in the source highlight's text or skills, nor anywhere in its owning entry: `Mentions {term}, which this role doesn't record`.
 
 Skills section: each skill must exist in the KB skills (case-insensitive): `Skill "{x}" isn't in your knowledge base` / `Every claim needs a stored fact. Add the skill to your knowledge base or remove it here.`
