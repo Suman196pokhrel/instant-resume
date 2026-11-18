@@ -1,7 +1,7 @@
 ---
 id: TASK-43
 title: Studio generate screen and project save
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-18T08:31:00Z'
 updated_date: '2026-11-18T09:15:00Z'
@@ -55,6 +55,13 @@ Tests
 Out of scope
 - Workspace preview (TASK-15), checks and the findings toast (TASK-20), Quick generate (TASK-24), prompt caching (TASK-41)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Studio step 4: one generate call, compile check, save with notes/brief/selection, clear draft, open the project; failure saves nothing with Try again / Switch model / Back to entries; focus, status and reduced motion covered by e2e.
+Live on Sonnet 5.5: 3/3 first-time valid, ~17 s and ~7,500 tokens (copy updated). Known: a save failure is labelled 'while rendering the PDF preview'; checks stage is a no-op until TASK-20.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
