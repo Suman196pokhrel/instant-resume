@@ -1,4 +1,6 @@
 import { expect, test, type Page } from "@playwright/test";
+import { join } from "node:path";
+import { PROVIDERS } from "../../lib/llm/providers";
 import { runOnEmptyServer } from "./server";
 
 // SPEC §14.1a resume import and review, §1.4 merge/replace, on its own empty-database server.
@@ -14,6 +16,8 @@ Support Engineer | Harbour Health
 LANGUAGES
 English, Korean
 `;
+
+const FIXTURES = join(__dirname, "../fixtures/import");
 
 type Kb = { contact: { name: string }; roles: { title: string }[]; skills: unknown[]; additional: { title: string; referenceOnly?: boolean }[] };
 const getKb = async (page: Page): Promise<Kb> => (await page.request.get("/api/kb")).json();
@@ -41,7 +45,8 @@ test("bad files and short text show clear errors and change nothing (AC4)", asyn
     [file("resume.exe", "MZ"), "Choose a PDF, DOCX or TXT file."],
     [file("empty.txt", ""), "This file is empty. Choose another file or paste the text."],
     [file("big.txt", Buffer.alloc(10 * 1024 * 1024 + 1, 97)), "This file is larger than 10 MB. Choose a smaller file or paste the text."],
-    [file("resume.pdf", "%PDF-1.7"), "Reading PDF and Word files arrives with your AI provider connection. For now, paste the text or choose a .txt file."],
+    [file("broken.pdf", "%PDF-1.7"), "Could not read the file. Try another file or paste its text."],
+    [file("broken.docx", "PK not a zip"), "Could not read the file. Try another file or paste its text."],
   ];
   for (const [f, message] of cases) {
     await input.setInputFiles(f);
@@ -49,7 +54,14 @@ test("bad files and short text show clear errors and change nothing (AC4)", asyn
   }
   await page.getByLabel("Or paste your resume text").fill("too short");
   await page.getByRole("button", { name: "Extract and review" }).click();
-  await expect(alert(page)).toHaveText("Paste your resume text or choose a non-empty TXT file.");
+  await expect(alert(page)).toHaveText("Paste your resume text or choose a non-empty file.");
+  for (const [name, message] of [
+    ["scanned.pdf", "This PDF has no selectable text, so it looks like a scan. Export it again as a text PDF, or paste the text."],
+    ["locked.pdf", "This PDF is password-protected. Remove the password, or paste the text."],
+  ]) {
+    await input.setInputFiles(join(FIXTURES, name));
+    await expect(alert(page)).toHaveText(message);
+  }
   expect(await getKb(page)).toEqual(before);
 });
 
@@ -125,4 +137,78 @@ test("a TXT upload over an unfinished draft asks first; replace swaps the knowle
   expect(kb.contact.name).toBe("Jo Park");
   expect(kb.roles).toEqual([]);
   expect(kb.skills).toEqual([]);
+});
+
+/** Connects Anthropic with a stubbed key test, and records any other request to a provider. */
+async function connectAnthropic(page: Page) {
+  const calls: string[] = [];
+  await page.route(/api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com/, (route) => {
+    calls.push(route.request().url());
+    return route.fulfill({ status: 200, contentType: "application/json", headers: { "access-control-allow-origin": "*" }, body: JSON.stringify({ data: PROVIDERS[0].models.map((id) => ({ id })) }) });
+  });
+  await page.goto("/settings");
+  const card = page.locator("[data-provider=anthropic]");
+  await card.getByLabel("API key").fill("sk-ant-api03-test-key-0123456789a9F2");
+  await card.getByRole("button", { name: "Test and save" }).click();
+  await expect(card.getByText("Encrypted on this device", { exact: true })).toBeVisible();
+  calls.length = 0;
+  return calls;
+}
+
+test("PDF and Word files are read on this device; with no model, the on-device parser sorts them (SPEC §14.1a)", async ({ page }) => {
+  const calls: string[] = [];
+  page.on("request", (r) => /anthropic|openai|googleapis/.test(r.url()) && calls.push(r.url()));
+  await page.goto("/import");
+  await expect(page.getByText("Connect a provider in Settings for better extraction.")).toBeVisible();
+  const input = page.getByLabel(/Choose an existing resume/);
+  for (const name of ["resume.docx", "resume.pdf"]) {
+    await input.setInputFiles(join(FIXTURES, name));
+    await expect(page.getByText(`${name} — ready to extract`)).toBeVisible();
+    await expect(page.getByLabel("Or paste your resume text")).toHaveValue(/Brightwater Logistics[\s\S]*Reduced AWS spend by 25%/);
+  }
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  await expect(heading(page)).toHaveText("Review");
+  await expect(page.getByText("resume.pdf")).toBeVisible();
+  expect(calls).toEqual([]); // nothing left the device
+});
+
+test("with Anthropic connected, the transfer is explained before anything is sent; Send opens Review with the file's details (AC1-AC3)", async ({ page }) => {
+  await connectAnthropic(page);
+  await page.goto("/import");
+  await page.getByLabel(/Choose an existing resume/).setInputFiles(join(FIXTURES, "resume.pdf"));
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  const dialog = page.getByRole("dialog");
+  await expect(dialog.getByRole("heading")).toHaveText("Send your resume to Anthropic?");
+  await expect(dialog).toContainText("Your resume text goes straight from this browser to Anthropic (claude-sonnet-5-5) to sort it into sections. It isn't sent to Instant Resume's server.");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  await expect(dialog).toBeHidden();
+  await expect(page).toHaveURL(/\/import$/);
+
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  await page.getByRole("button", { name: "Send to Anthropic" }).click();
+  await expect(page.getByText("Sorting your resume with Anthropic. This usually takes 10 to 30 seconds.")).toBeVisible();
+  await expect(heading(page)).toHaveText("Review");
+  await expect(page.getByText("resume.pdf")).toBeVisible();
+  await expect(page.getByText("Senior Software Engineer").first()).toBeVisible();
+  await expect(page.getByText("LANGUAGES").first()).toBeVisible(); // an unknown section is kept
+});
+
+test("a provider failure explains itself and Try again recovers; Cancel keeps the text (AC4)", async ({ page }) => {
+  await connectAnthropic(page);
+  await page.goto("/import?mock=extract-error");
+  await page.getByLabel("Or paste your resume text").fill(RESUME);
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  await page.getByRole("button", { name: "Send to Anthropic" }).click();
+  await page.getByRole("main").getByRole("button", { name: "Cancel" }).click(); // mid-extract (the dialog's own Cancel is outside main)
+  await expect(page.getByRole("button", { name: "Extract and review" })).toBeEnabled();
+  await expect(page.getByLabel("Or paste your resume text")).toHaveValue(RESUME);
+  await expect(page).toHaveURL(/\/import\?mock=extract-error$/);
+
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  await page.getByRole("button", { name: "Send to Anthropic" }).click();
+  const callout = page.getByRole("alert").filter({ hasText: "having trouble" });
+  await expect(callout).toContainText("Anthropic is having trouble right now");
+  await expect(page.getByRole("button", { name: "Read on this device instead" })).toBeVisible();
+  await callout.getByRole("button", { name: "Try again" }).click();
+  await expect(heading(page)).toHaveText("Review");
 });

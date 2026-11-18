@@ -50,7 +50,7 @@ export function createAdapter(model: LanguageModel, ctx: { provider: ProviderId;
 
 /** The adapter for the active model: the mock when NEXT_PUBLIC_LLM_MOCK=1 (tests, demos), else the real provider. */
 export async function getAdapter(): Promise<LlmAdapter> {
-  if (process.env.NEXT_PUBLIC_LLM_MOCK === "1") return createMockAdapter({ fixtures: MOCK_FIXTURES, scenario: mockScenario() });
+  if (process.env.NEXT_PUBLIC_LLM_MOCK === "1") return createMockAdapter({ fixtures: MOCK_FIXTURES, scenario: mockScenario(), delayMs: 2000 }); // realistic (SPEC §8.1), and long enough to cancel
   const active = resolveChoice(getActiveModel(), await listConnections().catch(() => []));
   const key = active && (await readKey(active.provider).catch(() => null));
   if (!active || !key) throw noModelError();
