@@ -27,7 +27,8 @@ import { toast } from "@/lib/toast";
  */
 export function ImportForm({ unfinished }: { unfinished: boolean }) {
   const router = useRouter();
-  const { active } = useLlmChoice();
+  const { connections, active } = useLlmChoice();
+  const loadingChoice = connections === null; // until IndexedDB answers, don't guess whether a model is connected
   const name = active && provider(active.provider).name;
   const [text, setText] = useState("");
   const [fileName, setFileName] = useState("");
@@ -156,12 +157,12 @@ export function ImportForm({ unfinished }: { unfinished: boolean }) {
               Cancel
             </Button>
           )}
-          <Button onClick={extract} disabled={busy || extracting || reading}>
+          <Button onClick={extract} disabled={busy || extracting || reading || loadingChoice}>
             {extracting ? "Extracting…" : "Extract and review"}
           </Button>
         </div>
       </div>
-      {!active && <p className="mt-2 text-right text-[13px] text-muted-foreground">Connect a provider in Settings for better extraction. Without one, a basic parser on this device sorts the text.</p>}
+      {!active && !loadingChoice && <p className="mt-2 text-right text-[13px] text-muted-foreground">Connect a provider in Settings for better extraction. Without one, a basic parser on this device sorts the text.</p>}
 
       <Dialog open={dialog !== null} onOpenChange={(open) => !open && setDialog(null)}>
         <DialogContent>
