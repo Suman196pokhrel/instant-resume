@@ -30,7 +30,7 @@ export type PipelineEvent =
   | { type: "draft"; kind: "summary" | "bullet" | "letter"; text: string }
   | { type: "pages"; kind: Kind; value: number; action: string; done: boolean; budget: 1 | 2 }
   | { type: "checks"; coverage: number; findings: DocFinding[]; gaps: string[] }
-  | { type: "done"; projectId: string; summary: QuickSummary }
+  | { type: "done"; projectId: string; summary: QuickSummary; docs: Doc[] }
   | { type: "error"; index: number; label: string; reason: string; error?: LlmError };
 type ByType<T extends PipelineEvent["type"]> = Extract<PipelineEvent, { type: T }>;
 
@@ -175,7 +175,7 @@ export function createPipeline(input: { jdText: string; notes: string }, deps: P
       );
       if (signal.aborted) return;
       advance(1);
-      emit({ type: "done", projectId, summary: ctx.summary! });
+      emit({ type: "done", projectId, summary: ctx.summary!, docs: ctx.docs! });
     } catch {
       if (signal.aborted) return;
       emit({ type: "error", index: work.length - 1, label: labels[work.length - 1], reason: "Saving the project failed." });

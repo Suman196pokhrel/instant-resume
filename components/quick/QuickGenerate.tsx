@@ -2,7 +2,6 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { useRouter } from "next/navigation";
 import { Check, KeyRound, Sparkles, TriangleAlert, X, Zap } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -19,6 +18,7 @@ import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
+import { QuickResult, type QuickDone } from "./QuickResult";
 
 // Quick generate (SPEC §14.3; mock views-quick.js): paste a job description, watch the five-stage pipeline, then
 // open the result. The pipeline is lib/generate/pipeline.ts; this screen only listens to its events.
@@ -59,7 +59,6 @@ const SR: Record<Stage["status"], string> = { pending: "Not started", active: "I
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
 export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) {
-  const router = useRouter();
   const { connections, active } = useLlmChoice();
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [edited, setDraft] = useState<Draft | null>(null);
@@ -67,6 +66,10 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
   const [run, setRun] = useState<Run | null>(null);
   const [said, setSaid] = useState("");
   const [elapsed, setElapsed] = useState(0);
+  const [done, setDone] = useState<QuickDone | null>(null);
+  const [kbNow, setKbNow] = useState(kb); // Regenerate reads the KB again, so facts added from the result are used
+  const input = useRef<Draft>({ jdText: "", notes: "" }); // the run's own text: the stored draft is cleared on success
+  const replaces = useRef<string | null>(null);
   const pipeline = useRef<ReturnType<typeof createPipeline> | null>(null);
   const clock = useRef<{ start: number; timer?: ReturnType<typeof setInterval> }>({ start: 0 });
   const retry = useRef<HTMLButtonElement>(null);
@@ -89,12 +92,13 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
     if (on) clock.current.timer = setInterval(() => setElapsed((performance.now() - clock.current.start) / 1000), 100);
   };
 
-  function start() {
-    if (d!.jdText.trim().length < 80) return setShort("That looks too short to be a full job description. Paste the whole ad, including the requirements.");
+  function start(kb = kbNow, text: Draft = d!) {
+    if (text.jdText.trim().length < 80) return setShort("That looks too short to be a full job description. Paste the whole ad, including the requirements.");
     setShort("");
+    input.current = text;
     const scenario = process.env.NEXT_PUBLIC_LLM_MOCK === "1" ? mockScenario() : "happy";
     let brief: JobBrief | undefined;
-    const p = createPipeline(d!, {
+    const p = createPipeline(text, {
       kb,
       prefs,
       getAdapter,
@@ -127,8 +131,11 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
     p.on("done", (e) => {
       tick(false);
       saveDraft(null);
-      setSaid("Your documents are ready");
-      router.push(`/projects/${e.projectId}`); // the result screen replaces this with TASK-26
+      const old = replaces.current;
+      replaces.current = null;
+      if (old) void fetch(`/api/projects/${old}`, { method: "DELETE" }); // Regenerate replaces the project it came from
+      setDone({ projectId: e.projectId, summary: e.summary, docs: e.docs, brief: brief!, seconds: (performance.now() - clock.current.start) / 1000, model: active?.model ?? "your model" });
+      setRun(null);
     });
     pipeline.current = p;
     setRun(fresh());
@@ -151,6 +158,23 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
     setRun(null);
     if (toastIt) toast("Generation cancelled. Your job description is still here.");
   }
+
+  async function regenerate() {
+    const old = done?.projectId ?? null;
+    let fresh = kbNow;
+    try {
+      const res = await fetch("/api/kb");
+      if (res.ok) fresh = await res.json();
+    } catch {
+      // offline: regenerate from the KB we have
+    }
+    setKbNow(fresh);
+    replaces.current = old;
+    setDone(null);
+    start(fresh, input.current);
+  }
+
+  if (done) return <QuickResult done={done} kb={kbNow} prefs={prefs} onRegenerate={regenerate} />;
 
   if (!run)
     return (
@@ -183,7 +207,7 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
               <Link href="/settings">Change defaults</Link>
             </span>
           </div>
-          <Button onClick={start} disabled={!active || !d.jdText.trim()}>
+          <Button onClick={() => start()} disabled={!active || !d.jdText.trim()}>
             <Sparkles /> Generate
           </Button>
         </div>
