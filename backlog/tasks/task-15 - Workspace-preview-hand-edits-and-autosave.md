@@ -1,10 +1,10 @@
 ---
 id: TASK-15
 title: Workspace preview, hand edits and autosave
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T09:47:00Z'
+updated_date: '2026-11-18T09:48:00Z'
 labels:
   - m6
 dependencies:
@@ -56,6 +56,13 @@ Tests
 Out of scope
 - Job panel (TASK-45), section outlines and bullet tooltips (TASK-46), rewrite (TASK-16), structure (TASK-17), design (TASK-18), undo and coalescing (TASK-19), checks (TASK-21), history (TASK-22), export (TASK-23)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Workspace: 54px bar (crumb, Resume | Cover letter, save pill, Copy), live Typst SVG preview with zoom and render status, Content inspector (section list, Edit by hand), autosave via PUT /api/documents (800 ms, flush on leave), plain-text Copy; Zustand store per project.
+Deferred: template spacing calibration (TASK-18), loader progress bar, page-break lines (TASK-46); job panel TASK-45.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
