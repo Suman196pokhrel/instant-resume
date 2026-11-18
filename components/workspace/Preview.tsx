@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
@@ -17,7 +17,9 @@ const clampZoom = (z: number) => Math.min(1.6, Math.max(0.4, +z.toFixed(2)));
 
 export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBrief; prefs: Prefs }) {
   const kind = useWorkspace((s) => s.kind);
-  const doc = useWorkspace((s) => s.docs[s.kind]);
+  const saved = useWorkspace((s) => s.docs[s.kind]);
+  const pending = useWorkspace((s) => (s.pending?.kind === s.kind ? s.pending : null));
+  const doc = useMemo(() => saved && pending ? { ...saved, sections: saved.sections.map((x) => (x.id === pending.sectionId ? pending.after : x)) } : saved, [saved, pending]); // a proposal shows before it is accepted
   const zoom = useWorkspace((s) => s.zoom);
   const setZoom = useWorkspace((s) => s.setZoom);
   const [out, setOut] = useState<{ svg: string; ms: number; pages: number } | null>(null);

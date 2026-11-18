@@ -60,6 +60,7 @@
   --radius-xl: 12px;
 
   --shadow-pop: 0 14px 36px -10px rgba(26, 35, 32, 0.24), 0 2px 6px rgba(26, 35, 32, 0.08);
+  --shadow-card: 0 1px 2px rgba(26, 35, 32, 0.05), 0 6px 20px -14px rgba(26, 35, 32, 0.22); /* raised cards: the Instruction box */
   --shadow-card-hover: 0 4px 16px -8px rgba(26, 35, 32, 0.18);
   --shadow-primary: inset 0 1px 0 rgba(255, 255, 255, 0.14), 0 1px 2px rgba(10, 90, 79, 0.28);
   --shadow-tip: 0 6px 18px -6px rgba(26, 35, 32, 0.4);
@@ -72,6 +73,7 @@
   --animate-draw-tick: draw 350ms var(--ease) 500ms forwards;
   --animate-spin: spin 0.7s linear infinite; /* every spinner, and active stage icons (SPEC §12) */
   --animate-grow: grow 350ms var(--ease) both; /* Studio generation ghost page lines */
+  --animate-sweep: sweep 1.2s var(--ease) infinite; /* the "Rewriting with {model}" strip's shimmer */
 
   --color-on-ink: var(--on-ink);
   --color-prov-anthropic: var(--prov-anthropic);
@@ -262,6 +264,19 @@
   from {
     transform: scaleX(0);
   }
+}
+@keyframes sweep {
+  from {
+    background-position: -50% 0;
+  }
+  to {
+    background-position: 150% 0;
+  }
+}
+/* A light band sweeping across a working strip (mock .shimmer). */
+@utility shimmer {
+  background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent) no-repeat;
+  background-size: 50% 100%;
 }
 @keyframes draw {
   to {

@@ -73,3 +73,94 @@ test("Copy puts the document's plain text on the clipboard (AC3)", async ({ page
 test("an unknown project is a 404", async ({ page }) => {
   expect((await page.goto("/projects/p-nope"))?.status()).toBe(404);
 });
+
+// TASK-16: rewrite one section with an instruction (SPEC §8.3 call 4, §14.5 Instruction box and Proposal card).
+const inspectorOf = (page: Page) => page.getByRole("complementary", { name: "Inspector" });
+function documentPuts(page: Page) {
+  const bodies: { revision: { kind: string; label: string } }[] = [];
+  page.on("request", (r) => r.method() === "PUT" && r.url().includes("/api/documents/") && bodies.push(r.postDataJSON()));
+  return bodies;
+}
+async function openSection(page: Page, name: RegExp) {
+  const { id } = await makeProject(page);
+  await page.goto(`/projects/${id}`);
+  await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
+  await inspectorOf(page).getByRole("button", { name }).click();
+  return inspectorOf(page).getByRole("textbox", { name: /Rewrite this/ });
+}
+
+test("Emphasise Mentoring proposes a knowledge base bullet; Accept applies and saves it as a rewrite (AC1-3, DoD)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const box = await openSection(page, /Experience/);
+  const inspector = inspectorOf(page);
+  await expect(inspector.getByText(/^Sends only this section, about [\d,]+ tokens$/)).toBeVisible();
+  await box.fill("Emphasise Mentoring");
+  await box.press("Control+Enter");
+  await expect(box).toBeDisabled();
+  await expect(inspector.getByRole("status")).toContainText(/Rewriting with /);
+  await expect(inspector.getByRole("textbox", { name: "Bullet 1" })).toBeDisabled(); // hand edits wait
+
+  await expect(inspector.getByText("Proposed change")).toBeVisible({ timeout: 10_000 });
+  await expect(inspector.getByText("Proposed change").locator("xpath=../..")).toBeFocused();
+  await expect(inspector.getByText('"Emphasise Mentoring"')).toBeVisible();
+  const diff = inspector.getByLabel("Changes");
+  await expect(diff.locator("ins")).toContainText("Mentored three graduate engineers");
+  await expect(diff.getByText("from knowledge base")).toBeVisible();
+  await inspector.getByRole("button", { name: "1 patch operation, validated" }).click();
+  await expect(inspector.locator("pre")).toContainText('"source": "hl-bw-5"');
+  expect(puts).toHaveLength(0); // nothing saved while it is only proposed
+
+  await inspector.getByRole("button", { name: "Accept" }).click();
+  await expect(page.getByText("Change applied to Experience")).toBeVisible();
+  await expect(inspector.getByRole("textbox", { name: "Bullet 1" })).toHaveValue(/^Mentored three graduate engineers/);
+  await expect(inspector.getByRole("textbox", { name: "Bullet 2" })).toHaveValue("Cut page load from 4.2s to 1.1s");
+  await expect(inspector.getByRole("textbox", { name: /Rewrite this/ })).toBeFocused();
+  await expect.poll(() => puts.map((p) => p.revision)).toEqual([{ kind: "rewrite", label: 'Rewrote Experience: "Emphasise Mentoring"' }]);
+});
+
+test("Reject leaves the section untouched and saves nothing (AC3)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const box = await openSection(page, /Experience/);
+  const inspector = inspectorOf(page);
+  await box.fill("Emphasise Mentoring");
+  await inspector.getByRole("button", { name: "Rewrite", exact: true }).click();
+  await inspector.getByRole("button", { name: "Reject" }).click({ timeout: 10_000 });
+  await expect(page.getByText("Change rejected. Nothing was applied.")).toBeVisible();
+  await expect(inspector.getByRole("textbox", { name: "Bullet 1" })).toHaveValue("Cut page load from 4.2s to 1.1s");
+  await expect(inspector.getByRole("textbox", { name: "Bullet 2" })).toHaveCount(0);
+  await expect(inspector.getByRole("textbox", { name: /Rewrite this/ })).toBeFocused();
+  await page.waitForTimeout(1000); // longer than the save debounce
+  expect(puts).toHaveLength(0);
+});
+
+test("a cover letter paragraph: a suggestion chip rewrites it and Accept applies it (AC3)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const { id } = await makeProject(page);
+  await page.goto(`/projects/${id}`);
+  await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("tab", { name: "Cover letter" }).click();
+  const inspector = inspectorOf(page);
+  await inspector.getByRole("button", { name: /Opening/ }).click();
+  await expect(inspector.getByText(/^Sends only this paragraph/)).toBeVisible();
+  await inspector.getByRole("button", { name: "Emphasise Go" }).click();
+  await expect(inspector.getByRole("textbox", { name: /Rewrite this paragraph/ })).toHaveValue("Emphasise Go");
+  await expect(inspector.getByLabel("Changes").locator("ins")).toContainText("with a particular focus on Go", { timeout: 10_000 });
+  await inspector.getByRole("button", { name: "Accept" }).click();
+  await expect(page.getByText("Change applied to Opening")).toBeVisible();
+  await expect(inspector.getByRole("textbox", { name: "Opening text" })).toHaveValue("Opening paragraph, with a particular focus on Go.");
+});
+
+test("no change shows the §8 message with a different example; an empty instruction asks for one (AC4)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const box = await openSection(page, /Experience/);
+  const inspector = inspectorOf(page);
+  await inspector.getByRole("button", { name: "Rewrite", exact: true }).click();
+  await expect(inspector.getByText("Type an instruction first, or pick one of the suggestions.")).toBeVisible();
+  await box.fill("make it sparkle");
+  await box.press("Control+Enter");
+  await expect(inspector.getByText('No change suggested for "make it sparkle". Try a different instruction, like "emphasise Go".')).toBeVisible({ timeout: 10_000 });
+  await expect(box).toBeFocused();
+  await expect(inspector.getByText("Proposed change")).toHaveCount(0);
+});

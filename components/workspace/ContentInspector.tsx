@@ -7,20 +7,25 @@ import { Input, Textarea } from "@/components/ui/input";
 import { Pill } from "@/components/ui/pill";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import { sectionText } from "@/lib/doc/plain-text";
+import type { JobBrief } from "@/lib/schemas/brief";
 import type { Section } from "@/lib/schemas/document";
+import type { KnowledgeBase } from "@/lib/schemas/kb";
+import type { Prefs } from "@/lib/schemas/settings";
 import { useWorkspace } from "@/lib/stores/workspace";
+import { Instruction } from "./Instruction";
 import { copyText } from "./Workspace";
 
-// Inspector, Content tab (SPEC §14.5): the section list, then Edit by hand for the selected section. The Instruction
-// box (rewrite with AI) is TASK-16.
+// Inspector, Content tab (SPEC §14.5): the section list, then the Instruction box (rewrite with AI) and Edit by hand
+// for the selected section. Hand edits wait while a rewrite runs or its proposal is open, so Accept never overwrites them.
 
 type Item = Extract<Section, { items: unknown }>["items"][number];
 
-export function ContentInspector() {
+export function ContentInspector(props: { kb: KnowledgeBase; brief: JobBrief; prefs: Prefs; notes?: string }) {
   const doc = useWorkspace((s) => s.docs[s.kind]);
   const selected = useWorkspace((s) => s.selected);
   const select = useWorkspace((s) => s.select);
   const edit = useWorkspace((s) => s.editSection);
+  const locked = useWorkspace((s) => !!s.busy || !!s.pending);
   if (!doc) return null;
   const letter = doc.kind === "coverLetter";
   const s = doc.sections.find((x) => x.id === selected);
@@ -66,7 +71,9 @@ export function ContentInspector() {
           <TooltipContent>Copy this {letter ? "paragraph" : "section"} as plain text</TooltipContent>
         </Tooltip>
       </div>
-      <div className="flex flex-col gap-3">
+      <Instruction key={s.id} section={s} {...props} />
+      <fieldset disabled={locked} className="mt-4 flex flex-col gap-3 disabled:opacity-60">
+        <legend className="sr-only">Edit by hand</legend>
         <div className="flex items-baseline justify-between gap-2">
           <span className="text-xs font-semibold tracking-wide text-ink-2 uppercase">Edit by hand</span>
           <span className="text-[13px] text-muted-foreground">Updates the preview as you type</span>
@@ -97,7 +104,7 @@ export function ContentInspector() {
             </fieldset>
           ))
         )}
-      </div>
+      </fieldset>
     </>
   );
 }

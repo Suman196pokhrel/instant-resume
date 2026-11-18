@@ -38,6 +38,7 @@ export function Workspace(props: WorkspaceProps) {
     window.addEventListener("pagehide", flush);
     return () => {
       window.removeEventListener("pagehide", flush);
+      store.getState().busy?.abort();
       flush(); // leaving for another page sends what's pending
     };
   }, [store]);
@@ -96,7 +97,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
               <TabsTrigger value="design">Design</TabsTrigger>
             </TabsList>
             <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
-              <ContentInspector />
+              <ContentInspector kb={kb} brief={project.brief} prefs={prefs} notes={project.notes} />
             </TabsContent>
             {/* shortcut: placeholders until TASK-17 (Structure) and TASK-18 (Design) */}
             <TabsContent value="structure" className="p-4 text-muted-foreground">
