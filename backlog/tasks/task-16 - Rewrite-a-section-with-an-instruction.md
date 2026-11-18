@@ -1,10 +1,10 @@
 ---
 id: TASK-16
 title: Rewrite a section with an instruction
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:07:00Z'
+updated_date: '2026-11-18T10:19:00Z'
 labels:
   - m6
 dependencies:
@@ -21,10 +21,10 @@ As a job seeker, I can ask for one section to be rewritten and review the change
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 An instruction sends only the selected section and gets back JSON Patch operations for that section
-- [ ] #2 The proposal shows a word diff, tagged when content comes from the knowledge base
-- [ ] #3 Accept applies it and Reject leaves the section untouched; both work for cover letter paragraphs
-- [ ] #4 A no-change result shows the §8 message with a different example instruction
+- [x] #1 An instruction sends only the selected section and gets back JSON Patch operations for that section
+- [x] #2 The proposal shows a word diff, tagged when content comes from the knowledge base
+- [x] #3 Accept applies it and Reject leaves the section untouched; both work for cover letter paragraphs
+- [x] #4 A no-change result shows the §8 message with a different example instruction
 <!-- AC:END -->
 
 ## Definition of Done
@@ -77,6 +77,14 @@ created: 2026-11-18T08:44:00Z
 ---
 
 From TASK-13 review: rewriteRules(i) and validatePatch exist in lib/patch/validate.ts. A rewrite 'replace' of a bullet's text with an empty string is accepted today; decide whether that should be rejected (or treated as remove) when building rewrite.
+
+---
+
+created: 2026-11-18T10:19:00Z
+
+---
+
+Build done: lib/generate/rewrite.ts (+ mock fixture, opt-in live check: Sonnet 5.5 3-4 s, ~3,200 in / 200-320 out, validated first time), lib/doc/diff.ts, store pending/busy/accept/reject with ordered saves, components/workspace/Instruction.tsx. Token note recalibrated to 380 + chars/2 from live runs. 260 unit + 90 e2e pass.
 
 ---
 <!-- COMMENTS:END -->
