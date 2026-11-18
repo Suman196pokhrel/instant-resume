@@ -189,12 +189,16 @@ test("Alt+ArrowDown moves the focused section, announces it, keeps focus and sav
   await expect(list.getByRole("listitem", { name: /^Experience/ }).getByRole("button", { name: "Move down" })).toBeDisabled();
   await summary.focus();
   await page.keyboard.press("Alt+ArrowDown");
-  expect(await order(list)).toEqual(["Experience, position 1 of 2", "Summary, position 2 of 2"]);
+  await expect.poll(() => order(list)).toEqual(["Experience, position 1 of 2", "Summary, position 2 of 2"]);
   await expect(page.getByText("Summary moved to position 2")).toBeAttached();
   await expect(list.getByRole("listitem", { name: /^Summary/ })).toBeFocused();
   await expect.poll(() => puts.map((p) => p.revision)).toEqual([{ kind: "structure", label: "Moved Summary down" }]);
   await page.keyboard.press("Alt+ArrowUp");
-  expect(await order(list)).toEqual(["Summary, position 1 of 2", "Experience, position 2 of 2"]);
+  await expect.poll(() => order(list)).toEqual(["Summary, position 1 of 2", "Experience, position 2 of 2"]);
+  await expect(list.getByRole("listitem", { name: /^Summary/ })).toBeFocused(); // the focused row's own node moved this time
+  await list.getByRole("listitem", { name: /^Experience/ }).focus();
+  await page.keyboard.press("Alt+ArrowUp");
+  await expect(list.getByRole("listitem", { name: /^Experience/ })).toBeFocused();
   expect(await llmCalls(page)).toEqual([]); // AC3
 });
 
