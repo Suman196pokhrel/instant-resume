@@ -1,6 +1,6 @@
 # Smart Dev state: Instant Resume
 stage: spec
-task: TASK-21
+task: TASK-23
 next: spec TASK-20 (rules engine): read SPEC §10 and mock docs.js runChecks; on-device checks (keywords, claims vs KB, banned phrases, parse safety) as pure functions for the Checks panel (TASK-21); alternatives TASK-45 job panel, TASK-47 template calibration
 blockers: none
 updated: 2026-11-18 22:08 · session 8
