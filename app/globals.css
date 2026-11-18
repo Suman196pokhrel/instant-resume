@@ -74,6 +74,7 @@
   --animate-spin: spin 0.7s linear infinite; /* every spinner, and active stage icons (SPEC §12) */
   --animate-grow: grow 350ms var(--ease) both; /* Studio generation ghost page lines */
   --animate-sweep: sweep 1.2s var(--ease) infinite; /* the "Rewriting with {model}" strip's shimmer */
+  --animate-ring-in: ring-in 700ms var(--ease) both; /* Checks keyword ring draws in when the tab opens */
 
   --color-on-ink: var(--on-ink);
   --color-prov-anthropic: var(--prov-anthropic);
@@ -320,6 +321,11 @@ html[data-vt="reorder"]::view-transition-new(root) {
 @utility shimmer {
   background: linear-gradient(90deg, transparent, rgb(255 255 255 / 0.7), transparent) no-repeat;
   background-size: 50% 100%;
+}
+@keyframes ring-in {
+  from {
+    stroke-dashoffset: var(--c);
+  }
 }
 @keyframes draw {
   to {

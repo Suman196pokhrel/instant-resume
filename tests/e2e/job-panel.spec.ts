@@ -2,7 +2,7 @@ import { expect, test, type Page } from "@playwright/test";
 import { makeProject, SUMMARY } from "./projects";
 
 // SPEC §14.5 Job panel, Job tab and Regenerate dialog (TASK-45).
-const panel = (page: Page) => page.getByRole("complementary", { name: "Job" });
+const panel = (page: Page) => page.getByRole("complementary", { name: "Job and checks" });
 const sheet = (page: Page) => page.getByRole("region", { name: "Preview" }).locator("[data-sheet] svg").first();
 const toggle = (page: Page) => page.getByRole("button", { name: "Show or hide the job panel" });
 const job = { requirements: ["Build web apps for customers", "Strong Go skills", "Clear communication"], keywords: ["web apps", "Go", "Kafka"], jdText: "Platform Engineer\nSoutherly Energy\n\nWe build web apps." };

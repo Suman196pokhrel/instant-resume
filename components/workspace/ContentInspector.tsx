@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { ChevronLeft, ChevronRight, Copy, X } from "lucide-react";
 import { Button } from "@/components/ui/button";
 import { Field } from "@/components/ui/field";
@@ -26,6 +27,14 @@ export function ContentInspector(props: { kb: KnowledgeBase; brief: JobBrief; pr
   const select = useWorkspace((s) => s.select);
   const edit = useWorkspace((s) => s.editSection);
   const locked = useWorkspace((s) => !!s.busy || !!s.pending || s.regenerating);
+  const jump = useWorkspace((s) => s.jump);
+  const clearJump = useWorkspace((s) => s.clearJump);
+  const heading = useRef<HTMLHeadingElement>(null);
+  useEffect(() => {
+    if (!jump) return;
+    if (!jump.prefill) heading.current?.focus(); // a Checks finding lands on its section; Emphasise focuses the box instead (Instruction)
+    clearJump();
+  }, [jump, selected, clearJump]);
   if (!doc) return null;
   const letter = doc.kind === "coverLetter";
   const s = doc.sections.find((x) => x.id === selected);
@@ -63,7 +72,9 @@ export function ContentInspector(props: { kb: KnowledgeBase; brief: JobBrief; pr
           </TooltipTrigger>
           <TooltipContent>{all}</TooltipContent>
         </Tooltip>
-        <h3 className="flex-1 truncate">{s.title}</h3>
+        <h3 ref={heading} tabIndex={-1} className="flex-1 truncate outline-none">
+          {s.title}
+        </h3>
         <Tooltip>
           <TooltipTrigger render={<Button size="icon" aria-label="Copy text" onClick={() => copyText(sectionText(s), s.title)} />}>
             <Copy />

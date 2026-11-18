@@ -6,12 +6,12 @@ import { THEME_DEFAULTS } from "../../lib/schemas/theme";
 export const SUMMARY = "Engineer with eight years in web apps.";
 export const unique = (name: string) => `${name} ${Math.random().toString(36).slice(2, 7)}`;
 
-export async function makeProject(page: Page, { role = unique("Platform Engineer"), company = "Southerly Energy", requirements = ["Go"], keywords = ["Go"], jdText = "An ad" } = {}) {
+export async function makeProject(page: Page, { role = unique("Platform Engineer"), company = "Southerly Energy", requirements = ["Go"], keywords = ["Go"], jdText = "An ad", resumeSections = undefined as unknown[] | undefined } = {}) {
   const brief = { title: role, company, location: "Sydney NSW", seniority: "Senior", requirements, niceToHave: [], keywords, workRights: "Not stated" };
   const resume = {
     kind: "resume",
     theme: THEME_DEFAULTS,
-    sections: [
+    sections: resumeSections ?? [
       { id: "s-sum", kind: "summary", title: "Summary", hidden: false, text: SUMMARY },
       { id: "s-exp", kind: "experience", title: "Experience", hidden: false, items: [{ id: "i-1", ref: "role-brightwater", heading: "Senior Software Engineer", sub: "Brightwater Logistics", meta: "Sydney NSW | Mar 2022 to Present", bullets: [{ id: "b-1", text: "Cut page load from 4.2s to 1.1s", source: "hl-bw-1" }] }] },
     ],

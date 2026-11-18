@@ -51,12 +51,20 @@ export function Instruction({ section: s, kb, brief, prefs }: Props) {
   const reject = useWorkspace((x) => x.reject);
   const undo = useWorkspace((x) => x.undo);
   const { active } = useLlmChoice();
-  const [draft, setDraft] = useState("");
+  const prefill = useWorkspace((x) => x.jump?.prefill);
+  const [draft, setDraft] = useState(prefill ?? "");
   const [message, setMessage] = useState("");
   const [error, setError] = useState<LlmError | null>(null);
   const [back, setBack] = useState(false); // focus the box when returning from a proposal
   const box = useRef<HTMLTextAreaElement>(null);
   const refocus = () => setTimeout(() => box.current?.focus()); // once it is enabled again
+  // Checks' Emphasise: the instruction is ready to send (also when this section is already open)
+  const [seen, setSeen] = useState(prefill);
+  if (prefill !== seen) {
+    setSeen(prefill);
+    if (prefill) setDraft(prefill);
+  }
+  useEffect(() => void (prefill && box.current?.focus()), [prefill]);
   const noun = s.kind === "paragraph" ? "paragraph" : "section";
   const input = (instruction: string): RewriteInput => ({ doc, resume, sectionId: s.id, instruction, kb, brief, notes, tone: prefs.quick.tone, spelling: prefs.spelling });
 

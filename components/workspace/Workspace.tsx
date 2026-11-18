@@ -11,9 +11,11 @@ import type { ProjectBundle } from "@/lib/db/projects";
 import { plainText } from "@/lib/doc/plain-text";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
-import { createWorkspaceStore, useWorkspace, WorkspaceContext, type Kind } from "@/lib/stores/workspace";
+import { createWorkspaceStore, useWorkspace, WorkspaceContext, type InspectorTab, type Kind } from "@/lib/stores/workspace";
 import { toast } from "@/lib/toast";
 import { cn } from "cn";
+import { Count } from "@/components/ui/pill";
+import { ChecksTab, useChecks } from "./ChecksTab";
 import { ContentInspector } from "./ContentInspector";
 import { DesignTab } from "./DesignTab";
 import { JobPanel } from "./JobPanel";
@@ -70,6 +72,10 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
   const setKind = useWorkspace((s) => s.setKind);
   const doc = useWorkspace((s) => s.docs[s.kind]);
   const left = useWorkspace((s) => s.leftOpen);
+  const leftTab = useWorkspace((s) => s.leftTab);
+  const setLeftTab = useWorkspace((s) => s.setLeftTab);
+  const tab = useWorkspace((s) => s.tab);
+  const setTab = useWorkspace((s) => s.setTab);
   return (
     <div className="grid h-dvh grid-rows-[54px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:overflow-visible">
       <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-line bg-surface-2 pr-3.5 pl-4 max-[900px]:grid-cols-[1fr_auto]">
@@ -116,20 +122,31 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
       >
         <aside
           id="job-panel"
-          aria-label="Job"
+          aria-label="Job and checks"
           className={cn(
             "flex min-h-0 flex-col overflow-hidden border-r border-line bg-surface-2 max-[900px]:max-h-[420px] max-[900px]:border-r-0 max-[900px]:border-b",
             left === false && "invisible max-[900px]:hidden",
             left === null && "max-[1180px]:invisible max-[900px]:hidden"
           )}
         >
-          <div className="flex min-h-0 flex-1 flex-col overflow-auto px-3.5 py-4">
-            <JobPanel project={project} kb={kb} prefs={prefs} />
-          </div>
+          <Tabs value={leftTab} onValueChange={(v) => setLeftTab(v as "job" | "checks")} className="min-h-0 flex-1 gap-0">
+            <TabsList aria-label="Job panel" className="mx-3 mt-3 w-auto">
+              <TabsTrigger value="job">Job</TabsTrigger>
+              <TabsTrigger value="checks">
+                Checks <CheckCount kb={kb} project={project} />
+              </TabsTrigger>
+            </TabsList>
+            <TabsContent value="job" className="flex min-h-0 flex-1 flex-col overflow-auto px-3.5 py-4 animate-in duration-(--t) ease-(--ease) fade-in-0">
+              <JobPanel project={project} kb={kb} prefs={prefs} />
+            </TabsContent>
+            <TabsContent value="checks" className="flex min-h-0 flex-1 flex-col overflow-auto px-3.5 py-4 animate-in duration-(--t) ease-(--ease) fade-in-0">
+              <ChecksTab kb={kb} brief={project.brief} />
+            </TabsContent>
+          </Tabs>
         </aside>
         <Preview kb={kb} brief={project.brief} prefs={prefs} />
         <aside aria-label="Inspector" className="flex min-h-0 flex-col border-l border-line bg-surface max-[900px]:border-t max-[900px]:border-l-0">
-          <Tabs defaultValue="content" className="flex min-h-0 flex-1 flex-col">
+          <Tabs value={tab} onValueChange={(v) => setTab(v as InspectorTab)} className="flex min-h-0 flex-1 flex-col">
             <TabsList variant="underline" aria-label="Inspector">
               <TabsTrigger value="content">Content</TabsTrigger>
               <TabsTrigger value="structure">Structure</TabsTrigger>
@@ -149,6 +166,12 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
       </div>
     </div>
   );
+}
+
+/** The Checks tab's count badge, warn when there is anything to review. */
+function CheckCount({ kb, project }: Pick<WorkspaceProps, "kb"> & { project: WorkspaceProps["bundle"]["project"] }) {
+  const n = useChecks(kb, project.brief)?.findings.length ?? 0;
+  return n ? <Count className="bg-warn-soft text-warn">{n}</Count> : null;
 }
 
 function UndoButton() {
