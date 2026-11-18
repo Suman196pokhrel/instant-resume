@@ -1,5 +1,5 @@
 import { expect, it, vi } from "vitest";
-import { extractResume, toDraft, toExtraction, type Extraction } from "@/lib/import/extract";
+import { extractionSchema, extractResume, toDraft, toExtraction, type Extraction } from "@/lib/import/extract";
 import { parseResume } from "@/lib/import/parse";
 import type { LlmAdapter } from "@/lib/llm/adapter";
 
@@ -70,12 +70,23 @@ it("never fills work rights; unknown sections and the original text are kept as 
   ]);
 });
 
+it("keeps the rest of an answer when a field is missing, null or unexpected", () => {
+  const sloppy = { contact: { name: "Jordan Whitlock", email: null }, roles: [{ title: "Engineer", company: "Brightwater", highlights: [{ text: "Led a team of 4" }] }], credentials: [{ kind: "Certificate", title: "AWS Developer" }] };
+  const x = extractionSchema.parse(sloppy);
+  const d = toDraft(x, "T");
+  expect(d.contact).toEqual({ id: "kb-contact", name: "Jordan Whitlock" });
+  expect(d.roles).toEqual([{ title: "Engineer", company: "Brightwater", highlights: [{ text: "Led a team of 4", skills: [] }] }]);
+  expect(d.credentials).toEqual([{ kind: "Certification", title: "AWS Developer" }]);
+  expect(d.volunteering).toEqual([]);
+  expect(toDraft(extractionSchema.parse({ skills: [{ items: ["Go"] }] }), "T").skills).toEqual([{ group: "Skills", items: ["Go"] }]); // a label, not a fact
+});
+
 it("sends the resume as one named call with room for a long answer (AC1)", async () => {
   const generateObject = vi.fn().mockResolvedValue({ object: extraction, usage: { inputTokens: 1, outputTokens: 1 } });
   const signal = new AbortController().signal;
   const d = await extractResume("Jordan Whitlock\nEXPERIENCE", { generateObject } as LlmAdapter, signal);
   const args = generateObject.mock.calls[0][0];
-  expect(args).toMatchObject({ name: "extract", maxOutputTokens: 16000, signal, prompt: "<resume>\nJordan Whitlock\nEXPERIENCE\n</resume>" });
+  expect(args).toMatchObject({ name: "extract", maxOutputTokens: 16000, jsonInPrompt: true, signal, prompt: "<resume>\nJordan Whitlock\nEXPERIENCE\n</resume>" });
   expect(args.system).toMatch(/never invent/i);
   expect(args.schema.safeParse(extraction).success).toBe(true);
   expect(d.additional?.at(-1)).toEqual({ title: "Original resume text (reference)", notes: "Jordan Whitlock\nEXPERIENCE", referenceOnly: true });

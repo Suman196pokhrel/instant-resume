@@ -59,6 +59,26 @@ describe("createAdapter", () => {
   });
 });
 
+describe("jsonInPrompt (schemas too large for strict structured output)", () => {
+  const big = { ...args, jsonInPrompt: true };
+
+  it("puts the schema in the system prompt, sends no structured-output request, and reads fenced or wrapped JSON", async () => {
+    for (const text of ['```json\n{"ok":true}\n```', 'Here it is:\n{"ok":true}\nDone.']) {
+      const model = new MockLanguageModelV4({ doGenerate: reply(text) });
+      expect((await createAdapter(model, ctx).generateObject(big)).object).toEqual({ ok: true });
+      const call = model.doGenerateCalls[0];
+      expect(call.responseFormat?.type ?? "text").toBe("text");
+      expect(JSON.stringify(call.prompt)).toContain('\\"ok\\"'); // the JSON Schema is in the system prompt
+    }
+  });
+
+  it("retries once on unusable JSON, then gives the readable output error", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: [reply("no json here"), reply('{"ok":"yes"}')] });
+    await expect(createAdapter(model, ctx).generateObject(big)).rejects.toMatchObject({ kind: "output" });
+    expect(model.doGenerateCalls).toHaveLength(2);
+  });
+});
+
 describe("languageModel", () => {
   const ok = { anthropic: { content: [{ type: "text", text: '{"ok":true}' }], stop_reason: "end_turn", usage: { input_tokens: 1, output_tokens: 1 } } };
 

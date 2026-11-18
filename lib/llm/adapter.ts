@@ -2,17 +2,33 @@ import { createAnthropic } from "@ai-sdk/anthropic";
 import { createGoogleGenerativeAI } from "@ai-sdk/google";
 import { createOpenAI } from "@ai-sdk/openai";
 import { generateText, Output, type LanguageModel } from "ai";
-import type { z } from "zod";
+import { z } from "zod";
 import { getActiveModel, listConnections, readKey } from "@/lib/keystore";
-import { noModelError, toLlmError } from "./errors";
+import { noModelError, outputError, toLlmError } from "./errors";
 import { createMockAdapter, MOCK_FIXTURES, mockScenario } from "./mock";
 import type { ProviderId } from "./providers";
 import { resolveChoice } from "./use-choice";
 
 // SPEC §8.1: one adapter hides the providers; every LLM call in the app goes through it, and tests swap in the mock.
 
-/** maxOutputTokens: for long answers; the Anthropic SDK defaults to 4096 for model IDs it doesn't know. */
-export type GenerateArgs<T> = { name: string; schema: z.ZodType<T>; system: string; prompt: string; maxOutputTokens?: number; signal?: AbortSignal };
+/**
+ * maxOutputTokens: for long answers; the Anthropic SDK defaults to 4096 for model IDs it doesn't know.
+ * jsonInPrompt: for schemas too large for strict structured output (Anthropic compiles the schema into a grammar
+ * with a size limit, and Sonnet and Opus 5.5 refuse the forced-tool alternative). The schema goes in the system
+ * prompt and the answer is validated here with the same Zod schema, so nothing unvalidated gets through.
+ */
+export type GenerateArgs<T> = { name: string; schema: z.ZodType<T>; system: string; prompt: string; maxOutputTokens?: number; jsonInPrompt?: boolean; signal?: AbortSignal };
+
+/** The outermost JSON object in a model's text (code fences and surrounding prose are ignored), validated. */
+function fromText<T>(text: string, schema: z.ZodType<T>): T {
+  try {
+    const parsed = schema.safeParse(JSON.parse(text.slice(text.indexOf("{"), text.lastIndexOf("}") + 1)));
+    if (parsed.success) return parsed.data;
+  } catch {
+    // not JSON: an output error below
+  }
+  throw outputError();
+}
 export type Usage = { inputTokens: number; outputTokens: number };
 export interface LlmAdapter {
   generateObject<T>(args: GenerateArgs<T>): Promise<{ object: T; usage: Usage }>;
@@ -33,11 +49,15 @@ export function languageModel(id: ProviderId, apiKey: string, model: string, fet
 /** Validates output with the call's Zod schema (the SDK does, via Output.object), retrying once on bad output. */
 export function createAdapter(model: LanguageModel, ctx: { provider: ProviderId; model: string }): LlmAdapter {
   return {
-    async generateObject({ name, schema, system, prompt, maxOutputTokens, signal }) {
+    async generateObject({ name, schema, system, prompt, maxOutputTokens, jsonInPrompt, signal }) {
       for (let attempt = 0; ; attempt++) {
         try {
-          const result = await generateText({ model, system, prompt, maxOutputTokens, abortSignal: signal, output: Output.object({ schema, name }) });
-          return { object: result.output as z.infer<typeof schema>, usage: { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 } };
+          const call = { model, prompt, maxOutputTokens, abortSignal: signal };
+          const result = jsonInPrompt
+            ? await generateText({ ...call, system: `${system}\n\nReturn only a JSON object that matches this JSON Schema:\n${JSON.stringify(z.toJSONSchema(schema, { io: "input" }))}` })
+            : await generateText({ ...call, system, output: Output.object({ schema, name }) });
+          const object = jsonInPrompt ? fromText(result.text, schema) : (result.output as z.infer<typeof schema>);
+          return { object, usage: { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 } };
         } catch (e) {
           if (signal?.aborted) throw e; // a cancel, not a failure
           const error = toLlmError(e, ctx);

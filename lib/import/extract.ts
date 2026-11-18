@@ -6,20 +6,24 @@ import type { ParsedDraft } from "./parse";
 // with its metric and skills, existing KB fields that matching, generation and the number checks reuse later, so
 // the user reviews them once and no later call re-derives them. Nothing is saved before Review.
 
-const s = z.string(); // every field is required, "" when the resume doesn't say: this works with all three providers
-const highlight = z.object({ text: s, metric: s, skills: z.array(s) });
-const role = z.object({ title: s, company: s, location: s, start: s, end: s, highlights: z.array(highlight) });
+// Forgiving per field: a missing, null or odd value becomes "" or [] instead of failing the whole answer, so one
+// slip doesn't lose the import. The answer is still validated; the user reviews every field before saving.
+const s = z.string().catch("");
+const list = <T extends z.ZodType>(item: T) => z.array(item).catch([]);
+const highlight = z.object({ text: s, metric: s, skills: list(z.string()) });
+const role = z.object({ title: s, company: s, location: s, start: s, end: s, highlights: list(highlight) });
+const contact = z.object({ name: s, email: s, phone: s, location: s, linkedin: s, github: s });
 
 export const extractionSchema = z.object({
-  contact: z.object({ name: s, email: s, phone: s, location: s, linkedin: s, github: s }),
-  roles: z.array(role),
-  volunteering: z.array(role),
-  portfolio: z.array(z.object({ name: s, summary: s, link: s, highlights: z.array(highlight) })),
-  education: z.array(z.object({ degree: s, institution: s, year: s, notes: s })),
-  skills: z.array(z.object({ group: s, items: z.array(s) })),
-  credentials: z.array(z.object({ kind: z.enum(["Certification", "Award", "Publication", "Patent"]), title: s, issuer: s, year: s })),
-  referees: z.array(z.object({ name: s, title: s, company: s, contact: s })),
-  additional: z.array(z.object({ title: s, notes: s })),
+  contact: contact.catch(contact.parse({})),
+  roles: list(role),
+  volunteering: list(role),
+  portfolio: list(z.object({ name: s, summary: s, link: s, highlights: list(highlight) })),
+  education: list(z.object({ degree: s, institution: s, year: s, notes: s })),
+  skills: list(z.object({ group: s, items: list(z.string()) })),
+  credentials: list(z.object({ kind: z.enum(["Certification", "Award", "Publication", "Patent"]).catch("Certification"), title: s, issuer: s, year: s })),
+  referees: list(z.object({ name: s, title: s, company: s, contact: s })),
+  additional: list(z.object({ title: s, notes: s })),
 });
 export type Extraction = z.infer<typeof extractionSchema>;
 
@@ -52,7 +56,7 @@ export function toDraft(x: Extraction, original: string): ParsedDraft {
     volunteering: entries(x.volunteering, withHighlights),
     portfolio: entries(x.portfolio, withHighlights),
     education: entries(x.education),
-    skills: entries(x.skills, (g) => ({ group: g.group, items: [...new Set(g.items.map((i) => i.trim()).filter(Boolean))] })),
+    skills: entries(x.skills, (g) => ({ group: g.group || "Skills", items: [...new Set(g.items.map((i) => i.trim()).filter(Boolean))] })),
     credentials: entries(x.credentials),
     referees: entries(x.referees),
     additional: [...entries(x.additional), { title: "Original resume text (reference)", notes: original, referenceOnly: true }],
@@ -60,7 +64,7 @@ export function toDraft(x: Extraction, original: string): ParsedDraft {
 }
 
 export async function extractResume(text: string, adapter: LlmAdapter, signal?: AbortSignal): Promise<ParsedDraft> {
-  const { object } = await adapter.generateObject({ name: "extract", schema: extractionSchema, system: SYSTEM, prompt: `<resume>\n${text}\n</resume>`, maxOutputTokens: 16000, signal });
+  const { object } = await adapter.generateObject({ name: "extract", schema: extractionSchema, system: SYSTEM, prompt: `<resume>\n${text}\n</resume>`, maxOutputTokens: 16000, jsonInPrompt: true, signal });
   return toDraft(object, text);
 }
 
