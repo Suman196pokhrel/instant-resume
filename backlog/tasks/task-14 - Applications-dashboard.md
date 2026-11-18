@@ -1,10 +1,10 @@
 ---
 id: TASK-14
 title: Applications dashboard
-status: To Do
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T09:17:00Z'
+updated_date: '2026-11-18T09:24:00Z'
 labels:
   - m6
 dependencies:
@@ -22,10 +22,10 @@ As a job seeker, I can see my saved applications and reopen one. Refs: SPEC §13
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Cards show company, role and last edited, and clicking one opens its Workspace
-- [ ] #2 With no applications, the dashed box shows 'No applications yet' with a New application button
-- [ ] #3 Delete removes the card at once with the toast 'Application deleted' and Undo; Undo brings it back and nothing is deleted (SPEC §13.1 and the mock, not a confirm dialog)
-- [ ] #4 Duplicate adds '{role} (copy)'; search filters cards live by company or role
+- [x] #1 Cards show company, role and last edited, and clicking one opens its Workspace
+- [x] #2 With no applications, the dashed box shows 'No applications yet' with a New application button
+- [x] #3 Delete removes the card at once with the toast 'Application deleted' and Undo; Undo brings it back and nothing is deleted (SPEC §13.1 and the mock, not a confirm dialog)
+- [x] #4 Duplicate adds '{role} (copy)'; search filters cards live by company or role
 <!-- AC:END -->
 
 ## Definition of Done
@@ -65,6 +65,14 @@ created: 2026-11-17T10:03:00Z
 ---
 
 From the TASK-4 split: GET /api/projects (TASK-35) lists projects without keyword match counts; add them here.
+
+---
+
+created: 2026-11-18T09:24:00Z
+
+---
+
+Build done: 237 unit + 82 e2e pass. Deviation from plan: the DELETE goes out when the toast closes (sonner pauses on hover, so a fixed 6 s timer could fire while Undo still shows).
 
 ---
 <!-- COMMENTS:END -->
