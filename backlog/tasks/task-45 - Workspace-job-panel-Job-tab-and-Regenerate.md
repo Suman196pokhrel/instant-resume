@@ -1,10 +1,10 @@
 ---
 id: TASK-45
 title: 'Workspace job panel: Job tab and Regenerate'
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-18T09:34:00Z'
-updated_date: '2026-11-18T12:05:00Z'
+updated_date: '2026-11-18T12:07:00Z'
 labels:
   - m6
 dependencies:
@@ -79,9 +79,16 @@ Tests
 
 Out of scope
 - The Checks tab and its strip (TASK-21)
-- A forced-failure fixture for generate: the error path is checked by hand, unless the mock gets a trigger cheaply
+- (Review: the mock already had ?mock=generate-error, so the failure path got an e2e test)
 - History drawer (TASK-22)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Job panel (components/workspace/JobPanel.tsx): role, company · location, requirements reflected, keyword chips, notes autosaved via the store, job description, Regenerate (one generate call, generation revisions, themes kept, undo) with error callout; preview-bar toggle open from 1180px.
+Review: all ACs pass (298 unit, 6 job-panel e2e incl. failure path added in review; full e2e 102 pass, startup dev check blocked only by the owner's running pnpm dev). Parked TASK-49: toggle aria-expanded before first click.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
