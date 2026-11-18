@@ -120,5 +120,16 @@ describe("patch validator: rewrite of one section", () => {
     ["a cross-entry add", [{ op: "add", path: "/sections/1/items/1/bullets/-", value: { text: "x", source: "hl-bw-3" } }]],
     ["removing an item", [{ op: "remove", path: "/sections/1/items/1" }]],
     ["a heading change", [{ op: "replace", path: "/sections/1/items/0/heading", value: "CTO" }]],
+    ["blank bullet text (use remove)", [{ op: "replace", path: "/sections/1/items/0/bullets/0/text", value: "  " }]],
   ])("rejects %s (AC3)", (_name, ops) => rejects(filled, ops, rewriteRules(1)));
+
+  it("rejects blank text in a summary rewrite (TASK-16)", () => {
+    rejects(filled, [{ op: "replace", path: "/sections/0/text", value: "" }], rewriteRules(0));
+  });
+
+  it("rejects a change to an education notes line, which holds facts (TASK-16)", () => {
+    const { resume: withEd } = buildSkeleton(kb, brief, ["role-brightwater", "ed-unsw"], THEME_DEFAULTS);
+    const i = withEd.sections.findIndex((s) => s.kind === "education");
+    rejects(withEd, [{ op: "replace", path: `/sections/${i}/items/0/line`, value: "First class honours" }], rewriteRules(i));
+  });
 });

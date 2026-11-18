@@ -56,7 +56,7 @@ function apply(doc: unknown, op: Op) {
   switch (op.op) {
     case "replace": {
       if (!has(parent, key) || typeof (parent as Record<string, unknown>)[key] !== "string") fail(`${op.path} isn't text`);
-      if (typeof op.value !== "string") fail(`${op.path} needs text`);
+      if (typeof op.value !== "string" || !op.value.trim()) fail(`${op.path} needs text`); // a bullet goes with remove, never blank text
       (parent as Record<string, unknown>)[key] = op.value;
       return;
     }
