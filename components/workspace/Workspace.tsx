@@ -21,6 +21,9 @@ import { StructureTab } from "./StructureTab";
 // The Workspace (SPEC §14.5, mock views-workspace.js): bar, preview and inspector. The job panel is TASK-45; undo,
 // history and export join the bar with their cards.
 
+/** Fields with their own text undo; a slider, radio or colour input isn't one. */
+const TEXT_FIELD = 'textarea, select, [contenteditable], input:not([type="range"], [type="radio"], [type="checkbox"], [type="color"], [type="button"])';
+
 export type WorkspaceProps = { bundle: ProjectBundle; kb: KnowledgeBase; prefs: Prefs };
 export const KIND_LABEL: Record<Kind, string> = { resume: "Resume", coverLetter: "Cover letter" };
 
@@ -40,7 +43,7 @@ export function Workspace(props: WorkspaceProps) {
     // Ctrl/Cmd+Z undoes the last change, except in a text field, where the browser's own text undo applies.
     const onKey = (e: KeyboardEvent) => {
       const el = e.target as HTMLElement;
-      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== "z" || el.closest("input, textarea, select, [contenteditable]")) return;
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== "z" || el.closest(TEXT_FIELD)) return;
       e.preventDefault();
       store.getState().undo();
     };
@@ -129,7 +132,7 @@ function UndoButton() {
   const undo = useWorkspace((s) => s.undo);
   return (
     <Tooltip>
-      <TooltipTrigger render={<Button size="icon" aria-label="Undo" disabled={!label} onClick={undo} />}>
+      <TooltipTrigger render={<Button size="icon" aria-label="Undo" disabled={!label} onClick={() => undo()} />}>
         <Undo2 />
       </TooltipTrigger>
       <TooltipContent>{label ? `Undo: ${label} (Ctrl+Z)` : "Nothing to undo"}</TooltipContent>

@@ -41,7 +41,7 @@ type State = {
   renderMs: number | null; // the preview's last render, for the Design tab footer
   undoStack: Record<Kind, UndoStep[]>;
   /** Restores the current document to before its latest step and saves that as "Undid: {label}". */
-  undo: () => void;
+  undo: (kind?: Kind) => void; // a toast's Undo names its document
   setRenderMs: (ms: number) => void;
   flush: () => void;
 };
@@ -173,12 +173,14 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       renderMs: null,
       setRenderMs: (renderMs) => set({ renderMs }),
       undoStack: { resume: [], coverLetter: [] },
-      undo: () => {
-        const { kind, undoStack, selected } = get();
+      undo: (which) => {
+        const { undoStack, selected } = get();
+        const kind = which ?? get().kind;
         const step = undoStack[kind].at(-1);
         if (!step) return;
         const label = `Undid: ${step.label}`;
-        set({ undoStack: { ...undoStack, [kind]: undoStack[kind].slice(0, -1) }, ...drop(), selected: step.doc.sections.some((s) => s.id === selected) ? selected : null });
+        const here = kind === get().kind;
+        set({ undoStack: { ...undoStack, [kind]: undoStack[kind].slice(0, -1) }, ...(here ? { ...drop(), selected: step.doc.sections.some((s) => s.id === selected) ? selected : null } : {}) });
         commit(kind, { sections: step.doc.sections, theme: step.doc.theme, recipient: step.doc.recipient }, { kind: "restore", label }, false);
         toast(label);
       },

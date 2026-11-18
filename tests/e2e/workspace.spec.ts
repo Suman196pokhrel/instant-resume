@@ -346,3 +346,16 @@ test("the Undo button undoes a structure move; the rewrite toast's Undo restores
   await expect(inspector.getByRole("textbox", { name: "Bullet 1" })).toHaveValue("Cut page load from 4.2s to 1.1s");
   await expect(inspector.getByRole("textbox", { name: "Bullet 2" })).toHaveCount(0);
 });
+
+test("Ctrl+Z on a focused design slider undoes the design change (AC1, DoD)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const design = await openDesign(page);
+  const body = design.getByRole("slider", { name: "Body text" });
+  await body.focus();
+  await page.keyboard.press("ArrowRight");
+  const field = design.locator("[data-slot=slider]", { hasText: "Body text" });
+  await expect(field).toContainText("11 pt");
+  await page.keyboard.press("Control+z"); // a slider isn't a text field: the app's undo applies
+  await expect(field).toContainText("10.5 pt");
+  await expect(page.getByText("Undid: Adjusted design")).toBeVisible();
+});

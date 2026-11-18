@@ -91,7 +91,7 @@ export function Instruction({ section: s, kb, brief, prefs, notes }: Props) {
           accept();
           setDraft("");
           setBack(true);
-          toast(`Change applied to ${pending.before.title}`, { action: { label: "Undo", onClick: undo } });
+          toast(`Change applied to ${pending.before.title}`, { action: { label: "Undo", onClick: () => undo(kind) } });
         }}
         onReject={() => {
           reject();

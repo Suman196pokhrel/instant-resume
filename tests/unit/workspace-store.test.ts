@@ -232,6 +232,15 @@ describe("workspace store: undo (TASK-19)", () => {
     expect(text(store)).toBe("Typed.");
   });
 
+  it("a toast's Undo undoes its own document, even with the other one open", () => {
+    const store = createWorkspaceStore([resume, letter]);
+    typeInSummary(store, "Typed.");
+    store.getState().setKind("coverLetter");
+    store.getState().undo("resume");
+    expect(text(store)).toBe("Old.");
+    expect(store.getState().kind).toBe("coverLetter");
+  });
+
   it("undo drops a pending proposal", () => {
     const store = createWorkspaceStore([resume, letter]);
     store.getState().moveSection("s-sum", 1);
