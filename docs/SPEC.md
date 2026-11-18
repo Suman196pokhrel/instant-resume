@@ -541,7 +541,7 @@ Four tailoring calls, plus a resume-import extraction call described in 14.1a. E
 
 Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. Studio setup does not call match: it pre-ticks entries and shows "Matches React, TypeScript…" from keyword overlap computed on the device (`lib/match/keywords.ts`: whole words, ignoring case and hyphens, plural s only on words over 4 letters), so setup costs one LLM call (the brief). Studio generation does not call match either: the user has already chosen the entries, so its "Matching" stage runs on the device. The match call runs in Quick generate only, where it picks the entries and finds the gaps.
 
-**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. One call fills both documents (`lib/generate/generate.ts`). The LLM receives each skeleton as one line per fillable JSON path, the brief, the selected entries with highlight IDs plus the skills list, contact name and work rights, the project's `notes` (if any), prefs (tone, spelling) and returns:
+**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries (`lib/generate/skeleton.ts`) plus every skill group (skill groups aren't selectable in Studio step 3): sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. One call fills both documents (`lib/generate/generate.ts`). The LLM receives each skeleton as one line per fillable JSON path, the brief, the selected entries with highlight IDs plus the skills list, contact name and work rights, the project's `notes` (if any), prefs (tone, spelling) and returns:
 
 ```ts
 { resumeOps: Operation[]; coverLetterOps: Operation[] }   // RFC 6902
@@ -565,7 +565,7 @@ Allowed operations for generation:
 4. Every bullet's `source` exists in the KB and is a highlight of the item's own `ref` entry (generation and rewrite alike).
 5. IDs, `kind`, `hidden`, section order, theme and `recipient` are unchanged.
 
-Generation retries the call once when the validator rejects its patch, then shows the output error.
+Only bullets the patch adds are source-checked, so an older bullet whose highlight was since deleted never blocks a later rewrite. Generation also needs the summary and every cover letter paragraph filled; it retries the call once when the validator rejects its patch or leaves one empty, then shows the output error.
 
 **Errors** (`lib/llm/errors.ts`): every failed call becomes an `LlmError` with a title, one sentence on what to do, the provider's status and code as "Details", and a next step; screens show it with `LlmErrorCallout`. The provider's own message is never shown (it can echo the key). A cancel stays an abort, not an error.
 
@@ -689,7 +689,7 @@ Case-insensitive match of each brief keyword against the visible text of the doc
 
 Word-boundary, case-insensitive match. One finding per phrase per section: `"{phrase}" is on the banned-phrase list` / `Found in {section}. Phrases like this read as generic or AI-written.`
 
-List: passionate, results-driven, synergy, leverage, spearheaded, dynamic, team player, proven track record, fast-paced, go-getter, delve, tapestry, thrilled, cutting-edge, utilise. Keep it in one config file.
+List: passionate, results-driven, synergy, leverage, spearheaded, dynamic, team player, proven track record, fast-paced, go-getter, delve, tapestry, thrilled, cutting-edge, utilise. Keep it in one config file (`lib/rules/banned-phrases.ts`); the generate prompt tells the model to avoid it.
 
 ### 10.3 Claim grounding
 
@@ -1223,7 +1223,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 | Area | Cases |
 |---|---|
 | Schemas | The seed KB parses; missing required fields fail; a bullet without `source` fails; theme values outside the ranges fail; `schemaVersion` migration hook runs |
-| Skeleton builder | Uses only selected entries; section order; omits empty sections; experience meta format "Location \| Start to End"; skills lines keep "AWS (Lambda, ECS, SQS)" intact |
+| Skeleton builder | Uses only selected entries (plus every skill group); reference-only additional entries never included; section order; omits empty sections; experience meta format "Location \| Start to End"; skills lines keep "AWS (Lambda, ECS, SQS)" intact |
 | Patch validator | Accepts allowed ops; rejects paths outside the target section; rejects changes to `id`, `kind`, `hidden`, theme or order; rejects bullets whose `source` is unknown or belongs to another entry; rejects results that fail the `Document` schema; nothing is mutated on rejection |
 | Rules engine: keywords | Exact, hyphen/space and plural matches; `inKb` flag; hidden sections excluded |
 | Rules engine: banned phrases | Word boundaries ("dynamic" vs "dynamically" policy documented); one finding per section |

@@ -107,6 +107,13 @@ describe("patch validator: rewrite of one section", () => {
     expect(items[1].bullets).toEqual([]);
   });
 
+  it("an older bullet whose highlight was deleted doesn't block a rewrite elsewhere", () => {
+    const orphaned = structuredClone(filled);
+    const pf = orphaned.sections[3];
+    if (pf.kind === "portfolio") pf.items[0].bullets![0].source = "hl-deleted";
+    expect(validatePatch(orphaned, [{ op: "replace", path: "/sections/1/items/0/bullets/0/text", value: "Shorter" }], { rules: rewriteRules(1), kb }).ok).toBe(true);
+  });
+
   it.each<[string, Op[]]>([
     ["a path in another section", [{ op: "replace", path: "/sections/0/text", value: "x" }]],
     ["a move across items", [{ op: "move", from: "/sections/1/items/0/bullets/0", path: "/sections/1/items/1/bullets/0" }]],

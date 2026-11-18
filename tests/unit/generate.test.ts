@@ -65,6 +65,22 @@ describe("generate", () => {
     await expect(generateDocuments(await input(), { generateObject })).resolves.toHaveProperty("count");
   });
 
+  it("an answer that leaves the summary or a paragraph empty is retried, then an output error", async () => {
+    const generateObject = vi.fn().mockResolvedValue({ object: { resumeOps: [], coverLetterOps: [] }, usage: {} });
+    await expect(generateDocuments(await input(), { generateObject })).rejects.toMatchObject({ kind: "output" });
+    expect(generateObject).toHaveBeenCalledTimes(2);
+  });
+
+  it("never sends reference-only text, and tells the model the banned phrases", async () => {
+    const withOriginal = structuredClone(kb);
+    withOriginal.additional = [{ id: "add-orig", title: "Original resume", notes: "ORIGINAL TEXT", referenceOnly: true }];
+    const generateObject = vi.fn((args) => mock().generateObject(args)) as LlmAdapter["generateObject"];
+    await generateDocuments(await input({ kb: withOriginal, selected: ["role-brightwater", "add-orig"] }), { generateObject });
+    const { prompt, system } = vi.mocked(generateObject).mock.calls[0][0];
+    expect(prompt).not.toContain("ORIGINAL TEXT");
+    expect(system).toContain("proven track record");
+  });
+
   it("a cancel stays an abort", async () => {
     const controller = new AbortController();
     controller.abort();

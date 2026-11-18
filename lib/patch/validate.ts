@@ -97,6 +97,8 @@ function frame(doc: ResumeDocument) {
   };
 }
 
+const bulletsOf = (doc: ResumeDocument) => doc.sections.flatMap((s) => ("items" in s ? s.items.flatMap((i) => (i.bullets ?? []).map((b) => ({ ref: i.ref, b }))) : []));
+
 /** Each KB entry's highlight IDs, by entry ID. */
 function highlightOwners(kb: KnowledgeBase) {
   return new Map([...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio].map((e) => [e.id, new Set(e.highlights.map((h) => h.id))]));
@@ -114,10 +116,10 @@ export function validatePatch<D extends ResumeDocument>(doc: D, ops: Op[], { rul
     if (!parsed.success) fail("the result isn't a valid document");
     if (JSON.stringify(frame(doc)) !== JSON.stringify(frame(copy))) // same key order: the copy is a structuredClone patched in place
        fail("the patch changed something outside text and bullets");
+    // Only bullets this patch adds: an older bullet whose highlight was since deleted mustn't block every later rewrite.
     const owners = highlightOwners(kb);
-    for (const s of copy.sections)
-      for (const item of "items" in s ? s.items : [])
-        for (const b of item.bullets ?? []) if (!owners.get(item.ref)?.has(b.source)) fail(`${b.source} isn't a highlight of ${item.ref}`);
+    const old = new Set(bulletsOf(doc).map(({ b }) => b.id));
+    for (const { ref, b } of bulletsOf(copy)) if (!old.has(b.id) && !owners.get(ref)?.has(b.source)) fail(`${b.source} isn't a highlight of ${ref}`);
     return { ok: true, doc: copy, count: ops.length };
   } catch (e) {
     if (e instanceof Reject) return { ok: false, reason: e.message };

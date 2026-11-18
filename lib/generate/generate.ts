@@ -2,6 +2,7 @@ import { z } from "zod";
 import type { LlmAdapter } from "@/lib/llm/adapter";
 import { outputError } from "@/lib/llm/errors";
 import { GENERATION, validatePatch } from "@/lib/patch/validate";
+import { BANNED_PHRASES } from "@/lib/rules/banned-phrases";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import { THEME_DEFAULTS } from "@/lib/schemas/theme";
@@ -39,7 +40,7 @@ Rules:
 - Summary: 2 to 3 sentences: years of experience and focus, one or two proof points from the highlights, what they would bring to the team at the company.
 - Cover letter, 4 paragraphs under 300 words in total: Opening (the role, the company, the current role); Evidence (the two strongest relevant highlights); Fit (quote two requirements from the ad and connect them to earlier experience); Close (the work rights phrase, the notice period if known, thanks). The template adds the greeting and sign-off, so leave them out.
 - Work rights phrases: "I'm an Australian citizen", "I'm a permanent resident of Australia", "I'm a New Zealand citizen with full work rights in Australia", "I hold a temporary visa with full work rights", "I hold a temporary visa with limited work rights", "I would need visa sponsorship". Leave work rights out if the knowledge base has none.
-- Plain, specific, active voice. No filler such as "passionate", "results-driven", "team player", "go-getter" or "synergy".
+- Plain, specific, active voice, with no generic filler. Never use these words or phrases: ${BANNED_PHRASES.join(", ")}.
 - Return only the JSON.`;
 
 const TONES = {
@@ -71,7 +72,7 @@ function outline(doc: Draft) {
 
 function prompt({ kb, brief, selected, notes, tone, spelling }: GenerateInput, skeleton: ReturnType<typeof buildSkeleton>) {
   const ids = new Set(selected);
-  const entries = [...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio, ...kb.education, ...kb.credentials, ...(kb.additional ?? [])].filter((e) => ids.has(e.id));
+  const entries = [...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio, ...kb.education, ...kb.credentials, ...(kb.additional ?? []).filter((a) => !a.referenceOnly)].filter((e) => ids.has(e.id)); // the original resume text never backs a claim
   const facts = { name: kb.contact.name, location: kb.contact.location, workRights: kb.workRights ?? null, entries, skills: kb.skills };
   return [
     `<brief>\n${JSON.stringify(brief)}\n</brief>`,
@@ -95,8 +96,9 @@ export async function generateDocuments(input: GenerateInput, adapter: LlmAdapte
     const rules = { rules: GENERATION, kb: input.kb };
     const resume = validatePatch(skeleton.resume, object.resumeOps, rules);
     const letter = validatePatch(skeleton.coverLetter, object.coverLetterOps, rules);
-    if (resume.ok && letter.ok) return { resume: resume.doc, coverLetter: letter.doc, count: resume.count + letter.count };
-    reason = (!resume.ok && resume.reason) || (!letter.ok && letter.reason) || "";
+    const blank = [resume, letter].some((r) => r.ok && r.doc.sections.some((s) => "text" in s && !s.text.trim()));
+    if (resume.ok && letter.ok && !blank) return { resume: resume.doc, coverLetter: letter.doc, count: resume.count + letter.count };
+    reason = (!resume.ok && resume.reason) || (!letter.ok && letter.reason) || "the summary or a paragraph was left empty";
   }
   throw outputError(reason);
 }
