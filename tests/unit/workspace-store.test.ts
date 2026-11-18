@@ -78,3 +78,53 @@ describe("workspace store: rewrite", () => {
     expect(store.getState().pending).toBeNull();
   });
 });
+
+describe("workspace store: structure (TASK-17)", () => {
+  it("moveSection reorders and saves at once as a structure revision", async () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().moveSection("s-sum", 1);
+    expect(store.getState().docs.resume!.sections.map((s) => s.id)).toEqual(["s-exp", "s-sum"]);
+    await settle();
+    expect(bodies[0].revision).toEqual({ kind: "structure", label: "Moved Summary down" });
+    expect(bodies[0].sections.map((s) => s.id)).toEqual(["s-exp", "s-sum"]);
+    store.getState().moveSection("s-sum", 0);
+    release.shift()!();
+    await settle();
+    expect(bodies[1].revision.label).toBe("Moved Summary up");
+    store.getState().moveSection("s-sum", 0); // already there: nothing to save
+    release.shift()!();
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY * 2);
+    expect(bodies).toHaveLength(2);
+  });
+
+  it("a drag names no direction", async () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().moveSection("s-exp", 0, true);
+    await settle();
+    expect(bodies[0].revision.label).toBe("Moved Experience");
+  });
+
+  it("toggleHidden hides and shows, keeping the section", async () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().toggleHidden("s-exp");
+    expect(store.getState().docs.resume!.sections[1]).toMatchObject({ id: "s-exp", hidden: true });
+    await settle();
+    store.getState().toggleHidden("s-exp");
+    release.shift()!();
+    await settle();
+    expect(bodies.map((b) => b.revision.label)).toEqual(["Hid Experience", "Showed Experience"]);
+    expect(store.getState().docs.resume!.sections[1].hidden).toBe(false);
+  });
+
+  it("a pending hand edit is sent first with its own revision", async () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().editSection("s-sum", (s) => ({ ...s, title: "Profile" }), true);
+    store.getState().toggleHidden("s-exp");
+    await settle();
+    release.shift()!();
+    await settle();
+    expect(bodies.map((b) => b.revision.kind)).toEqual(["edit", "structure"]);
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY * 2);
+    expect(bodies).toHaveLength(2);
+  });
+});

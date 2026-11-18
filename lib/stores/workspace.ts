@@ -30,6 +30,9 @@ type State = {
   /** Applies the proposal and saves it now as a rewrite revision. */
   accept: () => void;
   reject: () => void;
+  /** Structure tab: move a section of the current document to index `to`; a drag names no direction. */
+  moveSection: (id: string, to: number, drag?: boolean) => void;
+  toggleHidden: (id: string) => void;
   flush: () => void;
 };
 
@@ -63,6 +66,18 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       };
       if (keepalive) void send(); // the page is going: no waiting behind earlier saves
       else queue = queue.then(send);
+    }
+    /** A change saved at once with its own revision; a hand edit still waiting goes first with its own. */
+    function commit(kind: Kind, sections: Section[], revision: RevisionIn) {
+      const doc = get().docs[kind];
+      if (!doc) return;
+      if (timers.has(kind)) {
+        clearTimeout(timers.get(kind));
+        save(kind);
+      }
+      set({ docs: { ...get().docs, [kind]: { ...doc, sections } }, save: "saving" });
+      labels.set(kind, revision);
+      save(kind);
     }
     /** Leaving a section, a document or the page drops what the rewrite was for. */
     const drop = () => {
@@ -98,16 +113,25 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
         const { pending: p, docs } = get();
         const doc = p && docs[p.kind];
         if (!p || !doc) return;
-        if (timers.has(p.kind)) {
-          clearTimeout(timers.get(p.kind));
-          save(p.kind); // the hand edit before it keeps its own revision
-        }
-        const sections = doc.sections.map((s) => (s.id === p.sectionId ? p.after : s));
-        set({ docs: { ...docs, [p.kind]: { ...doc, sections } }, pending: null, save: "saving" });
-        labels.set(p.kind, { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
-        save(p.kind);
+        set({ pending: null });
+        commit(p.kind, doc.sections.map((s) => (s.id === p.sectionId ? p.after : s)), { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
       },
       reject: () => set({ pending: null }),
+      moveSection: (id, to, drag = false) => {
+        const { kind, docs } = get();
+        const sections = [...(docs[kind]?.sections ?? [])];
+        const from = sections.findIndex((s) => s.id === id);
+        if (from < 0 || to === from || to < 0 || to >= sections.length) return;
+        const [moved] = sections.splice(from, 1);
+        sections.splice(to, 0, moved);
+        commit(kind, sections, { kind: "structure", label: `Moved ${moved.title}${drag ? "" : to < from ? " up" : " down"}` });
+      },
+      toggleHidden: (id) => {
+        const { kind, docs } = get();
+        const s = docs[kind]?.sections.find((x) => x.id === id);
+        if (!s) return;
+        commit(kind, docs[kind]!.sections.map((x) => (x.id === id ? { ...x, hidden: !x.hidden } : x)), { kind: "structure", label: `${s.hidden ? "Showed" : "Hid"} ${s.title}` });
+      },
       /** Sends pending saves now (leaving the page). */
       flush: () => {
         for (const [kind, t] of timers) {
