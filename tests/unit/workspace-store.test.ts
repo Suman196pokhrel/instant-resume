@@ -136,3 +136,26 @@ describe("workspace store: structure (TASK-17)", () => {
     expect(bodies).toHaveLength(2);
   });
 });
+
+describe("workspace store: design (TASK-18)", () => {
+  it("setTheme applies at once and saves once after the debounce as Adjusted design", async () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().setTheme({ baseSize: 11 });
+    store.getState().setTheme({ font: "Inter" });
+    expect(store.getState().docs.resume!.theme).toMatchObject({ baseSize: 11, font: "Inter" });
+    expect(store.getState().docs.coverLetter!.theme).toEqual(THEME_DEFAULTS); // each document has its own
+    await settle();
+    expect(bodies).toHaveLength(0);
+    await vi.advanceTimersByTimeAsync(SAVE_DELAY);
+    expect(bodies).toHaveLength(1);
+    expect(bodies[0].revision).toEqual({ kind: "adjustment", label: "Adjusted design", coalesceKey: "design" });
+  });
+
+  it("resetTheme restores the defaults and saves at once", async () => {
+    const store = createWorkspaceStore([{ ...resume, theme: { ...THEME_DEFAULTS, margin: 22 } }, letter]);
+    store.getState().resetTheme();
+    expect(store.getState().docs.resume!.theme).toEqual(THEME_DEFAULTS);
+    await settle();
+    expect(bodies[0].revision).toEqual({ kind: "adjustment", label: "Reset design to template defaults" });
+  });
+});

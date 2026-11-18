@@ -3,6 +3,7 @@ import { createStore, useStore, type StoreApi } from "zustand";
 import type { Op } from "@/lib/patch/validate";
 import type { ResumeDocument, Section } from "@/lib/schemas/document";
 import type { Revision } from "@/lib/schemas/project";
+import { THEME_DEFAULTS, type Theme } from "@/lib/schemas/theme";
 import { toast } from "@/lib/toast";
 
 // The Workspace store (SPEC §3, §14.5): one per open project. Every change updates the documents at once (the preview
@@ -33,6 +34,11 @@ type State = {
   /** Structure tab: move a section of the current document to index `to`; a drag names no direction. */
   moveSection: (id: string, to: number, drag?: boolean) => void;
   toggleHidden: (id: string) => void;
+  /** Design tab: change the current document's theme now; saved debounced as one "Adjusted design". */
+  setTheme: (patch: Partial<Theme>) => void;
+  resetTheme: () => void;
+  renderMs: number | null; // the preview's last render, for the Design tab footer
+  setRenderMs: (ms: number) => void;
   flush: () => void;
 };
 
@@ -68,16 +74,25 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       else queue = queue.then(send);
     }
     /** A change saved at once with its own revision; a hand edit still waiting goes first with its own. */
-    function commit(kind: Kind, sections: Section[], revision: RevisionIn) {
+    function commit(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn) {
       const doc = get().docs[kind];
       if (!doc) return;
       if (timers.has(kind)) {
         clearTimeout(timers.get(kind));
         save(kind);
       }
-      set({ docs: { ...get().docs, [kind]: { ...doc, sections } }, save: "saving" });
+      set({ docs: { ...get().docs, [kind]: { ...doc, ...change } }, save: "saving" });
       labels.set(kind, revision);
       save(kind);
+    }
+    /** A change applied now and saved after a pause, so a burst (typing, dragging a slider) is one save. */
+    function later(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn) {
+      const doc = get().docs[kind];
+      if (!doc) return;
+      set({ docs: { ...get().docs, [kind]: { ...doc, ...change } }, save: "saving" });
+      labels.set(kind, revision);
+      clearTimeout(timers.get(kind));
+      timers.set(kind, setTimeout(() => save(kind), SAVE_DELAY));
     }
     /** Leaving a section, a document or the page drops what the rewrite was for. */
     const drop = () => {
@@ -102,10 +117,7 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
         if (!doc) return;
         const sections = doc.sections.map((s) => (s.id === id ? change(s) : s));
         const title = sections.find((s) => s.id === id)?.title ?? "";
-        set({ docs: { ...docs, [kind]: { ...doc, sections } }, save: "saving" });
-        labels.set(kind, heading ? { kind: "edit", label: `Edited ${title} heading`, coalesceKey: `title-${id}` } : { kind: "edit", label: `Edited ${title}`, coalesceKey: `edit-${id}` }); // coalescing within 60 s is TASK-19
-        clearTimeout(timers.get(kind));
-        timers.set(kind, setTimeout(() => save(kind), SAVE_DELAY));
+        later(kind, { sections }, heading ? { kind: "edit", label: `Edited ${title} heading`, coalesceKey: `title-${id}` } : { kind: "edit", label: `Edited ${title}`, coalesceKey: `edit-${id}` }); // coalescing within 60 s is TASK-19
       },
       setBusy: (busy) => set({ busy }),
       propose: (pending) => set({ pending, busy: null }),
@@ -114,7 +126,7 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
         const doc = p && docs[p.kind];
         if (!p || !doc) return;
         set({ pending: null });
-        commit(p.kind, doc.sections.map((s) => (s.id === p.sectionId ? { ...p.after, hidden: s.hidden } : s)) /* hidden may have changed in Structure meanwhile */, { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
+        commit(p.kind, { sections: doc.sections.map((s) => (s.id === p.sectionId ? { ...p.after, hidden: s.hidden } : s)) /* hidden may have changed in Structure meanwhile */ }, { kind: "rewrite", label: `Rewrote ${p.before.title}: "${p.instruction}"` });
       },
       reject: () => set({ pending: null }),
       moveSection: (id, to, drag = false) => {
@@ -124,14 +136,22 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
         if (from < 0 || to === from || to < 0 || to >= sections.length) return;
         const [moved] = sections.splice(from, 1);
         sections.splice(to, 0, moved);
-        commit(kind, sections, { kind: "structure", label: `Moved ${moved.title}${drag ? "" : to < from ? " up" : " down"}` });
+        commit(kind, { sections }, { kind: "structure", label: `Moved ${moved.title}${drag ? "" : to < from ? " up" : " down"}` });
       },
       toggleHidden: (id) => {
         const { kind, docs } = get();
         const s = docs[kind]?.sections.find((x) => x.id === id);
         if (!s) return;
-        commit(kind, docs[kind]!.sections.map((x) => (x.id === id ? { ...x, hidden: !x.hidden } : x)), { kind: "structure", label: `${s.hidden ? "Showed" : "Hid"} ${s.title}` });
+        commit(kind, { sections: docs[kind]!.sections.map((x) => (x.id === id ? { ...x, hidden: !x.hidden } : x)) }, { kind: "structure", label: `${s.hidden ? "Showed" : "Hid"} ${s.title}` });
       },
+      setTheme: (patch) => {
+        const { kind, docs } = get();
+        const doc = docs[kind];
+        if (doc) later(kind, { theme: { ...doc.theme, ...patch } }, { kind: "adjustment", label: "Adjusted design", coalesceKey: "design" });
+      },
+      resetTheme: () => commit(get().kind, { theme: THEME_DEFAULTS }, { kind: "adjustment", label: "Reset design to template defaults" }),
+      renderMs: null,
+      setRenderMs: (renderMs) => set({ renderMs }),
       /** Sends pending saves now (leaving the page). */
       flush: () => {
         for (const [kind, t] of timers) {
