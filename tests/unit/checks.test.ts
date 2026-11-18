@@ -41,3 +41,24 @@ describe("keyword coverage (AC1)", () => {
     ]);
   });
 });
+
+describe("banned phrases (AC2)", () => {
+  const banned = (doc: CheckDoc) => check(doc).findings.filter((f) => f.type === "banned");
+
+  it("flags a phrase once per section, with the SPEC copy", () => {
+    const r = banned(resume(summary("A results driven engineer. Results-driven, always."), role([{ text: "Results-driven rebuild of the dashboard", source: "hl-bw-1" }])));
+    expect(r).toEqual([
+      { type: "banned", sectionId: "s-sum", title: '"results-driven" is on the banned-phrase list', detail: "Found in Summary. Phrases like this read as generic or AI-written." },
+      { type: "banned", sectionId: "s-exp", title: '"results-driven" is on the banned-phrase list', detail: "Found in Experience. Phrases like this read as generic or AI-written." },
+    ]);
+  });
+
+  it("matches whole words only: dynamically and leveraged pass", () => {
+    expect(banned(resume(summary("Dynamically scaled services and leveraged caching.")))).toEqual([]);
+    expect(banned(resume(summary("A dynamic, passionate team player.")))).toHaveLength(3);
+  });
+
+  it("ignores hidden sections", () => {
+    expect(banned(resume(summary("A passionate engineer.", { hidden: true })))).toEqual([]);
+  });
+});
