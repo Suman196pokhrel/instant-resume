@@ -1,10 +1,10 @@
 ---
 id: TASK-11
 title: Real resume extraction (PDF, DOCX, TXT)
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T07:58:00Z'
+updated_date: '2026-11-18T07:59:00Z'
 labels:
   - m3a
 dependencies:
@@ -62,6 +62,12 @@ Out of scope
 - Embeddings: Anthropic has none, and keyword matching over ~50 highlights doesn't need them.
 - Prompt caching of the KB across brief/match/generate calls (TASK-41, parked for M5).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+PDF/DOCX/TXT read on the device; with a connected model one consented extract call (jsonInPrompt: Anthropic rejects big strict grammars) fills the review draft including each highlight's metric and skills; on-device parser otherwise. Live-verified on Anthropic (4.7 s, ~2k in / 0.5-1.4k out tokens). Follow-ups: TASK-41 prompt caching, TASK-42 dev reload loop.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
