@@ -4,7 +4,7 @@ title: Revisions and undo
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-17T10:26:00Z'
+updated_date: '2026-11-18T10:21:00Z'
 labels:
   - m6
 dependencies:
@@ -41,6 +41,14 @@ created: 2026-11-17T10:03:00Z
 ---
 
 From the TASK-4 split: PUT /api/documents/:id (TASK-35) only appends revisions; coalescing by coalesceKey within 60 s is built here.
+
+---
+
+created: 2026-11-18T10:21:00Z
+
+---
+
+From TASK-16: the rewrite Accept toast 'Change applied to {title}' needs its Undo action, and Accept must push an undo step (shortcut comment in components/workspace/Instruction.tsx). Revisions: Accept saves kind rewrite, label 'Rewrote {title}: "{instruction}"', no coalesceKey (lib/stores/workspace.ts accept).
 
 ---
 <!-- COMMENTS:END -->
