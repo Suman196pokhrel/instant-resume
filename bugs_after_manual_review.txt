@@ -1,0 +1,10 @@
+# Flow : quick generate feature test with limited knowledge base data using sonet 5-5
+-> Inside the studio the scroll of the pdf feels sluggish and jittery.
+-> The single reusme page looks like a single page but has vertical content of 2 pages and im having to scroll all the way down.
+-> Inside the rendered resume, the Skills sectoin is lacking styling. Entire skills are just only comma separated in a single paragraph.
+-> Color picker feels sluggish and jittery.
+-> ReOrdering the structure of the resume works but the effect in action is not smooth and well animated with animated fading highlights like the mock. Right now its abrupt and not noticable .
+-> While manual typing on the content section , the changes on the rendered pdf is slow and jittery and laggy.
+-> In the left checks tab , when there are missing sections , right now there is simple "+ Add it " button , which opens a dialogbox that asks user to select from dropdown menu from existing experience, User shuold be allowed to directly create a new expeerience if needed . And shorten the "Only add it if it's true. It's saved as a highlight, so every future resume can use it." line to just simple short sentence.
+-> Exporting the same long resume results in 2 paged resume (not the target , our target is to get 1 page resume)
+-> Add a quick method to wipe all the knowledge base
