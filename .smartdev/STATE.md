@@ -1,5 +1,5 @@
 # Smart Dev state: Instant Resume
-stage: spec
+stage: review
 task: TASK-11
 next: write the spec for TASK-11 (real resume extraction: PDF, DOCX, TXT) using the LLM adapter (getAdapter, name "extract") and LlmErrorCallout; prove it live on Anthropic (.env.keys)
 blockers: none

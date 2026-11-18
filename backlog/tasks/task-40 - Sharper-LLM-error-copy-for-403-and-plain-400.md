@@ -4,6 +4,7 @@ title: Sharper LLM error copy for 403 and plain 400
 status: Parked
 assignee: []
 created_date: '2026-11-18T07:28:00Z'
+updated_date: '2026-11-18T07:58:00Z'
 labels: []
 dependencies: []
 ordinal: 37000
@@ -14,3 +15,15 @@ ordinal: 37000
 <!-- SECTION:DESCRIPTION:BEGIN -->
 From the TASK-10 review: every 403 is reported as a bad key, though it can also mean the organisation can't use that model or the region is blocked; a plain 400 (such as a prompt that's too long) says 'Try again in a moment', which won't help. Refine once real cases show up in the brief/generate calls.
 <!-- SECTION:DESCRIPTION:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T07:58:00Z
+
+---
+
+Also: Anthropic's 400 'The compiled grammar is too large…' maps to 'Something went wrong… try again', which can't help; it's a schema problem (use jsonInPrompt).
+
+---
+<!-- COMMENTS:END -->
