@@ -317,3 +317,20 @@ describe("workspace store: job panel (TASK-45)", () => {
     expect(store.getState().leftOpen).toBe(true);
   });
 });
+
+describe("workspace store: Checks jumps (TASK-21)", () => {
+  it("goTo selects the section on the Content tab, drops a proposal and carries a prefill once", () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().setTab("design");
+    store.getState().propose(proposal());
+    store.getState().goTo("s-exp", "Emphasise Go");
+    const s = store.getState();
+    expect([s.selected, s.tab, s.pending, s.jump]).toEqual(["s-exp", "content", null, { prefill: "Emphasise Go" }]);
+    store.getState().clearJump();
+    expect(store.getState().jump).toBeNull();
+    store.getState().goTo("s-sum");
+    expect(store.getState().jump).toEqual({});
+    store.getState().setLeftTab("checks");
+    expect(store.getState().leftTab).toBe("checks");
+  });
+});

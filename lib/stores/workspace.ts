@@ -53,7 +53,16 @@ type State = {
   setRegenerating: (on: boolean) => void;
   /** Replaces both documents with a fresh generation, keeping each theme; one revision and undo step each. */
   regenerate: (out: Record<Kind, Pick<ResumeDocument, "sections" | "recipient">>) => void;
+  /** Checks (TASK-21): the left and inspector tabs, and a jump from a finding to its section. */
+  leftTab: "job" | "checks";
+  setLeftTab: (tab: "job" | "checks") => void;
+  tab: InspectorTab;
+  setTab: (tab: InspectorTab) => void;
+  jump: { prefill?: string } | null; // one shot: the inspector focuses the section, or the instruction box with a prefill
+  goTo: (sectionId: string, prefill?: string) => void;
+  clearJump: () => void;
 };
+export type InspectorTab = "content" | "structure" | "design";
 
 export const SAVE_DELAY = 800;
 export const UNDO_LIMIT = 50;
@@ -220,6 +229,13 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       },
       leftOpen: null,
       toggleLeft: (shown) => set({ leftOpen: !shown }),
+      leftTab: "job",
+      setLeftTab: (leftTab) => set({ leftTab }),
+      tab: "content",
+      setTab: (tab) => set({ tab }),
+      jump: null,
+      goTo: (selected, prefill) => set({ selected, tab: "content", jump: prefill ? { prefill } : {}, ...drop() }),
+      clearJump: () => set({ jump: null }),
       regenerating: false,
       setRegenerating: (regenerating) => set({ regenerating }),
       regenerate: (out) => {
