@@ -88,7 +88,7 @@ test("suggested entries are pre-ticked and coverage updates live (AC3)", async (
   const count = async () => Number((await picked.textContent())!.split(" ")[0]);
   await expect(page.getByText("Covers 12 of 12 keywords")).toBeVisible();
   const before = await count();
-  const brightwater = page.getByRole("checkbox", { name: /Senior Software Engineer, Brightwater Logistics/ }).first();
+  const brightwater = page.getByRole("checkbox", { name: /Software Engineer, Brightwater Logistics/ }).first(); // kb.spec renames it to "Lead …" in parallel
   await expect(brightwater).toBeChecked();
   await expect(page.getByRole("checkbox", { name: /Ledgerline/ }).first()).not.toBeChecked();
   await expect(page.getByText(/Matches React, TypeScript/).first()).toBeVisible();

@@ -1,14 +1,22 @@
+import { redirect } from "next/navigation";
+import { QuickGenerate } from "@/components/quick/QuickGenerate";
 import { RenderWarmup } from "@/components/render/RenderWarmup";
 import { Content, TopBar } from "@/components/shell/TopBar";
+import { getDb } from "@/lib/db/client";
+import { readKb } from "@/lib/db/kb";
+import { readPrefs } from "@/lib/db/settings";
 
-export default function Page() {
+// Quick generate (SPEC §14.3): paste a job description, then five stages to finished documents.
+export default async function Page() {
+  const db = await getDb();
+  const kb = await readKb(db);
+  if (!kb) redirect("/onboarding"); // nothing to draw on yet
   return (
     <>
       <RenderWarmup />
       <TopBar title="New application / Quick generate" />
       <Content>
-        <h1>Paste a job description</h1>
-        <p className="mt-2 text-muted-foreground">Quick generate arrives with TASK-24.</p>
+        <QuickGenerate kb={kb} prefs={await readPrefs(db)} />
       </Content>
     </>
   );
