@@ -48,6 +48,7 @@ export function Instruction({ section: s, kb, brief, prefs, notes }: Props) {
   const propose = useWorkspace((x) => x.propose);
   const accept = useWorkspace((x) => x.accept);
   const reject = useWorkspace((x) => x.reject);
+  const undo = useWorkspace((x) => x.undo);
   const { active } = useLlmChoice();
   const [draft, setDraft] = useState("");
   const [message, setMessage] = useState("");
@@ -90,7 +91,7 @@ export function Instruction({ section: s, kb, brief, prefs, notes }: Props) {
           accept();
           setDraft("");
           setBack(true);
-          toast(`Change applied to ${pending.before.title}`); // shortcut: no Undo action until TASK-19 adds undo
+          toast(`Change applied to ${pending.before.title}`, { action: { label: "Undo", onClick: undo } });
         }}
         onReject={() => {
           reject();

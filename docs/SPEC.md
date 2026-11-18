@@ -431,7 +431,8 @@ Revision rules:
 
 - Every change creates or updates a revision automatically. There is no save button.
 - **Coalescing:** consecutive edits to the same section, or consecutive design adjustments, within 60 seconds update the latest revision instead of adding a new one. Use `coalesceKey` (`edit-{sectionId}`, `title-{sectionId}`, `design`).
-- Labels in plain words: "Generated from job brief", `Rewrote Experience: "more concise"`, "Edited Summary", "Adjusted design", "Moved Skills up", "Hid Referees", "Restored the version from Today, 10:42 am", "Undid: Rewrite of Experience".
+- Labels in plain words: "Generated from job brief", `Rewrote Experience: "more concise"`, "Edited Summary", "Adjusted design", "Moved Skills up", "Hid Referees", "Restored the version from Today, 10:42 am", `Undid: Rewrote Experience: "more concise"` (an undo step carries its change's revision label).
+- Revisions are coalesced by the server (`PUT /api/documents/:id`): a save whose `coalesceKey` matches the document's latest revision, less than 60 s after it, updates that revision (snapshot, time, label); anything else adds one. Each change keeps its own revision: a waiting save under another key is sent before the next change.
 
 ### 6.5 Settings (stored in the DB `settings` table, except connections)
 
@@ -1117,7 +1118,7 @@ State: a Zustand store per project holding `{ kind, selectedSectionId, inspector
 
 **History drawer:** "History"; "Every change to the {document} is saved here automatically. Select one to preview it." Newest first. Each row: an icon by kind (spark for generation and rewrite, pencil for edit, palette for adjustment, layers for structure, undo for restore), the label (2 lines max), "{Today, 10:42 am}" plus ", used the LLM" for LLM kinds, and a "Current" pill on the newest. Selecting an older row previews it (the banner and inspector lock described above). "Restore this version" copies the snapshot into the document, adds a restore revision, pushes an undo step, and shows the toast "Restored. The version you replaced is still in history." Escape or × closes the drawer and leaves preview mode.
 
-**Undo:** a per-document stack of up to 50 snapshots. Rewrites, edits (bursts), structure changes, design changes (bursts), restores and regenerations all push to it. Undo restores the snapshot and logs the revision "Undid: {label}".
+**Undo:** a per-document stack of up to 50 snapshots, in memory (gone after a reload). Rewrites, edits (bursts), structure changes, design changes (bursts), restores and regenerations all push to it; a burst is changes under one key (a section's text, its heading, or design) with pauses under 1.5 s. Undo restores the snapshot, saves it at once as the revision "Undid: {label}" (kind restore), drops a pending proposal, and shows the toast "Undid: {label}".
 
 ### 14.6 Backup (US12)
 

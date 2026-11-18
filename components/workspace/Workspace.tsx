@@ -2,7 +2,7 @@
 
 import { useEffect, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Copy, Loader2, TriangleAlert } from "lucide-react";
+import { Check, ChevronLeft, Copy, Loader2, TriangleAlert, Undo2 } from "lucide-react";
 import { ModelPicker } from "@/components/shell/ModelPicker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -37,9 +37,18 @@ export function Workspace(props: WorkspaceProps) {
   const [store] = useState(() => createWorkspaceStore(props.bundle.documents));
   useEffect(() => {
     const flush = () => store.getState().flush();
+    // Ctrl/Cmd+Z undoes the last change, except in a text field, where the browser's own text undo applies.
+    const onKey = (e: KeyboardEvent) => {
+      const el = e.target as HTMLElement;
+      if (!(e.ctrlKey || e.metaKey) || e.shiftKey || e.altKey || e.key.toLowerCase() !== "z" || el.closest("input, textarea, select, [contenteditable]")) return;
+      e.preventDefault();
+      store.getState().undo();
+    };
     window.addEventListener("pagehide", flush);
+    window.addEventListener("keydown", onKey);
     return () => {
       window.removeEventListener("pagehide", flush);
+      window.removeEventListener("keydown", onKey);
       store.getState().busy?.abort();
       flush(); // leaving for another page sends what's pending
     };
@@ -79,6 +88,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
         <div className="flex items-center justify-end gap-1.5 max-[900px]:col-span-2">
           <SavePill />
           <div className="mr-0.5 flex items-center gap-0.5 border-r border-line pr-2">
+            <UndoButton />
             <Tooltip>
               <TooltipTrigger render={<Button size="icon" aria-label="Copy as plain text" disabled={!doc} onClick={() => doc && copyText(plainText(doc, kb, project.brief, prefs.spelling), KIND_LABEL[kind])} />}>
                 <Copy />
@@ -111,6 +121,19 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
         </aside>
       </div>
     </div>
+  );
+}
+
+function UndoButton() {
+  const label = useWorkspace((s) => s.undoStack[s.kind].at(-1)?.label);
+  const undo = useWorkspace((s) => s.undo);
+  return (
+    <Tooltip>
+      <TooltipTrigger render={<Button size="icon" aria-label="Undo" disabled={!label} onClick={undo} />}>
+        <Undo2 />
+      </TooltipTrigger>
+      <TooltipContent>{label ? `Undo: ${label} (Ctrl+Z)` : "Nothing to undo"}</TooltipContent>
+    </Tooltip>
   );
 }
 

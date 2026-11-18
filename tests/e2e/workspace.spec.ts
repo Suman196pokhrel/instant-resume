@@ -292,3 +292,57 @@ test("Reset restores the defaults and is disabled when already there; each docum
   await expect(reset).toBeDisabled();
   await expect.poll(() => puts.map((p) => p.revision.label)).toEqual(["Adjusted design", "Reset design to template defaults"]);
 });
+
+// TASK-19: undo (SPEC §14.5): Ctrl/Cmd+Z, the bar's Undo button and the rewrite toast's Undo.
+test("Ctrl+Z outside a text field undoes a burst of typing and saves a restore revision (AC1)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const { id } = await makeProject(page);
+  await page.goto(`/projects/${id}`);
+  await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  await expect(undo).toBeDisabled(); // nothing to undo yet
+  const inspector = inspectorOf(page);
+  await inspector.getByRole("button", { name: /Summary/ }).click();
+  const text = inspector.getByRole("textbox", { name: "Summary text" });
+  await text.click();
+  await text.press("End");
+  await text.pressSequentially(" Ships fast.");
+  await text.press("Control+z"); // inside the field: the browser's own undo, not the app's
+  await expect(page.getByText(/^Undid:/)).toHaveCount(0);
+  await expect(undo).toBeEnabled();
+  await undo.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Undo: Edited Summary (Ctrl+Z)");
+  await page.locator("[data-sheet]").click(); // focus leaves the field
+  await page.keyboard.press("Control+z");
+  await expect(text).toHaveValue(SUMMARY);
+  await expect(page.getByText("Undid: Edited Summary")).toBeVisible();
+  await expect(undo).toBeDisabled();
+  await expect.poll(() => puts.at(-1)?.revision).toEqual({ kind: "restore", label: "Undid: Edited Summary" });
+});
+
+test("the Undo button undoes a structure move; the rewrite toast's Undo restores the section (AC1)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const list = await openStructure(page);
+  await list.getByRole("listitem", { name: /^Summary/ }).getByRole("button", { name: "Move down" }).click();
+  await expect.poll(() => order(list)).toEqual(["Experience, position 1 of 2", "Summary, position 2 of 2"]);
+  const undo = page.getByRole("button", { name: "Undo", exact: true });
+  await undo.hover();
+  await expect(page.getByRole("tooltip")).toHaveText("Undo: Moved Summary down (Ctrl+Z)");
+  await undo.click();
+  await expect.poll(() => order(list)).toEqual(["Summary, position 1 of 2", "Experience, position 2 of 2"]);
+  await expect(page.getByText("Undid: Moved Summary down")).toBeVisible();
+
+  const inspector = inspectorOf(page);
+  await inspector.getByRole("tab", { name: "Content" }).click();
+  await inspector.getByRole("button", { name: /Experience/ }).click();
+  const box = inspector.getByRole("textbox", { name: /Rewrite this/ });
+  await box.fill("Emphasise Mentoring");
+  await box.press("Control+Enter");
+  await inspector.getByRole("button", { name: "Accept" }).click({ timeout: 10_000 });
+  await expect(inspector.getByRole("textbox", { name: "Bullet 2" })).toBeVisible();
+  await page.getByRole("button", { name: "Undo" }).last().click(); // the toast's action
+  await expect(page.getByText('Undid: Rewrote Experience: "Emphasise Mentoring"')).toBeVisible();
+  await expect(inspector.getByRole("textbox", { name: "Bullet 1" })).toHaveValue("Cut page load from 4.2s to 1.1s");
+  await expect(inspector.getByRole("textbox", { name: "Bullet 2" })).toHaveCount(0);
+});

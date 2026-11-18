@@ -36,6 +36,9 @@ Views.project = function (root, params) {
   const settle = debounce(() => { Store.saveNow(); setSaveState('saved'); }, 600);
 
   function commit(revKind, label, coalesceKey) {
+    // An undo step reads like its revision: "Undid: Moved Summary down", as the real app (SPEC §6.4)
+    const top = undo[ui.kind][undo[ui.kind].length - 1];
+    if (top && top.fresh && revKind !== 'restore') { top.label = label; delete top.fresh; updateUndoBtn(); }
     const revs = p.revisions[ui.kind];
     const last = revs[revs.length - 1];
     const now = Date.now();
@@ -52,7 +55,7 @@ Views.project = function (root, params) {
 
   function pushUndo(label, burstKey) {
     if (burstKey && burst && burst.key === burstKey) { clearTimeout(burst.t); burst.t = setTimeout(() => (burst = null), 1500); return; }
-    undo[ui.kind].push({ label, snapshot: clone(doc()) });
+    undo[ui.kind].push({ label, snapshot: clone(doc()), fresh: true }); // commit() names it with the revision label
     if (undo[ui.kind].length > 50) undo[ui.kind].shift();
     if (burstKey) burst = { key: burstKey, t: setTimeout(() => (burst = null), 1500) };
     updateUndoBtn();
