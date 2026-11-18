@@ -1,7 +1,7 @@
 # Smart Dev state: Instant Resume
-stage: review
-task: TASK-10
-next: write the spec for TASK-10 (LLM adapter, mock provider, model picker) on lib/llm/providers.ts and lib/keystore.ts readKey; verify the model IDs against each provider's models endpoint first
+stage: spec
+task: TASK-11
+next: write the spec for TASK-11 (real resume extraction: PDF, DOCX, TXT) using the LLM adapter (getAdapter, name "extract") and LlmErrorCallout; prove it live on Anthropic (.env.keys)
 blockers: none
 updated: 2026-11-17 22:06 · session 5
 

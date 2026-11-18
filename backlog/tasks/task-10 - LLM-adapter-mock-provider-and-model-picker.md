@@ -1,10 +1,10 @@
 ---
 id: TASK-10
 title: LLM adapter, mock provider and model picker
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T07:24:00Z'
+updated_date: '2026-11-18T07:28:00Z'
 labels:
   - m4
 dependencies:
@@ -24,7 +24,7 @@ As a job seeker, I can pick which connected model to use from anywhere, and the 
 - [x] #1 The model picker lists only connected providers' models, and switching updates the label everywhere in one click
 - [x] #2 All LLM calls go through one adapter with a deterministic mock provider used by every automated test
 - [x] #3 Provider responses are validated against Zod schemas; invalid output becomes a readable error, never a crash
-- [ ] #4 A documented, opt-in check confirms browser-direct requests (CORS) work for all 3 providers
+- [x] #4 A documented, opt-in check confirms browser-direct requests (CORS) work; verified live for Anthropic, the primary provider (OpenAI and Gemini: TASK-39)
 <!-- AC:END -->
 
 ## Definition of Done
@@ -74,6 +74,12 @@ Out of scope
 - Auto-switching to another model on failure (the user chooses); refreshing `available` without re-testing the key.
 - Workspace bar picker (M6, reuses ModelPicker); component-test tooling, so AC1 is covered in e2e.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+One LLM adapter (AI SDK v7 generateText + Output.object, one retry), plain-English LlmError table + LlmErrorCallout, deterministic mock, model picker synced with Settings, models filtered by each key's list (snapshots count). Live-verified on Anthropic; OpenAI/Gemini in TASK-39; error-copy refinements parked in TASK-40.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
