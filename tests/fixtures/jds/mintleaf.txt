@@ -1,0 +1,25 @@
+Senior Full Stack Engineer
+Mintleaf, Melbourne VIC (hybrid, 2 days in office)
+
+Mintleaf builds invoicing and cash-flow tools for Australian tradespeople. We're a team of 40 and growing.
+
+What you'll do
+- Build features across our React and TypeScript web app and Node.js APIs
+- Design PostgreSQL schemas and keep queries fast
+- Own the performance and reliability of services on AWS
+- Write automated tests and improve our CI pipeline
+- Mentor engineers and lead technical design
+
+About you
+- 5+ years building production web applications
+- React, TypeScript and Node.js
+- Strong SQL and PostgreSQL
+- AWS in production
+- Mentoring and technical leadership
+
+Nice to have
+- GraphQL
+- Terraform
+- Accessibility experience
+
+Full working rights in Australia are required.
