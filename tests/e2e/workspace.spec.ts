@@ -335,7 +335,7 @@ test("the Undo button undoes a structure move; the rewrite toast's Undo restores
 
   const inspector = inspectorOf(page);
   await inspector.getByRole("tab", { name: "Content" }).click();
-  await inspector.getByRole("button", { name: /Experience/ }).click();
+  await inspector.getByRole("button", { name: /^Experience/ }).click();
   const box = inspector.getByRole("textbox", { name: /Rewrite this/ });
   await box.fill("Emphasise Mentoring");
   await box.press("Control+Enter");
