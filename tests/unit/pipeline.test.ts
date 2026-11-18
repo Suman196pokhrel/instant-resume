@@ -1,7 +1,7 @@
 import { readFileSync } from "node:fs";
 import { describe, expect, it, vi } from "vitest";
 import fixture from "../fixtures/kb.json";
-import { createPipeline, type PipelineDeps, type PipelineEvent, type ProjectIn } from "@/lib/generate/pipeline";
+import { coverageFinding, createPipeline, type PipelineDeps, type PipelineEvent, type ProjectIn } from "@/lib/generate/pipeline";
 import type { LlmAdapter } from "@/lib/llm/adapter";
 import { createMockAdapter, MOCK_FIXTURES } from "@/lib/llm/mock";
 import { kbSchema } from "@/lib/schemas/kb";
@@ -97,5 +97,13 @@ describe("pipeline: page fit (TASK-25)", () => {
     await p.run();
     expect(events.find((e) => e.type === "stage" && e.id === "fit" && e.status !== "active")).toMatchObject({ status: "warning", note: "Still 3 pages. Trim content in Studio." });
     expect(events.at(-1)).toMatchObject({ type: "done" });
+  });
+});
+
+describe("coverageFinding (TASK-26, SPEC §10.1)", () => {
+  it("flags coverage below 60% with the first three missing keywords, and nothing from 60%", () => {
+    expect(coverageFinding(50, ["Go", "Kafka", "Rust", "Java"], "s-1")).toEqual({ type: "coverage", doc: "resume", sectionId: "s-1", title: "Keyword coverage is 50%", detail: "Go, Kafka and Rust from the job brief don't appear in the resume." });
+    expect(coverageFinding(59, ["Go"], "s-1")?.detail).toBe("Go from the job brief doesn't appear in the resume.");
+    expect(coverageFinding(60, ["Go"], "s-1")).toBeNull();
   });
 });

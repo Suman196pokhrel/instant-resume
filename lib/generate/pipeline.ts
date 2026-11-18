@@ -60,6 +60,14 @@ const REASONS = [
 ];
 const pages = (n: number) => `${n} ${n === 1 ? "page" : "pages"}`;
 
+/** Quick generate's coverage finding (SPEC §10.1): below 60%, naming up to three keywords the resume misses. */
+export function coverageFinding(coverage: number, missing: string[], sectionId: string): DocFinding | null {
+  if (coverage >= 60) return null;
+  const kws = missing.slice(0, 3);
+  const list = kws.length > 1 ? `${kws.slice(0, -1).join(", ")} and ${kws.at(-1)}` : (kws[0] ?? "Keywords");
+  return { type: "coverage", doc: "resume", sectionId, title: `Keyword coverage is ${coverage}%`, detail: `${list} from the job brief ${kws.length === 1 ? "doesn't" : "don't"} appear in the resume.` };
+}
+
 export function createPipeline(input: { jdText: string; notes: string }, deps: PipelineDeps) {
   const { kb, prefs } = deps;
   const listeners = new Map<string, Set<(e: never) => void>>();
@@ -126,6 +134,8 @@ export function createPipeline(input: { jdText: string; notes: string }, deps: P
       const findings = ctx.docs!.flatMap((d) => runChecks(d, brief, kb, input.notes).findings.map((f) => ({ ...f, doc: d.kind })));
       const resume = runChecks(ctx.docs![0], brief, kb, input.notes);
       const coverage = Math.round((resume.matched.length / Math.max(1, brief.keywords.length)) * 100);
+      const low = coverageFinding(coverage, resume.missing.map((m) => m.keyword), ctx.docs![0].sections[0]?.id ?? "");
+      if (low) findings.push(low);
       const gaps = ctx.match!.gaps;
       ctx.summary = { coverage, findings, gaps, pages: ctx.pages! };
       emit({ type: "checks", coverage, findings, gaps });

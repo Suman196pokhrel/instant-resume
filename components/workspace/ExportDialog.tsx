@@ -12,6 +12,7 @@ import type { Project } from "@/lib/schemas/project";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
 import { useWorkspace, type Kind } from "@/lib/stores/workspace";
+import { downloadFile } from "@/lib/download";
 import { toast } from "@/lib/toast";
 import { KIND_LABEL } from "./Workspace";
 
@@ -19,15 +20,6 @@ import { KIND_LABEL } from "./Workspace";
 // then the browser downloads it. Checks never block an export.
 
 const KINDS: Kind[] = ["resume", "coverLetter"];
-
-function download(name: string, bytes: Uint8Array) {
-  const url = URL.createObjectURL(new Blob([bytes as BlobPart], { type: "application/pdf" }));
-  const a = Object.assign(document.createElement("a"), { href: url, download: name });
-  document.body.append(a);
-  a.click();
-  a.remove();
-  setTimeout(() => URL.revokeObjectURL(url), 1000); // after the download has started
-}
 
 export function ExportDialog({ project, kb, prefs }: { project: Project; kb: KnowledgeBase; prefs: Prefs }) {
   const [open, setOpen] = useState(false);
@@ -45,7 +37,7 @@ export function ExportDialog({ project, kb, prefs }: { project: Project; kb: Kno
       const { render } = await import("@/lib/render/client");
       const data = { kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: project.brief.title }, paper: prefs.paper, spelling: prefs.spelling };
       const chosen = KINDS.filter((k) => picked.includes(k) && docs[k]);
-      for (const k of chosen) download(names[k], (await render(k, { ...data, document: docs[k] }, "pdf")).artifact);
+      for (const k of chosen) downloadFile(names[k], (await render(k, { ...data, document: docs[k] }, "pdf")).artifact);
       setOpen(false);
       toast(`Exported ${chosen.map((k) => names[k]).join(" and ")}`);
     } catch {

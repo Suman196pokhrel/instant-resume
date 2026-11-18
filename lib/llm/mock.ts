@@ -71,7 +71,7 @@ function matchFor(prompt: string) {
 
 function generationFor(prompt: string) {
   const brief = JSON.parse(block(prompt, "brief") || "{}");
-  const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { name?: string; entries?: { id: string; highlights?: { id: string; text: string }[] }[] };
+  const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { name?: string; entries?: { id: string; highlights?: { id: string; text: string; evidenceFor?: string }[] }[] };
   const highlights = new Map((kb.entries ?? []).map((e) => [e.id, e.highlights ?? []]));
   const evidence = [...highlights.values()].flat().slice(0, 2).map((h) => h.text);
   const PARAGRAPHS: Record<string, string> = {
@@ -85,7 +85,9 @@ function generationFor(prompt: string) {
       const text = line.match(/^(\/sections\/\d+\/text) {2}\((.+)\)$/);
       if (text) return [{ op: "replace", path: text[1], value: PARAGRAPHS[text[2]] ?? `${kb.name ?? "Engineer"}, applying for the ${brief.title} role at ${brief.company}.` }];
       const list = line.match(/^ +(\/sections\/\d+\/items\/\d+\/bullets\/-) {2}entry (\S+):/);
-      return list ? (highlights.get(list[2]) ?? []).slice(0, 3).map((h) => ({ op: "add", path: list[1], value: { text: h.text, source: h.id } })) : [];
+      const hs = highlights.get(list?.[2] ?? "") ?? [];
+      const ordered = [...hs.filter((h) => h.evidenceFor), ...hs.filter((h) => !h.evidenceFor)]; // the prompt rule: a highlight added for a requirement always goes in
+      return list ? ordered.slice(0, 3).map((h) => ({ op: "add", path: list[1], value: { text: h.text, source: h.id } })) : [];
     });
   return { resumeOps: ops(block(prompt, "resume-skeleton")), coverLetterOps: ops(block(prompt, "cover-letter-skeleton")) };
 }
