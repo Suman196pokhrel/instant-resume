@@ -1,6 +1,7 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
 import { createWorkspaceStore, SAVE_DELAY, type Proposal } from "@/lib/stores/workspace";
 import type { ResumeDocument, Section } from "@/lib/schemas/document";
+import type { Revision } from "@/lib/schemas/project";
 import { THEME_DEFAULTS } from "@/lib/schemas/theme";
 
 // The Workspace store around a rewrite (SPEC §14.5; TASK-16): saves go out in order, Accept keeps a pending hand
@@ -332,5 +333,35 @@ describe("workspace store: Checks jumps (TASK-21)", () => {
     expect(store.getState().jump).toEqual({});
     store.getState().setLeftTab("checks");
     expect(store.getState().leftTab).toBe("checks");
+  });
+});
+
+describe("workspace store: history (TASK-22)", () => {
+  const rev = (over: Partial<Revision> = {}): Revision => ({ id: "r-1", documentId: "d-1", ts: new Date(2026, 10, 18, 9, 5).toISOString(), kind: "generation", label: "Generated from job brief", snapshot: { ...resume, theme: { ...THEME_DEFAULTS, margin: 22 }, sections: [{ ...summary, text: "Older." }] }, ...over });
+
+  it("view previews a revision and drops a proposal; switching documents leaves it", () => {
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().propose(proposal());
+    store.getState().view(rev());
+    expect([store.getState().viewing?.id, store.getState().pending]).toEqual(["r-1", null]);
+    store.getState().setKind("coverLetter");
+    expect(store.getState().viewing).toBeNull();
+  });
+
+  it("restore saves the snapshot as a new restore revision with an undo step; undo waits while viewing", async () => {
+    vi.setSystemTime(new Date(2026, 10, 18, 22, 0)); // "Today" in the label
+    const store = createWorkspaceStore([resume, letter]);
+    store.getState().select("s-sum");
+    store.getState().view(rev());
+    store.getState().undo(); // nothing happens while an old revision is shown
+    expect(bodies).toEqual([]);
+    store.getState().restore();
+    const s = store.getState();
+    expect([s.viewing, s.selected]).toEqual([null, null]);
+    expect(s.docs.resume).toMatchObject({ id: "d-1", theme: { margin: 22 }, sections: [{ text: "Older." }] });
+    await settle();
+    expect(bodies[0].revision).toEqual({ kind: "restore", label: "Restored the version from Today, 9:05 am" });
+    expect(steps(store)).toEqual(["Restored the version from Today, 9:05 am"]);
+    expect(toast).toHaveBeenCalledWith("Restored. The version you replaced is still in history.");
   });
 });

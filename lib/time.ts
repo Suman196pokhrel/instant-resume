@@ -11,3 +11,11 @@ export function timeAgo(iso: string, now = Date.now()): string {
   const d = Math.round(h / 24);
   return d < 14 ? plural(d, "day") : plural(Math.round(d / 7), "week");
 }
+
+/** SPEC §14.5 History times (mock core.js clockTime): "Today, 10:42 am", otherwise "17 Nov, 2:05 pm". */
+export function clockTime(iso: string, now = Date.now()): string {
+  const d = new Date(iso);
+  const t = d.toLocaleTimeString("en-AU", { hour: "numeric", minute: "2-digit" });
+  const day = new Date(now).toDateString() === d.toDateString() ? "Today" : d.toLocaleDateString("en-AU", { day: "numeric", month: "short" });
+  return `${day}, ${t}`;
+}

@@ -1,5 +1,5 @@
-import { expect, it } from "vitest";
-import { timeAgo } from "@/lib/time";
+import { describe, expect, it } from "vitest";
+import { clockTime, timeAgo } from "@/lib/time";
 
 // SPEC §13.1 time-ago format, §18.1 Text utils.
 const now = Date.parse("2026-11-18T12:00:00Z");
@@ -20,3 +20,11 @@ it.each([
   [14 * 86400, "2 weeks ago"],
   [-30, "just now"], // a clock slightly ahead
 ])("%i seconds ago reads %s", (s, text) => expect(ago(s)).toBe(text));
+
+describe("clockTime (SPEC §14.5 History)", () => {
+  const now = new Date(2026, 10, 18, 22, 0).getTime();
+  it("says Today for today, else the day and month, with the en-AU time", () => {
+    expect(clockTime(new Date(2026, 10, 18, 10, 42).toISOString(), now)).toBe("Today, 10:42 am");
+    expect(clockTime(new Date(2026, 10, 17, 14, 5).toISOString(), now)).toBe("17 Nov, 2:05 pm");
+  });
+});

@@ -4,6 +4,7 @@ import type { Op } from "@/lib/patch/validate";
 import type { ResumeDocument, Section } from "@/lib/schemas/document";
 import type { Revision } from "@/lib/schemas/project";
 import { THEME_DEFAULTS, type Theme } from "@/lib/schemas/theme";
+import { clockTime } from "@/lib/time";
 import { toast } from "@/lib/toast";
 
 // The Workspace store (SPEC §3, §14.5): one per open project. Every change updates the documents at once (the preview
@@ -61,6 +62,11 @@ type State = {
   jump: { prefill?: string } | null; // one shot: the inspector focuses the section, or the instruction box with a prefill
   goTo: (sectionId: string, prefill?: string) => void;
   clearJump: () => void;
+  /** History (TASK-22): an older revision shown in the preview, with the inspector locked. */
+  viewing: Revision | null;
+  view: (rev: Revision | null) => void;
+  /** Copies the viewed revision into its document as a new restore revision; later revisions stay. */
+  restore: () => void;
 };
 export type InspectorTab = "content" | "structure" | "design";
 
@@ -154,7 +160,7 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       save: "saved",
       busy: null,
       pending: null,
-      setKind: (kind) => set({ kind, selected: null, ...drop() }),
+      setKind: (kind) => set({ kind, selected: null, viewing: null, ...drop() }),
       select: (selected) => set({ selected, ...drop() }),
       setZoom: (zoom) => set({ zoom }),
       editSection: (id, change, heading = false) => {
@@ -201,6 +207,7 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       undoStack: { resume: [], coverLetter: [] },
       undo: (which) => {
         const { undoStack, selected } = get();
+        if (get().viewing) return; // restore or go back to current first
         const kind = which ?? get().kind;
         const step = undoStack[kind].at(-1);
         if (!step) return;
@@ -236,6 +243,15 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       jump: null,
       goTo: (selected, prefill) => set({ selected, tab: "content", jump: prefill ? { prefill } : {}, ...drop() }),
       clearJump: () => set({ jump: null }),
+      viewing: null,
+      view: (viewing) => set({ viewing, ...drop() }),
+      restore: () => {
+        const { viewing: r, kind } = get();
+        if (!r) return;
+        set({ viewing: null, selected: null });
+        commit(kind, { sections: r.snapshot.sections, theme: r.snapshot.theme, recipient: r.snapshot.recipient }, { kind: "restore", label: `Restored the version from ${clockTime(r.ts)}` });
+        toast("Restored. The version you replaced is still in history.");
+      },
       regenerating: false,
       setRegenerating: (regenerating) => set({ regenerating }),
       regenerate: (out) => {
