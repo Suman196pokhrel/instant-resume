@@ -70,6 +70,8 @@
   --animate-saved: saved-fade 2.4s var(--ease) forwards; /* onboarding "✓ Saved": appears, holds, fades (SPEC §12) */
   --animate-draw-ring: draw 600ms var(--ease) forwards; /* onboarding done check: circle, then tick */
   --animate-draw-tick: draw 350ms var(--ease) 500ms forwards;
+  --animate-spin: spin 0.7s linear infinite; /* every spinner, and active stage icons (SPEC §12) */
+  --animate-grow: grow 350ms var(--ease) both; /* Studio generation ghost page lines */
 
   --color-on-ink: var(--on-ink);
   --color-prov-anthropic: var(--prov-anthropic);
@@ -254,6 +256,11 @@
   }
   100% {
     opacity: 0;
+  }
+}
+@keyframes grow {
+  from {
+    transform: scaleX(0);
   }
 }
 @keyframes draw {

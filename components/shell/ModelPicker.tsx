@@ -35,6 +35,7 @@ export function ModelPicker() {
   return (
     <DropdownMenu>
       <DropdownMenuTrigger
+        data-model-toggle // Studio's "Switch model" opens this menu
         className="inline-flex h-8 max-w-[52vw] items-center gap-2 rounded-sm border border-line-2 bg-surface px-2.5 text-[13px] font-medium whitespace-nowrap text-ink hover:border-muted-foreground"
         aria-label={loading ? "Change model" : active ? `Model: ${label} ${active.model}. Change model` : "No model connected. Change model"}
       >

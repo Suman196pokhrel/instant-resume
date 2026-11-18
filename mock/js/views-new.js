@@ -197,8 +197,7 @@ function studioSetupView(root) {
 
   const STAGES = [
     { k: 'match', label: 'Matching knowledge base entries to the brief', ms: 900, llm: false },
-    { k: 'resume', label: 'Drafting the resume', ms: 2600, llm: true },
-    { k: 'letter', label: 'Drafting the cover letter', ms: 2100, llm: true },
+    { k: 'resume', label: 'Drafting the resume and cover letter', ms: 4700, llm: true },
     { k: 'validate', label: 'Validating the response', ms: 500, llm: false, done: '14 operations, all valid' },
     { k: 'checks', label: 'Running checks', ms: 500, llm: false },
     { k: 'render', label: 'Rendering the PDF preview', ms: 900, llm: false },
@@ -231,14 +230,15 @@ function studioSetupView(root) {
       const li = $(`[data-stage="${s.k}"]`, root);
       li.classList.add('active');
       const t0 = performance.now();
-      if (s.k === 'resume') {
-        for (let i = 0; i < 5; i++) { addGhost('gl-h', 1); addGhost('gl-l', 3); await sleep(s.ms / 5); if (!alive) break; }
-      } else if (s.k === 'letter' && willFail) {
+      if (s.k === 'resume' && willFail) {
+        addGhost('gl-h', 1); addGhost('gl-l', 3);
         await sleep(1100);
         clearInterval(timer);
         li.classList.remove('active'); li.classList.add('failed');
         st.demo.failGeneration = false; Store.save();
         return showFailure();
+      } else if (s.k === 'resume') {
+        for (let i = 0; i < 5; i++) { addGhost('gl-h', 1); addGhost('gl-l', 3); await sleep(s.ms / 5); if (!alive) break; }
       } else await sleep(s.ms);
       li.classList.remove('active'); li.classList.add('done');
       $('.gs-time', li).textContent = s.done || ((performance.now() - t0) / 1000).toFixed(1) + 's';
@@ -259,9 +259,11 @@ function studioSetupView(root) {
       <div class="callout callout-error">
         ${icon('alert', 16)}
         <div>
-          <strong>Generation stopped while drafting the cover letter.</strong>
-          <p>${esc(prov)} returned <code>529 overloaded_error</code>: the model is busy. Nothing was saved, and your job description, brief and selections are kept.</p>
-          <div class="row-gap"><button class="btn btn-primary btn-sm" data-retry>Retry</button><button class="btn btn-ghost btn-sm" data-switch>Switch model</button><button class="btn btn-ghost btn-sm" data-back-sel>Back to entries</button></div>
+          <strong>Generation stopped while drafting the resume and cover letter.</strong> Nothing was saved, and your job description, brief and selections are kept.
+          <p><strong>${esc(prov)} is having trouble right now</strong></p>
+          <p>This is on ${esc(prov)}'s side. Try again in a few minutes, or switch to another model.</p>
+          <p class="muted small">Details: 529 overloaded_error</p>
+          <div class="row-gap"><button class="btn btn-primary btn-sm" data-retry>Try again</button><button class="btn btn-ghost btn-sm" data-switch>Switch model</button><button class="btn btn-ghost btn-sm" data-back-sel>Back to entries</button></div>
         </div>
       </div>`;
     $('[data-retry]', root).onclick = generate;

@@ -2,6 +2,7 @@
 
 import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
+import { useRouter } from "next/navigation";
 import { Check, ChevronLeft, ChevronRight, KeyRound, ShieldCheck, Sparkles, X } from "lucide-react";
 import { z } from "zod";
 import { cn } from "cn";
@@ -21,6 +22,9 @@ import { useLlmChoice } from "@/lib/llm/use-choice";
 import { coverage, entryText, kbText, kwMatch, matchedKeywords, suggestSelection } from "@/lib/match/keywords";
 import { briefSchema, type JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
+import type { Prefs } from "@/lib/schemas/settings";
+import { toast } from "@/lib/toast";
+import { Generating } from "./Generating";
 
 // Studio setup (SPEC §14.4, mock studioSetupView). One LLM call (the brief); suggestions and coverage are computed here.
 
@@ -34,7 +38,8 @@ const draftSchema = z.object({
 type Draft = z.infer<typeof draftSchema>;
 const EMPTY: Draft = { stage: "jd", jdText: "", notes: "", brief: null, selected: [] };
 
-// The draft is per device, like the active model: it survives navigation and reloads. TASK-13 saves it with the project.
+// The draft is per device, like the active model: it survives navigation and reloads. Generation saves it with the
+// project, then clears it. Step 4 is not part of the draft, so a reload mid-run lands back on step 3.
 export const STUDIO_DRAFT = "instant-resume-studio-draft";
 function loadDraft(): Draft {
   try {
@@ -54,7 +59,9 @@ function saveDraft(d: Draft) {
 const STEPS = ["Job description", "Job brief", "Choose entries", "Generate"];
 const noop = () => () => {};
 
-export function StudioSetup({ kb }: { kb: KnowledgeBase }) {
+export function StudioSetup({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) {
+  const router = useRouter();
+  const [attempt, setAttempt] = useState(0); // step 4: 0 = not generating; each Try again is a new run
   const { connections, active } = useLlmChoice();
   const hydrated = useSyncExternalStore(noop, () => true, () => false); // the draft lives in this browser: read it after hydration
   const [edited, setD] = useState<Draft | null>(null);
@@ -71,7 +78,7 @@ export function StudioSetup({ kb }: { kb: KnowledgeBase }) {
     saveDraft(next);
     setD(next);
   };
-  const step = extracting ? 1 : { jd: 0, brief: 1, select: 2 }[d.stage];
+  const step = attempt ? 3 : extracting ? 1 : { jd: 0, brief: 1, select: 2 }[d.stage];
 
   async function extract() {
     if (d!.jdText.trim().length < 80) return setError("That looks too short to be a full job description. Paste the whole ad, including requirements.");
@@ -112,14 +119,33 @@ export function StudioSetup({ kb }: { kb: KnowledgeBase }) {
         ))}
       </ol>
       <section className="rounded-lg border border-line bg-surface p-6">
-        {extracting ? (
+        {attempt && d.brief ? (
+          <Generating
+            key={attempt}
+            kb={kb}
+            draft={{ jdText: d.jdText, notes: d.notes, brief: d.brief, selected: d.selected }}
+            prefs={prefs}
+            model={active?.model ?? ""}
+            onRetry={() => setAttempt((a) => a + 1)}
+            onBack={() => setAttempt(0)}
+            onDone={(id, seconds) => {
+              try {
+                localStorage.removeItem(STUDIO_DRAFT);
+              } catch {
+                // storage blocked: nothing was kept
+              }
+              router.push(`/projects/${id}`);
+              toast(`Generated in ${seconds.toFixed(1)}s. Review the checks before you export.`); // "No issues found." arrives with the checks (TASK-20)
+            }}
+          />
+        ) : extracting ? (
           <Extracting model={active?.model ?? ""} />
         ) : d.stage === "jd" ? (
           <JdStep d={d} update={update} connected={!!active} loading={connections === null} model={active?.model} error={error} llmError={llmError} onExtract={extract} />
         ) : d.stage === "brief" && d.brief ? (
           <BriefStep kb={kb} brief={d.brief} model={active?.model} onChange={(brief) => update({ brief })} onBack={() => update({ stage: "jd" })} onNext={() => update({ stage: "select" })} />
         ) : d.brief ? (
-          <SelectStep kb={kb} brief={d.brief} selected={d.selected} model={active?.model} onChange={(selected) => update({ selected })} onBack={() => update({ stage: "brief" })} />
+          <SelectStep kb={kb} brief={d.brief} selected={d.selected} model={active?.model} onChange={(selected) => update({ selected })} onBack={() => update({ stage: "brief" })} onGenerate={() => setAttempt(1)} />
         ) : null}
       </section>
     </div>
@@ -326,7 +352,8 @@ function BriefStep({ kb, brief, model, onChange, onBack, onNext }: { kb: Knowled
 
 type Row = { id: string; label: string; text: string };
 
-function SelectStep({ kb, brief, selected, model, onChange, onBack }: { kb: KnowledgeBase; brief: JobBrief; selected: string[]; model?: string; onChange: (s: string[]) => void; onBack: () => void }) {
+function SelectStep(props: { kb: KnowledgeBase; brief: JobBrief; selected: string[]; model?: string; onChange: (s: string[]) => void; onBack: () => void; onGenerate: () => void }) {
+  const { kb, brief, selected, model, onChange, onBack, onGenerate } = props;
   const [error, setError] = useState("");
   const suggested = useMemo(() => new Set(suggestSelection(kb, brief.keywords)), [kb, brief.keywords]);
   const row = (id: string, label: string, e: Record<string, unknown>): Row => ({ id, label, text: entryText(e) });
@@ -402,14 +429,11 @@ function SelectStep({ kb, brief, selected, model, onChange, onBack }: { kb: Know
         </Button>
         <div className="flex items-center gap-3">
           <span className="text-[13px] text-muted-foreground">{model ? `Runs on ${model}, about 6,000 tokens` : "Connect a provider in Settings to generate"}</span>
-          <Button onClick={() => !selected.length && setError("Select at least one knowledge base entry")} aria-describedby="generate-note">
+          <Button disabled={!model} onClick={() => (selected.length ? onGenerate() : setError("Select at least one knowledge base entry"))}>
             <Sparkles /> Generate resume and cover letter
           </Button>
         </div>
       </div>
-      <p id="generate-note" className="mt-2 text-right text-[13px] text-muted-foreground">
-        Generation arrives with the next update.
-      </p>
     </>
   );
 }

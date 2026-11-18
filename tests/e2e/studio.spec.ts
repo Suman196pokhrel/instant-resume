@@ -116,3 +116,85 @@ test("a failed extraction explains itself and Try again works without pasting ag
   await alert.getByRole("button", { name: "Try again" }).click();
   await expect(h1(page)).toHaveText("Job brief");
 });
+
+// SPEC §14.4 step 4 (TASK-43): one generate call, a compile check, then the project is saved and opened.
+async function toEntries(page: Page, query = "") {
+  await connectAnthropic(page);
+  await page.goto(`/new/studio${query}`);
+  await page.getByLabel("Job description").fill(MINTLEAF);
+  await page.getByRole("button", { name: /Notes for this application/ }).click();
+  await page.getByRole("textbox", { name: "Notes for this application" }).fill("Referred by Dana Okafor");
+  await page.getByRole("button", { name: "Extract requirements" }).click();
+  await page.getByRole("button", { name: "Choose entries" }).click();
+  await expect(h1(page)).toHaveText("Choose what to draw on");
+}
+/** This page's project saves (the shared e2e server gets projects from parallel tests too). */
+function saves(page: Page) {
+  const posts: string[] = [];
+  page.on("request", (r) => r.method() === "POST" && r.url().endsWith("/api/projects") && posts.push(r.url()));
+  return posts;
+}
+
+test("Generate saves the project with notes, brief and selection, then opens it (AC1-AC3)", async ({ page }) => {
+  test.setTimeout(90_000);
+  await toEntries(page);
+  await page.getByRole("button", { name: "Generate resume and cover letter" }).click();
+  await expect(h1(page)).toHaveText("Generating for Mintleaf");
+  await expect(page.getByText("Using claude-sonnet-5-5. Only facts from the entries you chose can be used.")).toBeVisible();
+  const stages = page.getByRole("list", { name: "Generation stages" }).getByRole("listitem");
+  await expect(stages).toHaveText([/^Matching knowledge base entries to the brief\s*on device/, /^Drafting the resume and cover letter/, /^Validating the response\s*on device/, /^Running checks\s*on device/, /^Rendering the PDF preview\s*on device/]);
+  await expect(stages.nth(1)).toHaveAttribute("data-state", "active");
+  await expect(page.getByText(/^\d+\.\ds elapsed$/)).toBeVisible();
+  await expect(page.locator("[data-ghost] > *").first()).toBeVisible(); // the ghost page grows while drafting
+  await expect(stages.nth(2)).toContainText(/\d+ operations, all valid/, { timeout: 15_000 });
+
+  await page.waitForURL(/\/projects\/p-/, { timeout: 60_000 });
+  await expect(page.getByText(/^Generated in \d+(\.\d)?s\. Review the checks before you export\.$/)).toBeVisible();
+  const id = page.url().split("/").pop();
+  const { project, documents } = await (await page.request.get(`/api/projects/${id}`)).json();
+  expect(project).toMatchObject({ company: "Mintleaf", role: "Senior Full Stack Engineer", source: "studio", notes: "Referred by Dana Okafor", jdText: MINTLEAF });
+  expect(project.brief.keywords).toContain("React");
+  expect(project.selected).toContain("role-brightwater");
+  const resume = documents.find((d: { kind: string }) => d.kind === "resume");
+  const letter = documents.find((d: { kind: string }) => d.kind === "coverLetter");
+  const bullets = resume.sections.flatMap((s: { items?: { bullets?: { source: string }[] }[] }) => s.items?.flatMap((i) => i.bullets ?? []) ?? []);
+  expect(bullets.length).toBeGreaterThan(0);
+  expect(bullets.every((b: { source: string }) => b.source.startsWith("hl-"))).toBe(true);
+  expect(letter.sections.map((s: { title: string }) => s.title)).toEqual(["Opening", "Evidence", "Fit", "Close"]);
+
+  await page.goto("/new/studio"); // the draft was cleared once the project saved
+  await expect(h1(page)).toHaveText("Paste the job description");
+  await expect(page.getByLabel("Job description")).toHaveValue("");
+});
+
+test("a failed generation saves nothing; Switch model opens the picker and Try again recovers (AC3, DoD)", async ({ page }) => {
+  test.setTimeout(90_000);
+  await page.emulateMedia({ reducedMotion: "reduce" });
+  await toEntries(page, "?mock=generate-error");
+  const posts = saves(page);
+  await page.getByRole("button", { name: "Generate resume and cover letter" }).click();
+  await expect(page.locator("[data-ghost] > *").first()).toHaveCSS("animation-duration", "1e-05s"); // static under reduced motion
+  const alert = page.getByRole("main").getByRole("alert").filter({ hasText: "Generation stopped" });
+  await expect(alert).toContainText("Generation stopped while drafting the resume and cover letter.");
+  await expect(alert).toContainText("Nothing was saved, and your job description, brief and selections are kept.");
+  await expect(alert).toContainText("Anthropic is having trouble right now");
+  await expect(page.getByRole("list", { name: "Generation stages" }).getByRole("listitem").nth(1)).toHaveAttribute("data-state", "failed");
+  expect(posts).toHaveLength(0);
+
+  await alert.getByRole("button", { name: "Switch model" }).click();
+  await expect(page.getByRole("menu")).toBeVisible();
+  await page.keyboard.press("Escape");
+  await alert.getByRole("button", { name: "Try again" }).focus();
+  await page.keyboard.press("Enter");
+  await page.waitForURL(/\/projects\/p-/, { timeout: 60_000 });
+  expect(posts).toHaveLength(1);
+});
+
+test("Back to entries after a failure keeps the selection (AC3)", async ({ page }) => {
+  await toEntries(page, "?mock=generate-error");
+  const picked = await page.getByText(/^\d+ of \d+ selected$/).textContent();
+  await page.getByRole("button", { name: "Generate resume and cover letter" }).click();
+  await page.getByRole("button", { name: "Back to entries" }).click();
+  await expect(h1(page)).toHaveText("Choose what to draw on");
+  await expect(page.getByText(/^\d+ of \d+ selected$/)).toHaveText(picked!);
+});

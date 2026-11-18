@@ -1,10 +1,10 @@
 ---
 id: TASK-43
 title: Studio generate screen and project save
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-18T08:31:00Z'
-updated_date: '2026-11-18T08:48:00Z'
+updated_date: '2026-11-18T08:56:00Z'
 labels:
   - m5
 dependencies:
