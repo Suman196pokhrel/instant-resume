@@ -1,10 +1,10 @@
 ---
 id: TASK-17
 title: 'Structure tab: reorder and hide sections'
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:34:00Z'
+updated_date: '2026-11-18T10:38:00Z'
 labels:
   - m6
 dependencies:
@@ -21,9 +21,9 @@ As a job seeker, I can reorder and hide sections without losing them. Refs: SPEC
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Sections reorder by drag and by Alt+ArrowUp/Down, with a screen reader announcement
-- [ ] #2 A hidden section disappears from the preview but stays listed as Hidden and can be shown again
-- [ ] #3 No structure change calls the LLM
+- [x] #1 Sections reorder by drag and by Alt+ArrowUp/Down, with a screen reader announcement
+- [x] #2 A hidden section disappears from the preview but stays listed as Hidden and can be shown again
+- [x] #3 No structure change calls the LLM
 <!-- AC:END -->
 
 ## Definition of Done
@@ -57,3 +57,15 @@ Tests
 Out of scope
 - Preview glide and flash of the moved section (TASK-46, positions), undo (TASK-19), revision coalescing (TASK-19), touch drag
 <!-- SECTION:PLAN:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T10:38:00Z
+
+---
+
+Build done: StructureTab (native drag, Alt+Arrow, buttons, hide/show, aria-live, view-transition glide), store moveSection/toggleHidden via a shared commit helper, mock adapter spy window.__llmCalls. Deviation: document.startViewTransition + flushSync instead of React <ViewTransition> (Zustand updates are synchronous, so React transitions don't animate them). 269 unit + 93 e2e pass.
+
+---
+<!-- COMMENTS:END -->
