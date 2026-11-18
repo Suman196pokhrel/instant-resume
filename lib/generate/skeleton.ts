@@ -10,7 +10,7 @@ import { newId } from "@/lib/utils";
 type Item = { ref: string; heading: string; sub?: string; meta?: string; line?: string; bullets?: [] };
 type Draft = Omit<ResumeDocument, "id" | "projectId"> & { id: "draft"; projectId: "draft" };
 
-const join = (sep: string, ...parts: (string | undefined)[]) => parts.filter(Boolean).join(sep);
+const join = (sep: string, ...parts: (string | undefined)[]) => parts.filter(Boolean).join(sep) || undefined;
 const dates = (start?: string, end?: string) => join(" to ", start, end);
 const items = (title: string, kind: Exclude<Section["kind"], "summary" | "paragraph">, list: Item[]): Section[] =>
   list.length ? [{ id: newId("s"), kind, title, hidden: false, items: list.map((i) => ({ id: newId("i"), ...i })) }] : [];
