@@ -1,10 +1,10 @@
 ---
 id: TASK-20
 title: Rules engine
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T11:49:00Z'
+updated_date: '2026-11-18T11:50:00Z'
 labels:
   - m7
 dependencies:
@@ -79,3 +79,10 @@ Out of scope
 - Inflected banned forms (leveraged, utilised): park it if wanted
 - The DoD UI and keyboard items: this card has no UI
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+runChecks(doc, brief, kb, notes?) in lib/checks/run.ts: keywords (inKb incl. notes), banned phrases (whole words), grounding (numbers as tokens, years ignored; tech terms; skills; summaries), parse safety. 15 unit tests; SPEC §10 and mock docs.js updated.
+Review: all ACs pass (295 unit, 98 e2e), mock runChecks exercised headlessly. Parked: banned phrases in employer names.
+<!-- SECTION:NOTES:END -->
