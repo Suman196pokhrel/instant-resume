@@ -9,7 +9,12 @@ const KEYS = "keys"; // the one CryptoKey
 const CONNECTIONS = "connections";
 
 export type Sealed = { iv: Uint8Array; ciphertext: ArrayBuffer };
-export type Connection = { provider: ProviderId; masked: string; model: string; addedAt: number };
+/** `available`: the listed models this key can use, from its key test; absent on connections saved before that. */
+export type Connection = { provider: ProviderId; masked: string; model: string; addedAt: number; available?: string[] };
+
+/** Fired on window after any connection or active-model change, so every picker and Settings stay in step. */
+export const LLM_CHANGED = "instant-resume-llm-changed";
+const changed = () => window.dispatchEvent(new Event(LLM_CHANGED));
 
 export const newCryptoKey = () => crypto.subtle.generateKey({ name: "AES-GCM", length: 256 }, false, ["encrypt", "decrypt"]);
 
@@ -58,20 +63,25 @@ type Row = Connection & Sealed;
 
 export async function listConnections(): Promise<Connection[]> {
   const rows = await run<Row[]>(CONNECTIONS, "readonly", (s) => s.getAll());
-  return rows.map(({ provider, masked, model, addedAt }) => ({ provider, masked, model, addedAt }));
+  return rows.map(({ provider, masked, model, addedAt, available }) => ({ provider, masked, model, addedAt, available }));
 }
 
-export async function saveConnection(provider: ProviderId, apiKey: string, masked: string, model: string): Promise<void> {
+export async function saveConnection(provider: ProviderId, apiKey: string, masked: string, model: string, available: string[]): Promise<void> {
   const sealed = await encrypt(await cryptoKey(), apiKey.trim());
-  await run(CONNECTIONS, "readwrite", (s) => s.put({ provider, masked, model, addedAt: Date.now(), ...sealed } satisfies Row));
+  await run(CONNECTIONS, "readwrite", (s) => s.put({ provider, masked, model, addedAt: Date.now(), available, ...sealed } satisfies Row));
+  changed();
 }
 
 export async function setConnectionModel(provider: ProviderId, model: string): Promise<void> {
   const row = await run<Row | undefined>(CONNECTIONS, "readonly", (s) => s.get(provider));
   if (row) await run(CONNECTIONS, "readwrite", (s) => s.put({ ...row, model }));
+  changed();
 }
 
-export const removeConnection = (provider: ProviderId) => run(CONNECTIONS, "readwrite", (s) => s.delete(provider));
+export async function removeConnection(provider: ProviderId): Promise<void> {
+  await run(CONNECTIONS, "readwrite", (s) => s.delete(provider));
+  changed();
+}
 
 /** The decrypted key, for the call about to be made (TASK-10), or null when there is none. */
 export async function readKey(provider: ProviderId): Promise<string | null> {
@@ -81,18 +91,21 @@ export async function readKey(provider: ProviderId): Promise<string | null> {
 
 // The active model is not secret: localStorage (SPEC §8.2).
 const ACTIVE = "instant-resume-active-model";
+let inMemory: ActiveModel | null = null; // used when storage is blocked: the choice lasts until reload
 export function getActiveModel(): ActiveModel | null {
   try {
     return activeModelSchema.parse(JSON.parse(localStorage.getItem(ACTIVE) ?? "null"));
   } catch {
-    return null;
+    return inMemory;
   }
 }
 export function setActiveModel(active: ActiveModel | null) {
+  inMemory = active;
   try {
     if (active) localStorage.setItem(ACTIVE, JSON.stringify(active));
     else localStorage.removeItem(ACTIVE);
   } catch {
-    // storage blocked: the choice lasts until reload
+    // storage blocked: getActiveModel falls back to inMemory
   }
+  changed();
 }

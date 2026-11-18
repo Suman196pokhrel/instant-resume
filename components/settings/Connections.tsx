@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useRef, useState } from "react";
+import { useRef, useState } from "react";
 import { Check, ExternalLink, KeyRound } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
@@ -8,9 +8,9 @@ import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/component
 import { Field } from "@/components/ui/field";
 import { Input, NativeSelect } from "@/components/ui/input";
 import { Pill } from "@/components/ui/pill";
-import { getActiveModel, listConnections, removeConnection, saveConnection, setActiveModel, setConnectionModel, type Connection } from "@/lib/keystore";
+import { removeConnection, saveConnection, setActiveModel, setConnectionModel, type Connection } from "@/lib/keystore";
 import { keyFormatError, maskKey, PROVIDERS, testKey, type Provider } from "@/lib/llm/providers";
-import type { ActiveModel } from "@/lib/schemas/settings";
+import { defaultModel, modelsFor, useLlmChoice } from "@/lib/llm/use-choice";
 import { toast } from "@/lib/toast";
 
 const DOT = { anthropic: "bg-prov-anthropic", openai: "bg-prov-openai", gemini: "bg-prov-gemini" } as const;
@@ -18,54 +18,29 @@ const card = "flex flex-col gap-3 rounded-lg border border-line p-4";
 
 /** Settings → Connections (SPEC §8.2, §13.3, mock Views.settings). Keys stay encrypted in this browser. */
 export function Connections() {
-  const [conns, setConns] = useState<Connection[] | null>(null);
-  const [active, setActive] = useState<ActiveModel | null>(null);
+  const { connections: conns, active } = useLlmChoice(); // shared with the top bar picker
   const [justConnected, setJustConnected] = useState<string | null>(null);
 
-  const refresh = async () => {
-    setConns(await listConnections());
-    setActive(getActiveModel());
-  };
-  useEffect(() => {
-    let live = true;
-    listConnections().then(
-      (list) => {
-        if (!live) return;
-        setConns(list);
-        setActive(getActiveModel());
-      },
-      () => live && setConns([]) // IndexedDB unavailable: show the empty cards
-    );
-    return () => {
-      live = false;
-    };
-  }, []);
-
-  const choose = (next: ActiveModel | null) => {
-    setActiveModel(next);
-    setActive(next);
+  const activate = (c: Connection | undefined) => {
+    const model = c && defaultModel(c);
+    setActiveModel(c && model ? { provider: c.provider, model } : null);
   };
 
-  async function connected(p: Provider, model: string) {
-    const list = await listConnections();
-    if (!active || !list.some((c) => c.provider === active.provider)) choose({ provider: p.id, model });
+  function connected(p: Provider, model: string) {
+    if (!active) setActiveModel({ provider: p.id, model });
     setJustConnected(p.id);
-    await refresh();
     toast(`${p.name} connected`);
   }
 
   async function remove(p: Provider) {
     await removeConnection(p.id);
-    const rest = (await listConnections())[0];
-    if (active?.provider === p.id) choose(rest ? { provider: rest.provider, model: rest.model } : null);
-    await refresh();
+    if (active?.provider === p.id) activate(conns?.find((c) => c.provider !== p.id));
     toast(`${p.name} key removed`);
   }
 
   async function changeModel(c: Connection, model: string) {
     await setConnectionModel(c.provider, model);
-    if (active?.provider === c.provider) choose({ provider: c.provider, model });
-    await refresh();
+    if (active?.provider === c.provider) setActiveModel({ provider: c.provider, model });
   }
 
   return (
@@ -113,8 +88,8 @@ export function Connections() {
                 inUse={active?.provider === p.id}
                 fresh={justConnected === p.id}
                 onUse={() => {
-                  choose({ provider: p.id, model: c.model });
-                  toast(`Now using ${c.model}`);
+                  activate(c);
+                  toast(`Now using ${defaultModel(c)}`);
                 }}
                 onRemove={() => remove(p)}
                 onModel={(m) => changeModel(c, m)}
@@ -129,6 +104,7 @@ export function Connections() {
 }
 
 function ConnectedCard({ p, c, inUse, fresh, onUse, onRemove, onModel }: { p: Provider; c: Connection; inUse: boolean; fresh: boolean; onUse: () => void; onRemove: () => void; onModel: (m: string) => void }) {
+  const models = modelsFor(c);
   return (
     <div className={cn(card, "bg-surface")} data-provider={p.id}>
       <div className="flex items-center gap-2">
@@ -145,15 +121,21 @@ function ConnectedCard({ p, c, inUse, fresh, onUse, onRemove, onModel }: { p: Pr
           <Check className="size-3.5" /> Key works. Saved and encrypted on this device.
         </p>
       )}
-      <Field id={`model-${p.id}`} label="Default model">
-        <NativeSelect value={c.model} onChange={(e) => onModel(e.target.value)}>
-          {p.models.map((m) => (
-            <option key={m}>{m}</option>
-          ))}
-        </NativeSelect>
-      </Field>
+      {models.length ? (
+        <Field id={`model-${p.id}`} label="Default model">
+          <NativeSelect value={defaultModel(c) ?? ""} onChange={(e) => onModel(e.target.value)}>
+            {models.map((m) => (
+              <option key={m}>{m}</option>
+            ))}
+          </NativeSelect>
+        </Field>
+      ) : (
+        <p role="status" className="text-[13px] text-warn">
+          None of our listed {p.name} models are available to this key. Update Instant Resume, or try another key.
+        </p>
+      )}
       <div className="flex gap-2">
-        {!inUse && (
+        {!inUse && models.length > 0 && (
           <Button variant="ghost" size="sm" onClick={onUse}>
             Use {p.name}
           </Button>
@@ -166,7 +148,7 @@ function ConnectedCard({ p, c, inUse, fresh, onUse, onRemove, onModel }: { p: Pr
   );
 }
 
-function EmptyCard({ p, onConnected }: { p: Provider; onConnected: (model: string) => Promise<void> }) {
+function EmptyCard({ p, onConnected }: { p: Provider; onConnected: (model: string) => void }) {
   const [key, setKey] = useState("");
   const [show, setShow] = useState(false);
   const [model, setModel] = useState(p.models[0]);
@@ -188,13 +170,14 @@ function EmptyCard({ p, onConnected }: { p: Provider; onConnected: (model: strin
       setTesting(false);
       return fail(result.message);
     }
+    const saved = result.available.includes(model) ? model : (result.available[0] ?? model); // the chosen model may be retired
     try {
-      await saveConnection(p.id, key, maskKey(p.id, key.trim()), model);
-      await onConnected(model);
+      await saveConnection(p.id, key, maskKey(p.id, key.trim()), saved, result.available);
     } catch {
       setTesting(false);
-      fail("Couldn't store the key in this browser. Check that site storage is allowed, then try again.");
+      return fail("Couldn't store the key in this browser. Check that site storage is allowed, then try again.");
     }
+    onConnected(saved);
   }
 
   return (

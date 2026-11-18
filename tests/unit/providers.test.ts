@@ -25,18 +25,32 @@ it("masks a key to its prefix and last four characters", () => {
 
 it("lists the three providers with models", () => {
   expect(PROVIDERS.map((p) => p.id)).toEqual(["anthropic", "openai", "gemini"]);
-  for (const p of PROVIDERS) expect(p.models.length).toBeGreaterThan(0);
+  expect(PROVIDERS.map((p) => p.models)).toEqual([
+    ["claude-sonnet-5-5", "claude-opus-5-5", "claude-haiku-5-5"],
+    ["gpt-6.2-sol", "gpt-6.2-astra", "gpt-6-luna"],
+    ["gemini-3.8-flash", "gemini-3.1-pro-preview"],
+  ]);
 });
 
 describe("testKey", () => {
   const reply = (status: number, body: unknown) => vi.fn().mockResolvedValue(new Response(JSON.stringify(body), { status }));
 
   it("accepts a key the provider accepts, calling the models endpoint from the browser", async () => {
-    const f = reply(200, { data: [] });
-    expect(await testKey("anthropic", "sk-ant-KEY", f)).toEqual({ ok: true });
+    const f = reply(200, { data: [{ id: "claude-opus-5-5" }, { id: "claude-haiku-5-5" }, { id: "claude-old-1" }] });
+    expect(await testKey("anthropic", "sk-ant-KEY", f)).toEqual({ ok: true, available: ["claude-opus-5-5", "claude-haiku-5-5"] });
     const [url, init] = f.mock.calls[0];
-    expect(url).toBe("https://api.anthropic.com/v1/models");
+    expect(url).toBe("https://api.anthropic.com/v1/models?limit=1000");
     expect(init.headers).toMatchObject({ "x-api-key": "sk-ant-KEY", "anthropic-version": "2023-06-01", "anthropic-dangerous-direct-browser-access": "true" });
+  });
+
+  it("reports which of our models each provider's list offers (retired models drop out)", async () => {
+    expect(await testKey("openai", "k", reply(200, { data: [{ id: "gpt-6.2-sol" }, { id: "gpt-6-luna" }] }))).toEqual({ ok: true, available: ["gpt-6.2-sol", "gpt-6-luna"] });
+    expect(await testKey("gemini", "k", reply(200, { models: [{ name: "models/gemini-3.8-flash" }] }))).toEqual({ ok: true, available: ["gemini-3.8-flash"] });
+    expect(await testKey("openai", "k", reply(200, { data: [{ id: "gpt-4o" }] }))).toEqual({ ok: true, available: [] });
+  });
+
+  it("offers every listed model when the list can't be read", async () => {
+    expect(await testKey("openai", "k", reply(200, { unexpected: true }))).toEqual({ ok: true, available: PROVIDERS[1].models });
   });
 
   it("sends a Gemini key in a header, not the URL", async () => {

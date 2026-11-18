@@ -1,11 +1,14 @@
 import { expect, test, type Page } from "@playwright/test";
+import { PROVIDERS } from "../../lib/llm/providers";
 
 // SPEC §8.2 connections and key storage, §18.4 #2. Provider endpoints are stubbed; nothing leaves the test.
 const ANTHROPIC = "sk-ant-api03-test-key-0123456789a9F2";
 const card = (page: Page, name: string) => page.locator("[data-provider]").filter({ has: page.getByRole("heading", { name, exact: true }) });
 
+const EVERY_MODEL = { data: PROVIDERS.flatMap((p) => p.models).map((id) => ({ id })) };
+
 /** Stubs every provider's models endpoint, records the calls, and fails if one has the given status. */
-async function stubProviders(page: Page, status = 200, body: unknown = { data: [] }) {
+async function stubProviders(page: Page, status = 200, body: unknown = EVERY_MODEL) {
   const calls: string[] = [];
   await page.route(/api\.anthropic\.com|api\.openai\.com|generativelanguage\.googleapis\.com/, (route) => {
     calls.push(route.request().url());
@@ -44,7 +47,7 @@ test("a rejected key shows the provider's reason and is not saved (AC3)", async 
   await anthropic.getByLabel("API key").fill(ANTHROPIC);
   await anthropic.getByRole("button", { name: "Test and save" }).click();
   await expect(anthropic.getByText("Anthropic rejected this key (401 authentication_error). Check the key is active and copied in full.")).toBeVisible();
-  expect(calls).toEqual(["https://api.anthropic.com/v1/models"]);
+  expect(calls).toEqual(["https://api.anthropic.com/v1/models?limit=1000"]);
   await page.reload();
   await expect(card(page, "Anthropic")).toContainText("Not connected");
 });
@@ -110,12 +113,23 @@ test("Use switches the active provider, and Remove key falls back to another con
     await expect(card(page, name).getByText("Encrypted on this device", { exact: true })).toBeVisible();
   }
   await expect(card(page, "Anthropic").getByText("In use")).toBeVisible(); // the first connection stays active
-  await card(page, "Gemini").getByLabel("Default model").selectOption("gemini-3-flash");
+  await card(page, "Gemini").getByLabel("Default model").selectOption("gemini-3.1-pro-preview");
   await card(page, "Gemini").getByRole("button", { name: "Use Gemini" }).click();
-  await expect(page.getByText("Now using gemini-3-flash")).toBeVisible();
+  await expect(page.getByText("Now using gemini-3.1-pro-preview")).toBeVisible();
   await expect(card(page, "Gemini").getByText("In use")).toBeVisible();
   await card(page, "Gemini").getByRole("button", { name: "Remove key" }).click();
   await expect(page.getByText("Gemini key removed")).toBeVisible();
   await expect(card(page, "Gemini")).toContainText("Not connected");
   await expect(card(page, "Anthropic").getByText("In use")).toBeVisible();
+});
+
+test("a key that can't use any listed model is saved with a clear warning, not made active", async ({ page }) => {
+  await stubProviders(page, 200, { data: [{ id: "gpt-4o" }] });
+  await page.goto("/settings");
+  const openai = card(page, "OpenAI");
+  await openai.getByLabel("API key").fill("sk-proj-test-key-0123456789abcd");
+  await openai.getByRole("button", { name: "Test and save" }).click();
+  await expect(openai.getByText("None of our listed OpenAI models are available to this key. Update Instant Resume, or try another key.")).toBeVisible();
+  await expect(openai.getByText("In use")).toHaveCount(0);
+  await expect(openai.getByRole("button", { name: "Use OpenAI" })).toHaveCount(0);
 });
