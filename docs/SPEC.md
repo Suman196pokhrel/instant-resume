@@ -197,7 +197,7 @@ Screens and regions: App shell, Sidebar, Dashboard, Project card, Empty state, O
 | UI | shadcn/ui core components (Base UI primitives), Tailwind CSS v4, themed with the tokens in section 11. Use vetted 21st.dev components only where shadcn lacks one. Motion: shadcn components keep their built-in animations (`tw-animate-css`) as shipped; a shared component gets custom CSS motion only where the mock calls for it (section 12). Page, step and document transitions use React's `<ViewTransition>` (React 19.3; it drives the browser's View Transitions API). No Framer Motion or other JS animation libraries. |
 | Drag and drop | dnd-kit (with keyboard sensor) |
 | LLM | Vercel AI SDK v7, client side: `ai`, `@ai-sdk/openai`, `@ai-sdk/anthropic`, `@ai-sdk/google`. `generateObject` is deprecated in v7: the adapter calls `generateText` with `output: Output.object({ schema })` and Zod schemas. Large schemas use `jsonInPrompt` instead (§8.1). |
-| Patching | `fast-json-patch` (RFC 6902) |
+| Patching | RFC 6902 subset applied in `lib/patch/validate.ts` (only the whitelisted ops; no library) |
 | PDF | Typst via typst.ts (WASM) in a Web Worker, lazy-loaded on the Workspace and Quick generate pages only |
 | Key encryption | Web Crypto API, AES-GCM, non-extractable key in IndexedDB (see 8.2) |
 | Fonts (UI) | Schibsted Grotesk via `next/font/google` |
@@ -539,9 +539,9 @@ Four tailoring calls, plus a resume-import extraction call described in 14.1a. E
   suggestedEntryIds: string[] }
 ```
 
-Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. Studio setup does not call match: it pre-ticks entries and shows "Matches React, TypeScript…" from keyword overlap computed on the device (`lib/match/keywords.ts`: whole words, ignoring case and hyphens, plural s only on words over 4 letters), so setup costs one LLM call (the brief); match runs with generation.
+Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. Studio setup does not call match: it pre-ticks entries and shows "Matches React, TypeScript…" from keyword overlap computed on the device (`lib/match/keywords.ts`: whole words, ignoring case and hyphens, plural s only on words over 4 letters), so setup costs one LLM call (the brief). Studio generation does not call match either: the user has already chosen the entries, so its "Matching" stage runs on the device. The match call runs in Quick generate only, where it picks the entries and finds the gaps.
 
-**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. The LLM receives the skeleton (with JSON paths), the brief, the selected entries with highlight IDs, the project's `notes` (if any), prefs (tone, spelling) and returns:
+**3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. One call fills both documents (`lib/generate/generate.ts`). The LLM receives each skeleton as one line per fillable JSON path, the brief, the selected entries with highlight IDs plus the skills list, contact name and work rights, the project's `notes` (if any), prefs (tone, spelling) and returns:
 
 ```ts
 { resumeOps: Operation[]; coverLetterOps: Operation[] }   // RFC 6902
@@ -549,7 +549,7 @@ Validate every ID exists. Gap = a must-have requirement with an empty `evidence`
 
 Allowed operations for generation:
 - `replace` on `/sections/{i}/text` (summary, paragraphs)
-- `add` on `/sections/{i}/items/{k}/bullets/-` with value `{ id, text, source }`
+- `add` on `/sections/{i}/items/{k}/bullets/-` with value `{ text, source }` (the app assigns bullet IDs; an ID from the model is ignored)
 - `replace` on `/sections/{i}/items/{k}/line` (skills ordering only: same skills, new order)
 
 **4. Rewrite**: input: one section (with its index), the instruction, the brief, the KB entries that section references (with highlight IDs). Output: `{ ops: Operation[]; note?: string }`. Allowed paths are limited to `/sections/{thatIndex}/…`:
@@ -560,10 +560,12 @@ Allowed operations for generation:
 
 **Patch validator** (`lib/patch/validate.ts`), applied to every LLM output:
 1. Every op's path matches the whitelist for that call.
-2. Apply to a deep copy with fast-json-patch.
+2. Apply to a deep copy (a replace or remove needs an existing target, an add needs an existing list, a move stays inside one list). A replace of a skills `line` must keep the same skills (split on commas outside parentheses).
 3. Validate the result with the `Document` Zod schema.
-4. Every bullet's `source` exists in the KB and belongs to the item's `ref` entry (or, for generation, to a selected entry).
+4. Every bullet's `source` exists in the KB and is a highlight of the item's own `ref` entry (generation and rewrite alike).
 5. IDs, `kind`, `hidden`, section order, theme and `recipient` are unchanged.
+
+Generation retries the call once when the validator rejects its patch, then shows the output error.
 
 **Errors** (`lib/llm/errors.ts`): every failed call becomes an `LlmError` with a title, one sentence on what to do, the provider's status and code as "Details", and a next step; screens show it with `LlmErrorCallout`. The provider's own message is never shown (it can echo the key). A cancel stays an abort, not an error.
 

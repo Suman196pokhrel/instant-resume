@@ -44,6 +44,30 @@ function briefFor(ad: string) {
   };
 }
 
+const block = (prompt: string, tag: string) => prompt.match(new RegExp(`<${tag}>\\n([\\s\\S]*?)\\n</${tag}>`))?.[1] ?? "";
+
+/** Fills whatever skeleton the prompt carries from its own knowledge base, so it fits any KB (the shared e2e one changes). */
+function generationFor(prompt: string) {
+  const brief = JSON.parse(block(prompt, "brief") || "{}");
+  const kb = JSON.parse(block(prompt, "knowledge-base") || "{}") as { name?: string; entries?: { id: string; highlights?: { id: string; text: string }[] }[] };
+  const highlights = new Map((kb.entries ?? []).map((e) => [e.id, e.highlights ?? []]));
+  const evidence = [...highlights.values()].flat().slice(0, 2).map((h) => h.text);
+  const PARAGRAPHS: Record<string, string> = {
+    Opening: `I'm applying for the ${brief.title} role at ${brief.company}.`,
+    Evidence: evidence.join(" ") || "My experience is set out in my resume.",
+    Fit: `Your ad asks for ${(brief.requirements ?? []).slice(0, 2).join(" and ") || "relevant experience"}, which matches my recent work.`,
+    Close: "Thank you for considering my application.",
+  };
+  const ops = (skeleton: string) =>
+    skeleton.split("\n").flatMap((line): object[] => {
+      const text = line.match(/^(\/sections\/\d+\/text) {2}\((.+)\)$/);
+      if (text) return [{ op: "replace", path: text[1], value: PARAGRAPHS[text[2]] ?? `${kb.name ?? "Engineer"}, applying for the ${brief.title} role at ${brief.company}.` }];
+      const list = line.match(/^ +(\/sections\/\d+\/items\/\d+\/bullets\/-) {2}entry (\S+):/);
+      return list ? (highlights.get(list[2]) ?? []).slice(0, 3).map((h) => ({ op: "add", path: list[1], value: { text: h.text, source: h.id } })) : [];
+    });
+  return { resumeOps: ops(block(prompt, "resume-skeleton")), coverLetterOps: ops(block(prompt, "cover-letter-skeleton")) };
+}
+
 export const MOCK_FIXTURES: Record<string, Fixture> = {
   ping: (_args, scenario) => ({ ok: true, scenario }),
   // The on-device parser's reading of the resume, so tests see the uploaded file's own details reach Review.
@@ -61,6 +85,7 @@ export const MOCK_FIXTURES: Record<string, Fixture> = {
     }
     return briefFor(prompt.match(/^<job-ad>\n([\s\S]*)\n<\/job-ad>$/)?.[1] ?? "");
   },
+  generate: ({ prompt }) => generationFor(prompt),
 };
 
 /** The scenario from `?mock=` (SPEC §17), or "happy". */
