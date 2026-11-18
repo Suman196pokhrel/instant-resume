@@ -4,7 +4,7 @@ title: LLM adapter, mock provider and model picker
 status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T07:08:00Z'
+updated_date: '2026-11-18T07:11:00Z'
 labels:
   - m4
 dependencies:
@@ -24,7 +24,7 @@ As a job seeker, I can pick which connected model to use from anywhere, and the 
 - [x] #1 The model picker lists only connected providers' models, and switching updates the label everywhere in one click
 - [x] #2 All LLM calls go through one adapter with a deterministic mock provider used by every automated test
 - [x] #3 Provider responses are validated against Zod schemas; invalid output becomes a readable error, never a crash
-- [x] #4 A documented, opt-in check confirms browser-direct requests (CORS) work for all 3 providers
+- [ ] #4 A documented, opt-in check confirms browser-direct requests (CORS) work for all 3 providers
 <!-- AC:END -->
 
 ## Definition of Done
@@ -83,6 +83,14 @@ created: 2026-11-18T07:08:00Z
 ---
 
 Built: adapter (generateText + Output.object, one retry), LlmError table + LlmErrorCallout, mock adapter (ping fixture), available models from key test with fallback, ModelPicker synced via useLlmChoice, /dev/llm probe, opt-in cors.spec.ts. 158 unit + 65 e2e pass, 3 skipped (cors, needs real keys; not yet run against real providers).
+
+---
+
+created: 2026-11-18T07:11:00Z
+
+---
+
+AC4: check built (tests/e2e/cors.spec.ts + /dev/llm) but not yet run against live providers; waiting on a run with real keys.
 
 ---
 <!-- COMMENTS:END -->
