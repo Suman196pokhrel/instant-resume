@@ -14,6 +14,7 @@ import type { Prefs } from "@/lib/schemas/settings";
 import { createWorkspaceStore, useWorkspace, WorkspaceContext, type Kind } from "@/lib/stores/workspace";
 import { toast } from "@/lib/toast";
 import { ContentInspector } from "./ContentInspector";
+import { DesignTab } from "./DesignTab";
 import { Preview } from "./Preview";
 import { StructureTab } from "./StructureTab";
 
@@ -103,9 +104,8 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
             <TabsContent value="structure" className="min-h-0 flex-1 overflow-auto p-4">
               <StructureTab />
             </TabsContent>
-            {/* shortcut: placeholder until TASK-18 (Design) */}
-            <TabsContent value="design" className="p-4 text-muted-foreground">
-              Fonts, sizes and colours arrive with the next update.
+            <TabsContent value="design" className="min-h-0 flex-1 overflow-auto p-4">
+              <DesignTab />
             </TabsContent>
           </Tabs>
         </aside>

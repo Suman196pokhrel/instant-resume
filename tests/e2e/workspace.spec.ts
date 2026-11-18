@@ -228,3 +228,67 @@ test("a hidden section leaves the preview but stays listed, and can be shown aga
   await expect.poll(() => puts.map((p) => p.revision.label)).toEqual(["Hid Summary", "Showed Summary"]);
   expect(await llmCalls(page)).toEqual([]);
 });
+
+// TASK-18: Design tab (SPEC §14.5): every control re-renders the preview at once, with no LLM call.
+async function openDesign(page: Page) {
+  await page.addInitScript(() => ((window as { __llmCalls?: string[] }).__llmCalls = []));
+  const { id } = await makeProject(page);
+  await page.goto(`/projects/${id}`);
+  await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
+  await inspectorOf(page).getByRole("tab", { name: "Design" }).click();
+  return inspectorOf(page);
+}
+
+test("each control re-renders the preview at once, with no LLM call (AC1, AC2, DoD)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const design = await openDesign(page);
+  await expect(design.getByText("Design changes go straight to the renderer. No LLM call, no tokens.")).toBeVisible();
+  let before = await sheet(page).innerHTML();
+  const body = design.getByRole("slider", { name: "Body text" });
+  await body.focus();
+  await page.keyboard.press("ArrowRight");
+  await page.keyboard.press("ArrowRight");
+  await expect(design.locator("[data-slot=slider]", { hasText: "Body text" })).toContainText("11.5 pt");
+  await expect.poll(() => sheet(page).innerHTML()).not.toBe(before);
+  const status = preview(page).getByText(/^Rendered in \d+ ms · 1 page · A4$/);
+  await expect(status).toBeVisible();
+  await expect(status.locator("svg")).toBeAttached(); // the zap after a design change
+  await expect(design.getByText(/^Last render \d+ ms$/)).toBeVisible();
+
+  before = await sheet(page).innerHTML();
+  await design.getByRole("radio", { name: "Liberation Sans" }).focus();
+  await page.keyboard.press("ArrowRight"); // radio group: arrows choose (Carlito)
+  await expect(design.getByRole("radio", { name: "Carlito" })).toBeChecked();
+  await expect.poll(() => sheet(page).innerHTML()).not.toBe(before);
+
+  before = await sheet(page).innerHTML();
+  await design.getByRole("button", { name: "Accent #1F4E8C" }).focus();
+  await page.keyboard.press("Enter");
+  await expect(design.getByRole("button", { name: "Accent #1F4E8C" })).toHaveAttribute("aria-pressed", "true");
+  await expect(design.getByRole("button", { name: "Accent #0E7466" })).toHaveAttribute("aria-pressed", "false");
+  await expect.poll(() => sheet(page).innerHTML()).not.toBe(before);
+
+  await expect.poll(() => puts.map((p) => p.revision)).toEqual([{ kind: "adjustment", label: "Adjusted design", coalesceKey: "design" }]);
+  expect(await page.evaluate(() => (window as { __llmCalls?: string[] }).__llmCalls)).toEqual([]); // AC2
+});
+
+test("Reset restores the defaults and is disabled when already there; each document has its own theme (AC3)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const puts = documentPuts(page);
+  const design = await openDesign(page);
+  const reset = design.getByRole("button", { name: "Reset to template defaults" });
+  await expect(reset).toBeDisabled();
+  await design.getByRole("button", { name: "Accent #2E2E2E" }).click();
+  await expect(reset).toBeEnabled();
+
+  await page.getByRole("tab", { name: "Cover letter" }).click();
+  await expect(design.getByRole("button", { name: "Accent #0E7466" })).toHaveAttribute("aria-pressed", "true");
+  await expect(reset).toBeDisabled();
+  await page.getByRole("tab", { name: "Resume" }).click();
+
+  await reset.click();
+  await expect(design.getByRole("button", { name: "Accent #0E7466" })).toHaveAttribute("aria-pressed", "true");
+  await expect(reset).toBeDisabled();
+  await expect.poll(() => puts.map((p) => p.revision.label)).toEqual(["Adjusted design", "Reset design to template defaults"]);
+});

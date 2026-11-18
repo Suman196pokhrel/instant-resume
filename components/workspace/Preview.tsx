@@ -4,6 +4,7 @@ import { useEffect, useMemo, useRef, useState } from "react";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
+import { Zap } from "lucide-react";
 import { useWorkspace } from "@/lib/stores/workspace";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -22,7 +23,9 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const doc = useMemo(() => saved && pending ? { ...saved, sections: saved.sections.map((x) => (x.id === pending.sectionId ? pending.after : x)) } : saved, [saved, pending]); // a proposal shows before it is accepted
   const zoom = useWorkspace((s) => s.zoom);
   const setZoom = useWorkspace((s) => s.setZoom);
-  const [out, setOut] = useState<{ svg: string; ms: number; pages: number } | null>(null);
+  const setRenderMs = useWorkspace((s) => s.setRenderMs);
+  const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean } | null>(null);
+  const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
   const [fit, setFit] = useState(1);
   const latest = useRef(0);
@@ -31,19 +34,22 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   useEffect(() => {
     if (!doc) return;
     const n = ++latest.current;
+    const design = !!shown.current && shown.current !== doc && shown.current.sections === doc.sections && shown.current.theme !== doc.theme;
+    shown.current = doc;
     const t = setTimeout(async () => {
       try {
         const { render } = await import("@/lib/render/client");
         const r = await render(kind, { document: doc, kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling }, "svg");
         if (n !== latest.current) return; // a newer change is already rendering
-        setOut({ svg: r.svg ?? "", ms: r.ms, pages: r.pages });
+        setOut({ svg: r.svg ?? "", ms: r.ms, pages: r.pages, design });
+        setRenderMs(r.ms);
         setError("");
       } catch (e) {
         if (n === latest.current) setError(e instanceof Error ? e.message : String(e));
       }
-    }, DEBOUNCE);
+    }, design ? 0 : DEBOUNCE); // design changes render at once (SPEC §9.1); typing is debounced
     return () => clearTimeout(t);
-  }, [doc, kind, kb, brief.title, prefs.paper, prefs.spelling]);
+  }, [doc, kind, kb, brief.title, prefs.paper, prefs.spelling, setRenderMs]);
 
   useEffect(() => {
     const el = scroll.current;
@@ -75,7 +81,8 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
           </Tooltip>
           {icon("Zoom in", () => step(0.1), "+")}
         </div>
-        <span className="ml-auto text-[13px] whitespace-nowrap text-muted-foreground">
+        <span className="ml-auto inline-flex items-center gap-1 text-[13px] whitespace-nowrap text-muted-foreground">
+          {out?.design && !error && <Zap aria-hidden className="size-3 text-primary" />}
           {error ? "Couldn't render this document" : out ? `Rendered in ${out.ms} ms · ${out.pages} ${out.pages === 1 ? "page" : "pages"} · ${prefs.paper}` : ""}
         </span>
       </div>
