@@ -1,4 +1,5 @@
 import { expect, test, type Page } from "@playwright/test";
+import { makeProject } from "./projects";
 
 const SHELL_ROUTES: [path: string, h1: string][] = [
   ["/onboarding", "Build your knowledge base"],
@@ -40,9 +41,9 @@ test("every route renders inside the right layout without errors (AC2, AC4)", as
     await expect(page.getByRole("heading", { level: 1 }), path).toHaveText(h1);
     await expect(page.locator("[data-shell]"), path).toHaveAttribute("data-shell", "full");
   }
-  await page.goto("/projects/sample");
+  await page.goto(`/projects/${(await makeProject(page)).id}`);
   await expect(page.locator("[data-shell]")).toHaveAttribute("data-shell", "compact");
-  await expect(page.getByRole("heading", { level: 1 })).toHaveText("Workspace");
+  await expect(page.getByRole("tablist", { name: "Document" })).toBeVisible();
 
   await page.goto("/onboarding/manual");
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Contact details");

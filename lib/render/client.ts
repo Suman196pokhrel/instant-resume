@@ -23,10 +23,10 @@ export function warmUp() {
   start();
 }
 
-export function render(kind: RenderKind, data: RenderInput): Promise<RenderResult> {
+export function render(kind: RenderKind, data: RenderInput, format: "pdf" | "svg" = "pdf"): Promise<RenderResult> {
   const id = ++nextId;
   return new Promise((resolve, reject) => {
     pending.set(id, { resolve, reject });
-    start().postMessage({ type: "compile", id, kind, data, format: "pdf" });
+    start().postMessage({ type: "compile", id, kind, data, format });
   });
 }

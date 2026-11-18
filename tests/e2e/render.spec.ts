@@ -2,6 +2,7 @@ import { execFileSync } from "node:child_process";
 import { mkdtempSync, readFileSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
+import { makeProject } from "./projects";
 import { expect, test, type Page } from "@playwright/test";
 
 // TASK-5 Typst spike (SPEC §9.1–9.2): real PDFs from the worker, timings, text order, lazy loading.
@@ -124,11 +125,11 @@ test.describe("lazy loading (AC4)", () => {
     expect(t.wasm).toEqual([]);
   });
 
-  for (const path of ["/projects/sample", "/new/quick"]) {
+  for (const path of ["/projects/{id}", "/new/quick"]) {
     test(`${path} starts the worker and fetches the Typst WASM`, async ({ page }) => {
       const t = await track(page);
       const wasm = page.waitForRequest((r) => r.url().endsWith(".wasm"));
-      await page.goto(path);
+      await page.goto(path.replace("{id}", path.includes("{id}") ? (await makeProject(page)).id : ""));
       await wasm;
       expect(await t.workers()).toBe(1);
     });

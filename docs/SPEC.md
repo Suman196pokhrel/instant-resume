@@ -608,11 +608,11 @@ Token estimate shown under the Instruction box: `Sends only this section, about 
 `lib/render/worker.ts` loads the typst.ts compiler WASM, the three font families from `public/fonts`, and the two templates. Messages:
 
 ```ts
-{ type: 'compile'; kind: 'resume'|'coverLetter'; data: RenderInput; format: 'vector'|'pdf' }  →  { pages: number; artifact: Uint8Array; ms: number }
+{ type: 'compile'; kind: 'resume'|'coverLetter'; data: RenderInput; format: 'svg'|'pdf' }  →  { pages: number; artifact: Uint8Array; svg?: string; ms: number }
 RenderInput = { document, kb (contact, workRights), brief (for the letter), paper: 'A4'|'Letter', spelling }
 ```
 
-The template reads the data from a virtual file `/data.json`. Lazy-load the worker on first entry to the Workspace or Quick generate. Show the loader card "Loading the Typst renderer" with a progress bar and "6.4 MB, loaded once per session" (use the real size), then cache it for the session.
+The template reads the data from a virtual file `/data.json`. Lazy-load the worker on first entry to the Workspace or Quick generate. Show the loader card "Loading the Typst renderer" and "11 MB, loaded once per session" (the compiler WASM is 10.8 MB gzipped; the SVG renderer, `@myriaddreamin/typst-ts-renderer`, about 350 KB, loads with the first preview), then cache it for the session. "svg" compiles to Typst's vector format and renders it to one SVG of all pages inside the worker, without the renderer's scripts.
 
 Preview: render pages to SVG/canvas inside the A4 "sheet" frame. Re-render on every content, structure or theme change. Debounce typing by 120 ms; design sliders render immediately. **Target under 300 ms** for design changes. Show "Rendered in {ms} ms · {n} pages · A4" in the preview bar, with a zap icon after design changes.
 

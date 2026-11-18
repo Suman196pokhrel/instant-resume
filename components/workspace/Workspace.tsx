@@ -1,0 +1,134 @@
+"use client";
+
+import { useEffect, useState } from "react";
+import Link from "next/link";
+import { Check, ChevronLeft, Copy, Loader2, TriangleAlert } from "lucide-react";
+import { ModelPicker } from "@/components/shell/ModelPicker";
+import { Button } from "@/components/ui/button";
+import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
+import type { ProjectBundle } from "@/lib/db/projects";
+import { plainText } from "@/lib/doc/plain-text";
+import type { KnowledgeBase } from "@/lib/schemas/kb";
+import type { Prefs } from "@/lib/schemas/settings";
+import { createWorkspaceStore, useWorkspace, WorkspaceContext, type Kind } from "@/lib/stores/workspace";
+import { toast } from "@/lib/toast";
+import { ContentInspector } from "./ContentInspector";
+import { Preview } from "./Preview";
+
+// The Workspace (SPEC §14.5, mock views-workspace.js): bar, preview and inspector. The job panel is TASK-45; undo,
+// history and export join the bar with their cards.
+
+export type WorkspaceProps = { bundle: ProjectBundle; kb: KnowledgeBase; prefs: Prefs };
+export const KIND_LABEL: Record<Kind, string> = { resume: "Resume", coverLetter: "Cover letter" };
+
+export async function copyText(text: string, label: string) {
+  try {
+    await navigator.clipboard.writeText(text);
+    toast(`${label} copied as plain text`);
+  } catch {
+    toast("Couldn't copy. Select the text and copy it yourself.", { kind: "error" });
+  }
+}
+
+export function Workspace(props: WorkspaceProps) {
+  const [store] = useState(() => createWorkspaceStore(props.bundle.documents));
+  useEffect(() => {
+    const flush = () => store.getState().flush();
+    window.addEventListener("pagehide", flush);
+    return () => {
+      window.removeEventListener("pagehide", flush);
+      flush(); // leaving for another page sends what's pending
+    };
+  }, [store]);
+  return (
+    <WorkspaceContext value={store}>
+      <Frame {...props} />
+    </WorkspaceContext>
+  );
+}
+
+function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
+  const kind = useWorkspace((s) => s.kind);
+  const setKind = useWorkspace((s) => s.setKind);
+  const doc = useWorkspace((s) => s.docs[s.kind]);
+  return (
+    <div className="grid h-dvh grid-rows-[54px_minmax(0,1fr)] overflow-hidden max-[900px]:h-auto max-[900px]:overflow-visible">
+      <header className="grid grid-cols-[1fr_auto_1fr] items-center gap-3 border-b border-line bg-surface-2 pr-3.5 pl-4 max-[900px]:grid-cols-[1fr_auto]">
+        <div className="flex min-w-0 items-center gap-2">
+          <Link href="/dashboard" className="inline-flex items-center gap-1 font-medium whitespace-nowrap text-ink-2 no-underline hover:text-ink">
+            <ChevronLeft className="size-[15px]" /> Applications
+          </Link>
+          <span className="text-muted-foreground">/</span>
+          <span className="truncate font-semibold max-[900px]:hidden">
+            {project.role} <span className="font-normal text-muted-foreground">at {project.company}</span>
+          </span>
+        </div>
+        <Tabs value={kind} onValueChange={(v) => setKind(v as Kind)}>
+          <TabsList aria-label="Document">
+            {(["resume", "coverLetter"] as const).map((k) => (
+              <TabsTrigger key={k} value={k}>
+                {KIND_LABEL[k]}
+              </TabsTrigger>
+            ))}
+          </TabsList>
+        </Tabs>
+        <div className="flex items-center justify-end gap-1.5 max-[900px]:col-span-2">
+          <SavePill />
+          <div className="mr-0.5 flex items-center gap-0.5 border-r border-line pr-2">
+            <Tooltip>
+              <TooltipTrigger render={<Button size="icon" aria-label="Copy as plain text" disabled={!doc} onClick={() => doc && copyText(plainText(doc, kb, project.brief, prefs.spelling), KIND_LABEL[kind])} />}>
+                <Copy />
+              </TooltipTrigger>
+              <TooltipContent>Copy as plain text, for job sites that ask you to paste</TooltipContent>
+            </Tooltip>
+          </div>
+          <ModelPicker />
+        </div>
+      </header>
+      <div className="grid min-h-0 grid-cols-[minmax(0,1fr)_372px] max-[1180px]:grid-cols-[minmax(0,1fr)_340px] max-[900px]:grid-cols-1">
+        <Preview kb={kb} brief={project.brief} prefs={prefs} />
+        <aside aria-label="Inspector" className="flex min-h-0 flex-col border-l border-line bg-surface max-[900px]:border-t max-[900px]:border-l-0">
+          <Tabs defaultValue="content" className="flex min-h-0 flex-1 flex-col">
+            <TabsList variant="underline" aria-label="Inspector">
+              <TabsTrigger value="content">Content</TabsTrigger>
+              <TabsTrigger value="structure">Structure</TabsTrigger>
+              <TabsTrigger value="design">Design</TabsTrigger>
+            </TabsList>
+            <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
+              <ContentInspector />
+            </TabsContent>
+            {/* shortcut: placeholders until TASK-17 (Structure) and TASK-18 (Design) */}
+            <TabsContent value="structure" className="p-4 text-muted-foreground">
+              Reordering and hiding sections arrive with the next update.
+            </TabsContent>
+            <TabsContent value="design" className="p-4 text-muted-foreground">
+              Fonts, sizes and colours arrive with the next update.
+            </TabsContent>
+          </Tabs>
+        </aside>
+      </div>
+    </div>
+  );
+}
+
+function SavePill() {
+  const save = useWorkspace((s) => s.save);
+  return (
+    <span role="status" className="inline-flex items-center gap-[5px] px-1.5 text-[12.5px] whitespace-nowrap text-muted-foreground">
+      {save === "saving" ? (
+        <>
+          <Loader2 aria-hidden className="size-[13px] animate-spin" /> Saving
+        </>
+      ) : save === "error" ? (
+        <>
+          <TriangleAlert aria-hidden className="size-[13px] text-warn" /> Not saved
+        </>
+      ) : (
+        <>
+          <Check aria-hidden className="size-[13px] text-primary" /> Saved
+        </>
+      )}
+    </span>
+  );
+}
