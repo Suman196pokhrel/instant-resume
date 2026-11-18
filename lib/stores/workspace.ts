@@ -12,6 +12,7 @@ import { toast } from "@/lib/toast";
 
 export type Kind = ResumeDocument["kind"];
 export type SaveState = "saved" | "saving" | "error";
+export type UndoStep = { label: string; doc: ResumeDocument }; // the document before the change
 export type Proposal = { sectionId: string; kind: Kind; before: Section; after: Section; instruction: string; ops: Op[]; warnings: string[] };
 type State = {
   kind: Kind;
@@ -38,11 +39,16 @@ type State = {
   setTheme: (patch: Partial<Theme>) => void;
   resetTheme: () => void;
   renderMs: number | null; // the preview's last render, for the Design tab footer
+  undoStack: Record<Kind, UndoStep[]>;
+  /** Restores the current document to before its latest step and saves that as "Undid: {label}". */
+  undo: () => void;
   setRenderMs: (ms: number) => void;
   flush: () => void;
 };
 
 export const SAVE_DELAY = 800;
+export const UNDO_LIMIT = 50;
+export const BURST_IDLE = 1500; // typing or dragging with pauses shorter than this is one undo step
 type RevisionIn = Pick<Revision, "kind" | "label" | "coalesceKey">;
 
 export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
@@ -50,6 +56,7 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
   const labels = new Map<Kind, RevisionIn>();
   let inflight = 0;
   let queue = Promise.resolve(); // saves go out in order, so an older snapshot never lands last
+  const bursts = new Map<Kind, { key: string; at: number }>();
 
   return createStore<State>()((set, get) => {
     function save(kind: Kind, keepalive = false) {
@@ -73,22 +80,35 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       if (keepalive) void send(); // the page is going: no waiting behind earlier saves
       else queue = queue.then(send);
     }
-    /** A change saved at once with its own revision; a hand edit still waiting goes first with its own. */
-    function commit(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn) {
+    function pushUndo(kind: Kind, doc: ResumeDocument, label: string) {
+      const stack = [...get().undoStack[kind], { label, doc }].slice(-UNDO_LIMIT);
+      set({ undoStack: { ...get().undoStack, [kind]: stack } });
+    }
+    /** Sends the save still waiting for this document now, under its own revision. */
+    function sendWaiting(kind: Kind) {
+      if (!timers.has(kind)) return;
+      clearTimeout(timers.get(kind));
+      save(kind);
+    }
+    /** A change saved at once with its own revision and undo step; a hand edit still waiting goes first with its own. */
+    function commit(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn, undoable = true) {
       const doc = get().docs[kind];
       if (!doc) return;
-      if (timers.has(kind)) {
-        clearTimeout(timers.get(kind));
-        save(kind);
-      }
+      sendWaiting(kind);
+      bursts.delete(kind);
+      if (undoable) pushUndo(kind, doc, revision.label);
       set({ docs: { ...get().docs, [kind]: { ...doc, ...change } }, save: "saving" });
       labels.set(kind, revision);
       save(kind);
     }
     /** A change applied now and saved after a pause, so a burst (typing, dragging a slider) is one save. */
-    function later(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn) {
+    function later(kind: Kind, change: Partial<ResumeDocument>, revision: RevisionIn & { coalesceKey: string }) {
       const doc = get().docs[kind];
       if (!doc) return;
+      if (labels.get(kind)?.coalesceKey !== revision.coalesceKey) sendWaiting(kind); // each change keeps its own revision
+      const burst = bursts.get(kind);
+      if (burst?.key !== revision.coalesceKey || Date.now() - burst.at > BURST_IDLE) pushUndo(kind, doc, revision.label);
+      bursts.set(kind, { key: revision.coalesceKey, at: Date.now() });
       set({ docs: { ...get().docs, [kind]: { ...doc, ...change } }, save: "saving" });
       labels.set(kind, revision);
       clearTimeout(timers.get(kind));
@@ -152,6 +172,16 @@ export function createWorkspaceStore(docs: ResumeDocument[]): StoreApi<State> {
       resetTheme: () => commit(get().kind, { theme: THEME_DEFAULTS }, { kind: "adjustment", label: "Reset design to template defaults" }),
       renderMs: null,
       setRenderMs: (renderMs) => set({ renderMs }),
+      undoStack: { resume: [], coverLetter: [] },
+      undo: () => {
+        const { kind, undoStack, selected } = get();
+        const step = undoStack[kind].at(-1);
+        if (!step) return;
+        const label = `Undid: ${step.label}`;
+        set({ undoStack: { ...undoStack, [kind]: undoStack[kind].slice(0, -1) }, ...drop(), selected: step.doc.sections.some((s) => s.id === selected) ? selected : null });
+        commit(kind, { sections: step.doc.sections, theme: step.doc.theme, recipient: step.doc.recipient }, { kind: "restore", label }, false);
+        toast(label);
+      },
       /** Sends pending saves now (leaving the page). */
       flush: () => {
         for (const [kind, t] of timers) {
