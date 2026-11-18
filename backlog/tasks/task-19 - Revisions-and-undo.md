@@ -4,7 +4,7 @@ title: Revisions and undo
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:21:00Z'
+updated_date: '2026-11-18T11:07:00Z'
 labels:
   - m6
 dependencies:
@@ -49,6 +49,14 @@ created: 2026-11-18T10:21:00Z
 ---
 
 From TASK-16: the rewrite Accept toast 'Change applied to {title}' needs its Undo action, and Accept must push an undo step (shortcut comment in components/workspace/Instruction.tsx). Revisions: Accept saves kind rewrite, label 'Rewrote {title}: "{instruction}"', no coalesceKey (lib/stores/workspace.ts accept).
+
+---
+
+created: 2026-11-18T11:07:00Z
+
+---
+
+From TASK-18 review: lib/stores/workspace.ts keeps one pending revision label per document, so a hand edit followed within SAVE_DELAY by a design change (or an edit to another section) is saved as one PUT under the later label; content is kept, the earlier label is lost. Coalescing per key should give each its own revision.
 
 ---
 <!-- COMMENTS:END -->

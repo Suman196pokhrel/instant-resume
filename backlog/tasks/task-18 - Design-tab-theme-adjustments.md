@@ -1,10 +1,10 @@
 ---
 id: TASK-18
 title: 'Design tab: theme adjustments'
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:52:00Z'
+updated_date: '2026-11-18T11:07:00Z'
 labels:
   - m6
 dependencies:
@@ -59,6 +59,13 @@ Tests
 Out of scope
 - Undo of design bursts (TASK-19), coalescing within 60 s (TASK-19), page fitting (TASK-25), presets (Quick generate)
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Design tab: font cards, six sliders, swatches + custom colour, Reset (disabled at defaults), Last render; design-only changes render without the debounce, with the zap; saved as one 'Adjusted design'; spy proves no LLM call.
+Review: sample fonts load, slider values save clean; per-document single pending label noted on TASK-19. Template calibration is TASK-47.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
