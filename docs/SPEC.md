@@ -512,7 +512,7 @@ interface LlmAdapter {
 
 Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-browser-access: true` (the SDK doesn't add it). All three providers accept browser calls; the opt-in check is `ANTHROPIC_API_KEY=… OPENAI_API_KEY=… GEMINI_API_KEY=… pnpm test:e2e tests/e2e/cors.spec.ts`, which makes one structured call per provider from Chromium through `/dev/llm` and confirms every listed model ID still exists. If a provider can't be called from the browser, report it; don't proxy keys through the server.
 
-**Mock provider:** `createMockAdapter` (`lib/llm/mock.ts`), enabled when `NEXT_PUBLIC_LLM_MOCK=1` (inlined at build time; the e2e build sets it). It returns deterministic fixtures keyed by call `name` after a 2 s delay, validated with the call's schema like a real answer, and supports scenarios `happy | gaps | findings | error-stage-1…5 | extract-error` via a `?mock=` query param. The `extract` fixture is the on-device parser's reading of the resume, so tests see the uploaded file's own details reach Review. Each other call's fixtures, and the pipeline's stage delays (2–3.6 s), arrive with that call and the pipeline. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
+**Mock provider:** `createMockAdapter` (`lib/llm/mock.ts`), enabled when `NEXT_PUBLIC_LLM_MOCK=1` (inlined at build time; the e2e build sets it). It returns deterministic fixtures keyed by call `name` after a 2 s delay, validated with the call's schema like a real answer, and supports scenarios `happy | gaps | findings | error-stage-1…5 | extract-error | brief-error` via a `?mock=` query param. The `brief` fixture returns §17's Mintleaf brief for the Mintleaf ad (else a plain brief from the ad's first lines). The `extract` fixture is the on-device parser's reading of the resume, so tests see the uploaded file's own details reach Review. Each other call's fixtures, and the pipeline's stage delays (2–3.6 s), arrive with that call and the pipeline. **All CI e2e tests run against the mock provider.** The public demo also uses fixtures, but requires the separate static/browser-persistence boundary in 3.1; enabling this adapter alone does not make the real app deployable as a static site.
 
 ### 8.2 Connections and key storage
 
@@ -530,7 +530,7 @@ Browser-direct calls: Anthropic needs the header `anthropic-dangerous-direct-bro
 
 Four tailoring calls, plus a resume-import extraction call described in 14.1a. Each uses `generateObject` with a Zod schema; **output that fails validation is rejected before it touches anything**. Retry once on a validation failure, then surface an error.
 
-**1. Extract brief**: input: JD text. Output: `JobBrief`. Keywords must be terms that appear in the JD.
+**1. Extract brief**: input: JD text. Output: `JobBrief` (strict structured output). Keywords are short terms (one to three words), must-haves and nice-to-haves alike; after the call, any keyword the JD doesn't use (as the term or its stem, so "Testing" passes for "tests") is dropped. Measured on Mintleaf (2026-11-18): Sonnet 5.5 2.5 s, about 1,160 input and 250 output tokens.
 
 **2. Match (evidence)**: input: brief + KB (with IDs). Output:
 
@@ -539,7 +539,7 @@ Four tailoring calls, plus a resume-import extraction call described in 14.1a. E
   suggestedEntryIds: string[] }
 ```
 
-Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. (The Studio path uses `suggestedEntryIds` to pre-tick entries and shows "Matches React, TypeScript…" reasons computed locally from keyword overlap.)
+Validate every ID exists. Gap = a must-have requirement with an empty `evidence` after validation. Studio setup does not call match: it pre-ticks entries and shows "Matches React, TypeScript…" from keyword overlap computed on the device (`lib/match/keywords.ts`: whole words, ignoring case and hyphens, plural s only on words over 4 letters), so setup costs one LLM call (the brief); match runs with generation.
 
 **3. Generate**: the app first builds a **skeleton document** deterministically from the selected KB entries: sections, items with `ref`, headings, sub, meta, skills lines, and empty `bullets` and `text`. The LLM receives the skeleton (with JSON paths), the brief, the selected entries with highlight IDs, the project's `notes` (if any), prefs (tone, spelling) and returns:
 
@@ -1060,7 +1060,7 @@ Settings used: theme preset, page budget (1 page also hides Portfolio, Certifica
 
 ### 14.4 Studio setup (`/new/studio`) and generation
 
-A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries → 4 Generate. The draft persists across navigation.
+A stepper with 4 steps: 1 Job description → 2 Job brief → 3 Choose entries → 4 Generate. The draft (`{ stage, jdText, notes, brief, selected }`) persists across navigation and reloads in this browser's localStorage (`instant-resume-studio-draft`); generation saves notes, brief and selection with the project.
 
 1. **Job description:** "Paste the job description" / "Paste the whole ad as plain text. You'll see what was extracted before anything is generated." No-connection callout. Sample chips (dev only). Textarea and character count, then the same optional "Notes for this application" field as Quick generate, folded into a disclosure that starts open only when there are notes. "✦ Extract requirements" (disabled without a connection; same under-80-characters error). While extracting: "Reading the job description with {model}…" and a brief skeleton (title bar, lines, chips).
 2. **Job brief:** "Job brief" / "Extracted from the ad. Fix anything that's wrong; keywords drive tailoring and checks." A pill "✦ Extracted by {model}". Editable Role, Company, Location and Team (optional). Two columns: Requirements list (and Nice to have), each heading with a count; Keywords (with a count) as removable chips (teal with ✓ when the KB supports them, dashed grey otherwise) under a two-item legend "Backed by your knowledge base" / "Not backed, so it can't be claimed", plus "Add a keyword". A work-rights callout if the ad states a requirement: "{ad requirement}. Your knowledge base says: {status}." Buttons: "Edit job description" and "Choose entries".

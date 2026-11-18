@@ -22,7 +22,7 @@ const FIXTURES = join(__dirname, "../fixtures/import");
 type Kb = { contact: { name: string }; roles: { title: string }[]; skills: unknown[]; additional: { title: string; referenceOnly?: boolean }[] };
 const getKb = async (page: Page): Promise<Kb> => (await page.request.get("/api/kb")).json();
 const file = (name: string, body: string | Buffer) => ({ name, mimeType: "text/plain", buffer: Buffer.isBuffer(body) ? body : Buffer.from(body) });
-const alert = (page: Page) => page.getByRole("alert").filter({ hasNotText: /^$/ });
+const alert = (page: Page) => page.getByRole("main").getByRole("alert").filter({ hasNotText: /^$/ }); // not Next.js' route announcer
 const heading = (page: Page) => page.getByRole("heading", { level: 1 });
 const toReview = (page: Page) => page.getByRole("navigation", { name: "Onboarding steps" }).getByRole("button", { name: /Review/ }).click();
 

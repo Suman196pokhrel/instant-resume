@@ -9,7 +9,7 @@ const SYSTEM = `You read a job ad and return its job brief as JSON.
 - seniority is one of Junior, Mid-level, Senior, Lead, judged from the title and the years asked for.
 - requirements: the must-haves, 3 to 8 short phrases in the ad's own words.
 - niceToHave: the optional extras, short phrases.
-- keywords: 8 to 15 skills, tools or practices the ad asks for, each written as it appears in the ad.
+- keywords: 8 to 15 short terms of one to three words (a skill, tool or practice, like "React", "PostgreSQL", "Testing" or "Mentoring") that the ad asks for, must-haves and nice-to-haves alike. Use the ad's own word for each; never a whole phrase like "performance and reliability".
 - workRights: what the ad says about work rights or visas, or "Not stated".
 - Use only what the ad says. Never invent requirements.`;
 
