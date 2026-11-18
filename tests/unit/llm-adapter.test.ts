@@ -22,6 +22,12 @@ describe("createAdapter", () => {
     expect(await createAdapter(model, ctx).generateObject(args)).toEqual({ object: { ok: true }, usage: { inputTokens: 12, outputTokens: 3 } });
   });
 
+  it("passes a call's output budget to the provider", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: reply('{"ok":true}') });
+    await createAdapter(model, ctx).generateObject({ ...args, maxOutputTokens: 16000 });
+    expect(model.doGenerateCalls[0].maxOutputTokens).toBe(16000);
+  });
+
   it("retries once when the output fails the schema, then succeeds", async () => {
     const model = new MockLanguageModelV4({ doGenerate: [reply('{"ok":"yes"}'), reply('{"ok":false}')] });
     expect((await createAdapter(model, ctx).generateObject(args)).object).toEqual({ ok: false });

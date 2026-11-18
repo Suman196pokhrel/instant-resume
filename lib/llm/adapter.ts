@@ -11,7 +11,8 @@ import { resolveChoice } from "./use-choice";
 
 // SPEC §8.1: one adapter hides the providers; every LLM call in the app goes through it, and tests swap in the mock.
 
-export type GenerateArgs<T> = { name: string; schema: z.ZodType<T>; system: string; prompt: string; signal?: AbortSignal };
+/** maxOutputTokens: for long answers; the Anthropic SDK defaults to 4096 for model IDs it doesn't know. */
+export type GenerateArgs<T> = { name: string; schema: z.ZodType<T>; system: string; prompt: string; maxOutputTokens?: number; signal?: AbortSignal };
 export type Usage = { inputTokens: number; outputTokens: number };
 export interface LlmAdapter {
   generateObject<T>(args: GenerateArgs<T>): Promise<{ object: T; usage: Usage }>;
@@ -32,10 +33,10 @@ export function languageModel(id: ProviderId, apiKey: string, model: string, fet
 /** Validates output with the call's Zod schema (the SDK does, via Output.object), retrying once on bad output. */
 export function createAdapter(model: LanguageModel, ctx: { provider: ProviderId; model: string }): LlmAdapter {
   return {
-    async generateObject({ name, schema, system, prompt, signal }) {
+    async generateObject({ name, schema, system, prompt, maxOutputTokens, signal }) {
       for (let attempt = 0; ; attempt++) {
         try {
-          const result = await generateText({ model, system, prompt, abortSignal: signal, output: Output.object({ schema, name }) });
+          const result = await generateText({ model, system, prompt, maxOutputTokens, abortSignal: signal, output: Output.object({ schema, name }) });
           return { object: result.output as z.infer<typeof schema>, usage: { inputTokens: result.usage.inputTokens ?? 0, outputTokens: result.usage.outputTokens ?? 0 } };
         } catch (e) {
           if (signal?.aborted) throw e; // a cancel, not a failure

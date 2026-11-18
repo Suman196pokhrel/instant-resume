@@ -28,9 +28,20 @@ it("waits for the delay, and a cancel stops the wait", async () => {
   await expect(pending).rejects.toMatchObject({ name: "AbortError" });
 });
 
+it("extracts deterministically from the resume text, and extract-error fails the first extract only", async () => {
+  const { extractionSchema } = await import("@/lib/import/extract");
+  const call = { name: "extract", schema: extractionSchema, system: "", prompt: "<resume>\nSam Lee\n\nEXPERIENCE\nSupport Engineer | Harbour Health\n</resume>" };
+  const ok = await createMockAdapter({ fixtures: MOCK_FIXTURES, scenario: "happy" }).generateObject(call);
+  expect(ok.object.roles).toEqual([{ title: "Support Engineer", company: "Harbour Health", location: "", start: "", end: "", highlights: [] }]);
+  const failing = createMockAdapter({ fixtures: MOCK_FIXTURES, scenario: "extract-error" });
+  await expect(failing.generateObject(call)).rejects.toMatchObject({ kind: "busy" });
+  expect((await failing.generateObject(call)).object).toEqual(ok.object);
+});
+
 it("reads the scenario from ?mock=, defaulting to happy", () => {
   expect(mockScenario("?mock=findings")).toBe("findings");
   expect(mockScenario("?mock=error-stage-3")).toBe("error-stage-3");
+  expect(mockScenario("?mock=extract-error")).toBe("extract-error");
   expect(mockScenario("?mock=nonsense")).toBe("happy");
   expect(mockScenario("")).toBe("happy");
 });

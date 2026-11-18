@@ -1,0 +1,19 @@
+Jordan Whitlock
+jordan.whitlock@example.com | 0412 345 678 | Sydney NSW
+
+EXPERIENCE
+Senior Software Engineer | Brightwater Logistics
+• Rebuilt the shipment tracking dashboard in React and TypeScript, cutting page load from 4.2s to 1.1s
+• Reduced AWS spend by 25% by right-sizing ECS services and adding autoscaling
+
+Software Engineer | Mosaic Learning
+• Cut API p95 latency from 900ms to 220ms with Redis caching and query indexes
+
+EDUCATION
+Bachelor of Science (Computer Science) | UNSW Sydney
+
+SKILLS
+TypeScript, React, Node.js, PostgreSQL, AWS (Lambda, ECS, SQS)
+
+LANGUAGES
+English, Spanish
