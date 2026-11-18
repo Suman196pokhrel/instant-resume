@@ -1,10 +1,10 @@
 ---
 id: TASK-13
 title: Generate documents with patch validation
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T08:35:00Z'
+updated_date: '2026-11-18T08:41:00Z'
 labels:
   - m5
 dependencies:
@@ -22,9 +22,9 @@ As a job seeker, I get a tailored resume and cover letter built only from my cho
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The skeleton uses only the selected entries, in section order, omitting empty sections
-- [ ] #2 Every generated bullet carries a valid source highlight ID; unknown or cross-entry sources are rejected
-- [ ] #3 The patch validator rejects paths outside the target section and changes to id, kind, hidden, theme or order, and mutates nothing on rejection
+- [x] #1 The skeleton uses only the selected entries, in section order, omitting empty sections
+- [x] #2 Every generated bullet carries a valid source highlight ID; unknown or cross-entry sources are rejected
+- [x] #3 The patch validator rejects paths outside the target section and changes to id, kind, hidden, theme or order, and mutates nothing on rejection
 <!-- AC:END -->
 
 ## Definition of Done
@@ -65,3 +65,15 @@ Tests (tests/unit)
 Out of scope
 - Step 4 screen, project save, draft clearing, rendering, live Anthropic proof (TASK-43); rewrite call (TASK-16); checks stage and findings toast (TASK-20); prompt caching (TASK-41, parked).
 <!-- SECTION:PLAN:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T08:41:00Z
+
+---
+
+Build done: lib/generate/skeleton.ts, lib/patch/validate.ts, lib/generate/generate.ts, mock 'generate' fixture, SPEC §3/§8.3. 221 unit + 73 e2e pass. DoD UI items: n/a, this card adds no UI (the screen is TASK-43).
+
+---
+<!-- COMMENTS:END -->

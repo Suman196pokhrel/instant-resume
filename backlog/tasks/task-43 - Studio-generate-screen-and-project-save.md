@@ -4,6 +4,7 @@ title: Studio generate screen and project save
 status: To Do
 assignee: []
 created_date: '2026-11-18T08:31:00Z'
+updated_date: '2026-11-18T08:40:00Z'
 labels:
   - m5
 dependencies:
@@ -24,3 +25,15 @@ As a job seeker, I watch my resume and cover letter being generated, then land i
 - [ ] #3 Step 4 shows the stages, elapsed time and ghost page as in the mock; a failure shows the stage in red and a callout with Retry, Switch model and Back to entries, and nothing is saved
 - [ ] #4 Proven live on Anthropic: the generated documents pass the validator; tokens and time measured and noted in SPEC §8.3
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T08:40:00Z
+
+---
+
+From TASK-13: core is lib/generate/generate.ts generateDocuments(input, adapter, signal) -> { resume, coverLetter, count } (id/projectId 'draft': drop them on POST /api/projects). Decided one call: update SPEC §14.4 step 4 and mock views-new.js STAGES in the same commit: one stage 'Drafting the resume and cover letter', failure 'Generation stopped while drafting.' Validate stage done note uses count. jsonInPrompt not set yet (schema is small): decide in the live proof; maxOutputTokens 8000.
+
+---
+<!-- COMMENTS:END -->
