@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
 stage: spec
-task: TASK-26
-next: spec TASK-26 (Quick generate result, gaps, Settings defaults): SPEC §14.3 Result screen + §13.3 Settings; QuickGenerate.tsx currently router.pushes to /projects/{id} on done (replace with the result screen); reuse fileName, ExportDialog download(), AddEvidenceDialog, plainText/copyText; pipeline summary has coverage/findings(doc)/gaps/pages. Then TASK-27, 28, 29, 38, 46, 47 in board order
+task: TASK-51
+next: spec TASK-51 (Settings: Quick generate defaults): SPEC §13.3 item 2 + §14.3 "Settings used"; Settings page (app/(shell)/settings/page.tsx) gets theme/page budget/cover letter/tone saved via PUT /api/settings ("Preference saved"); pipeline applies prefs.quick.theme preset (THEME_PRESETS) to both docs. Then TASK-38 (paper/spelling, same section style), 27, 28, 29, 46, 47
 blockers: none
-updated: 2026-11-18 23:05 · session 9 (running, autonomous)
+updated: 2026-11-18 23:25 · session 10
 
 ## Numbers
-stories: 33 done · 0 review · 0 in progress · 6 to do · 10 parked | tests: 319 unit + 117 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits this session: ~40
+stories: 34 done · 0 review · 0 in progress · 7 to do · 10 parked | tests: 320 unit + 119 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 35
 
 ## Last session
-- done: TASK-20 rules engine (lib/checks/run.ts), TASK-45 job panel + Regenerate, TASK-21 Checks tab + AddEvidenceDialog (components/kb), TASK-22 History drawer + restore, TASK-23 Export PDF (lib/doc/filename.ts), TASK-50 match call (lib/match/evidence.ts, live 3.2 s), TASK-24 Quick generate pipeline + progress (lib/generate/pipeline.ts, components/quick/QuickGenerate.tsx), TASK-25 page fitting (lib/generate/fit.ts). Moved the flagged-bullet tooltip and the preview scroll/flash to TASK-46. Parked TASK-48 (banned phrases in employer names), TASK-49 (toggle aria-expanded)
-- decisions: numbers are compared as tokens and years ignored; banned phrases match whole words; notes live in the workspace store (PATCH project); Regenerate uses its own `regenerating` flag (selection doesn't cancel it); store goTo/jump for Checks jumps; inspector tab and left tab are controlled; viewing a revision makes the inspector inert; Export is disabled with nothing ticked
-- gotchas: Next 16 allows one `next dev` per folder (startup e2e fails while the owner's dev server runs); Playwright role queries still see inert subtrees (assert focus instead); a just-opened drawer with a visibility transition can't take focus (flip visibility at once on open); don't run prettier (no config: it reformats whole files); e2e that writes the KB must use its own entries (kb.spec and studio.spec read the seed in parallel)
-- correction: the user wants cards run back to back without stopping for approval or wrap up; pick the recommended option
+- done: TASK-20 rules engine, TASK-45 job panel + Regenerate, TASK-21 Checks tab + AddEvidenceDialog, TASK-22 History drawer + restore, TASK-23 Export PDF, TASK-50 match call (lib/match/evidence.ts, live 3.2 s), TASK-24 Quick generate pipeline + progress (lib/generate/pipeline.ts, components/quick), TASK-25 page fitting (lib/generate/fit.ts), TASK-26 Quick result screen. Split off TASK-50 (from 24) and TASK-51 (from 26); flagged-bullet tooltip + preview scroll/flash moved to TASK-46; parked TASK-48, 49
+- decisions: numbers compared as tokens, years ignored; cover letter paragraphs may quote the ad's numbers; banned phrases whole words; notes in the workspace store; Regenerate has its own `regenerating` flag; viewing a revision makes the inspector inert; Export disabled with nothing ticked; Quick selection = Studio baseline + match suggestions + evidence owners; fit loop's three 1-page hides are one step; coverage finding below 60%; Quick Regenerate re-reads the KB and deletes the replaced project
+- gotchas: one `next dev` per folder (startup e2e fails while the owner's dev server runs); Playwright role queries see inert subtrees; Chrome's scrollIntoView returns a promise, so never return it from an effect; don't run prettier (no config); e2e that writes the KB must add its own entries and avoid Kubernetes (kb.spec counts seed roles, studio.spec needs Kubernetes unbacked)
+- correction: user wants cards run back to back without approval or wrap-up stops (picking recommended options); asked to stop after TASK-26 this time
