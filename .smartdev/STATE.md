@@ -1,6 +1,6 @@
 # Smart Dev state: Instant Resume
 stage: spec
-task: TASK-25
+task: TASK-26
 next: spec TASK-24 (Quick generate pipeline and progress): read SPEC §14.3 Quick generate and the mock's views-quick.js; reuse extractBrief, generateDocuments, runChecks, fileName and AddEvidenceDialog; then TASK-25, 26 and on in board order
 blockers: none
 updated: 2026-11-18 23:05 · session 9 (running, autonomous)
