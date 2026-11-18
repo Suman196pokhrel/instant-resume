@@ -1,10 +1,10 @@
 ---
 id: TASK-18
 title: 'Design tab: theme adjustments'
-status: In Progress
+status: Review
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T10:48:00Z'
+updated_date: '2026-11-18T10:52:00Z'
 labels:
   - m6
 dependencies:
@@ -21,9 +21,9 @@ As a job seeker, I can adjust font, sizes, margins, spacing and accent colour an
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Each control updates the theme and the preview re-renders, showing 'Rendered in … ms'
-- [ ] #2 No design change calls the LLM adapter (asserted with a spy)
-- [ ] #3 Reset restores the defaults and is disabled when already at defaults
+- [x] #1 Each control updates the theme and the preview re-renders, showing 'Rendered in … ms'
+- [x] #2 No design change calls the LLM adapter (asserted with a spy)
+- [x] #3 Reset restores the defaults and is disabled when already at defaults
 <!-- AC:END -->
 
 ## Definition of Done
@@ -68,6 +68,14 @@ created: 2026-11-18T09:47:00Z
 ---
 
 From TASK-15: calibrate resume.typ/letter.typ spacing against the mock (contact block and skills lines sit tight in the Typst preview).
+
+---
+
+created: 2026-11-18T10:52:00Z
+
+---
+
+Build done: DesignTab (font radio cards, 6 sliders, swatches + custom colour, Reset, Last render), store setTheme (debounced 'Adjusted design', key design) / resetTheme (at once), Preview renders design-only changes without the debounce and shows the zap. Template calibration split to TASK-47. 271 unit + 95 e2e pass.
 
 ---
 <!-- COMMENTS:END -->
