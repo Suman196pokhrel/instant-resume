@@ -3,6 +3,8 @@ import type { Db } from "./client";
 import { kbSchema, type KnowledgeBase } from "../schemas/kb";
 import { upgrade } from "../schemas/migrate";
 import { ApiError } from "../api";
+import { newId } from "../utils";
+export { newId };
 
 // The knowledge base is stored one row per entry (SPEC §7.1); contact and workRights are single rows.
 const LISTS = {
@@ -63,7 +65,6 @@ export const KB_LIST_PREFIX = {
 export type KbListKey = keyof typeof KB_LIST_PREFIX;
 
 export const isKbList = (type: string): type is KbListKey => Object.hasOwn(KB_LIST_PREFIX, type);
-export const newId = (prefix: string) => `${prefix}-${crypto.randomUUID().replaceAll("-", "").slice(0, 8)}`;
 
 /** Gives an incoming entry, and each of its highlights, an ID when it has none. */
 export function fillIds(entry: Record<string, unknown>, prefix: string) {
