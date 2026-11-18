@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
 stage: spec
 task: TASK-20
-next: spec TASK-16 (rewrite a section): Instruction box + proposal card in components/workspace/ContentInspector.tsx, rewrite call using lib/patch/validate.ts rewriteRules(i); decide the empty-bullet-text case (card comment); TASK-45 job panel is the alternative
+next: spec TASK-20 (rules engine): read SPEC §10 and mock docs.js runChecks; on-device checks (keywords, claims vs KB, banned phrases, parse safety) as pure functions for the Checks panel (TASK-21); alternatives TASK-45 job panel, TASK-47 template calibration
 blockers: none
-updated: 2026-11-18 20:26 · session 7
+updated: 2026-11-18 22:08 · session 8
 
 ## Numbers
-stories: 21 done · 0 review · 0 in progress · 17 to do · 8 parked | tests: 241 unit + 86 e2e pass (3 opt-in skips; live check opt-in) | commits last session: 29
+stories: 25 done · 0 review · 0 in progress · 14 to do · 8 parked | tests: 280 unit + 98 e2e pass (3 e2e opt-in skips; 2 live checks opt-in) | commits last session: 26
 
 ## Last session
-- done: TASK-13 skeleton + patch validator + one generate call; TASK-43 Studio step 4 (generate, compile, save, open); TASK-14 dashboard; TASK-15 Workspace (Typst SVG preview, hand edits, autosave, Copy). New: TASK-45 job panel, TASK-46 preview outlines (split from 15), TASK-44 tooltip flake (parked)
-- decisions: one generate call for both documents; Studio matching on device, match call is Quick generate only; a bullet's source must be a highlight of its own entry, only added bullets are source-checked; hand-written RFC 6902 subset (no fast-json-patch); dashboard delete deferred until the Undo toast closes or the page is left; Zustand store per project; worker renders SVG via typst-ts-renderer (no scripts); generate measured 16-18 s, ~7,500 tokens on Sonnet 5.5, strict output OK
-- gotchas: live check needs IR_LIVE=1 plus key (tests/unit/generate-live.test.ts); e2e writes need an origin header (CSRF guard); seed has no projects, use tests/e2e/projects.ts makeProject; startup.spec 'pnpm dev' fails while the owner's own pnpm dev runs; quote values in prompts (model copied 'Languages:' into a skills line)
-- correction: user wants to keep going across cards in one session, even when it is long
+- done: TASK-16 rewrite (lib/generate/rewrite.ts, word diff, Instruction box + Proposal card, live on Sonnet 5.5: 3-4 s, ~3,200 in); TASK-17 Structure tab; TASK-18 Design tab; TASK-19 revisions (server coalescing < 60 s per key) + undo (50 steps, bursts). New: TASK-47 template spacing calibration (split from 18)
+- decisions: validator rejects blank text (bullets go with remove); summary/paragraph rewrites are grounded in the resume's entries; token note = 380 + chars/2 (fitted live); hand edits locked while a rewrite runs or is pending; native HTML5 drag (no dnd-kit); undo labels are revision labels ("Undid: Moved Summary down"); saves are queued in order and each change keeps its own revision
+- gotchas: Zustand updates don't animate with React <ViewTransition>: use document.startViewTransition + flushSync (StructureTab glide); structure reorders apply inside the transition, so e2e must poll; mock adapter spy window.__llmCalls (define it via addInitScript); Ctrl+Z skips text fields only (TEXT_FIELD in Workspace.tsx)
+- correction: none new; user keeps going across cards in one session
