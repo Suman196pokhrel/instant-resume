@@ -4,7 +4,7 @@ import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { NextRequest } from "next/server";
 import { sql } from "drizzle-orm";
-import { beforeAll, describe, expect, it } from "vitest";
+import { beforeAll, describe, expect, it, vi } from "vitest";
 import * as projects from "@/app/api/projects/route";
 import * as project from "@/app/api/projects/[id]/route";
 import * as duplicate from "@/app/api/projects/[id]/duplicate/route";
@@ -173,6 +173,46 @@ describe("saving a document (AC4)", () => {
     const res = await doc.PUT(req("PUT", { theme: { ...THEME_DEFAULTS, margin: 40 }, sections: [], revision: { kind: "adjustment", label: "Adjusted design" } }), ctx(original.id));
     expect(res.status).toBe(422);
     expect(await json(await revisions.GET(req("GET"), ctx(original.id)))).toHaveLength(2);
+  });
+});
+
+describe("revisions coalesce per key within 60 s (TASK-19 AC3)", () => {
+  const put = (id: string, summary: string, revision: Record<string, unknown>) => doc.PUT(req("PUT", { ...resume(summary), revision }), ctx(id));
+  let cleanup = "";
+  const labels = async (id: string) => (await json(await revisions.GET(req("GET"), ctx(id)))).map((r: any) => [r.label, r.snapshot.sections[0].text]);
+
+  it("the same key within 60 s updates the latest revision; after 60 s, another key or no key adds one", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    try {
+      vi.setSystemTime(new Date("2026-11-18T10:00:00Z"));
+      const { project: mine, documents } = await json(await create());
+      cleanup = mine.id;
+      const id = documents.find((d: any) => d.kind === "resume").id;
+      const edit = { kind: "edit", label: "Edited Summary", coalesceKey: "edit-sec-sum" };
+      const first = await (await put(id, "One.", edit)).json();
+      vi.setSystemTime(new Date("2026-11-18T10:00:40Z"));
+      const second = await (await put(id, "Two.", edit)).json();
+      expect(second.revision.id).toBe(first.revision.id);
+      expect(second.revision.ts).toBe("2026-11-18T10:00:40.000Z");
+      expect(await labels(id)).toEqual([["Edited Summary", "Two."], ["Generated from job brief", "Senior engineer who ships."]]);
+
+      vi.setSystemTime(new Date("2026-11-18T10:01:41Z")); // 61 s after the last one
+      await put(id, "Three.", edit);
+      await put(id, "Four.", { kind: "edit", label: "Edited Experience", coalesceKey: "edit-sec-exp" });
+      await put(id, "Five.", { kind: "structure", label: "Moved Summary down" });
+      await put(id, "Six.", { kind: "structure", label: "Moved Summary up" });
+      expect((await labels(id)).map(([l, t]: string[]) => `${l}: ${t}`)).toEqual([
+        "Moved Summary up: Six.",
+        "Moved Summary down: Five.",
+        "Edited Experience: Four.",
+        "Edited Summary: Three.",
+        "Edited Summary: Two.",
+        "Generated from job brief: Senior engineer who ships.",
+      ]);
+    } finally {
+      vi.useRealTimers();
+      if (cleanup) await project.DELETE(req("DELETE"), ctx(cleanup)); // later tests count every project
+    }
   });
 });
 

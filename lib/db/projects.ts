@@ -13,6 +13,7 @@ import { documents, projects, revisions } from "./schema";
 export type ProjectBundle = { project: Project; documents: ResumeDocument[]; revisions: Revision[] };
 
 const now = () => new Date().toISOString();
+export const COALESCE_MS = 60_000;
 const notFound = () => new ApiError(404, "not_found");
 
 const toProject = (r: typeof projects.$inferSelect): Project =>
@@ -138,11 +139,15 @@ export async function saveDocument(db: Db, id: string, input: Record<string, unk
   const { revision: meta } = saveSchema.parse(input);
   const ts = now();
   const document = documentSchema.parse({ ...input, id: row.id, projectId: row.projectId, kind: row.kind });
-  const revision = revisionSchema.parse({ ...meta, id: newId("rev"), documentId: id, ts, snapshot: document });
+  // SPEC §6.4: the same coalesceKey within 60 s of the latest revision updates it instead of adding one.
+  const latest = await db.select().from(revisions).where(eq(revisions.documentId, id)).orderBy(desc(revisions.ts), sql`rowid desc`).limit(1).get();
+  const merge = !!meta.coalesceKey && latest?.coalesceKey === meta.coalesceKey && Date.parse(ts) - Date.parse(latest.ts) < COALESCE_MS;
+  const revision = revisionSchema.parse({ ...meta, id: merge ? latest!.id : newId("rev"), documentId: id, ts, snapshot: document });
   await db.transaction(async (tx) => {
     const { content, theme, updatedAt } = fromDocument(document, ts);
     await tx.update(documents).set({ content, theme, updatedAt }).where(eq(documents.id, id));
-    await tx.insert(revisions).values(fromRevision(revision));
+    if (merge) await tx.update(revisions).set(fromRevision(revision)).where(eq(revisions.id, revision.id));
+    else await tx.insert(revisions).values(fromRevision(revision));
     await tx.update(projects).set({ updatedAt: ts }).where(eq(projects.id, row.projectId));
   });
   return { document, revision };

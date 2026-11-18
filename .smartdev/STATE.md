@@ -1,5 +1,5 @@
 # Smart Dev state: Instant Resume
-stage: spec
+stage: build
 task: TASK-19
 next: spec TASK-16 (rewrite a section): Instruction box + proposal card in components/workspace/ContentInspector.tsx, rewrite call using lib/patch/validate.ts rewriteRules(i); decide the empty-bullet-text case (card comment); TASK-45 job panel is the alternative
 blockers: none
