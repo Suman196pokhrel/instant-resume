@@ -4,7 +4,7 @@ title: Studio generate screen and project save
 status: Review
 assignee: []
 created_date: '2026-11-18T08:31:00Z'
-updated_date: '2026-11-18T09:08:00Z'
+updated_date: '2026-11-18T09:15:00Z'
 labels:
   - m5
 dependencies:
@@ -72,6 +72,14 @@ created: 2026-11-18T09:08:00Z
 ---
 
 Build done. Live (Sonnet 5.5, Mintleaf, 8 entries): generate 16-18 s, ~4.7k in / 2.6-2.9k out tokens, strict structured output OK (no jsonInPrompt). First live run exposed a prompt bug (skills line copied with its group name) - fixed. Copy 'about 6,000 tokens' -> 'about 7,500 tokens' in SPEC, app, mock. 224 unit + 76 e2e pass (2 consecutive full runs); tooltip flake parked (TASK-44).
+
+---
+
+created: 2026-11-18T09:15:00Z
+
+---
+
+Advisor fixes: focus to h1 on step 4 and to the failure on error (e2e uses keyboard only), sr-only status names the active stage, warm-up overlaps the call, stage times by index, Back after success doesn't regenerate (e2e). Live: 3/3 runs validated first time (IR_LIVE=1 gate). Full e2e green except startup.spec 'pnpm dev' when the owner's own pnpm dev is running (Next refuses a second dev server) - environmental.
 
 ---
 <!-- COMMENTS:END -->
