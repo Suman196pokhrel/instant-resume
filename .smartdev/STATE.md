@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
 stage: spec
 task: TASK-24
-next: spec TASK-20 (rules engine): read SPEC §10 and mock docs.js runChecks; on-device checks (keywords, claims vs KB, banned phrases, parse safety) as pure functions for the Checks panel (TASK-21); alternatives TASK-45 job panel, TASK-47 template calibration
+next: spec TASK-24 (Quick generate pipeline and progress): read SPEC §14.3 Quick generate and the mock's views-quick.js; reuse extractBrief, generateDocuments, runChecks, fileName and AddEvidenceDialog; then TASK-25, 26 and on in board order
 blockers: none
-updated: 2026-11-18 22:08 · session 8
+updated: 2026-11-18 23:05 · session 9 (running, autonomous)
 
 ## Numbers
-stories: 25 done · 0 review · 0 in progress · 14 to do · 8 parked | tests: 280 unit + 98 e2e pass (3 e2e opt-in skips; 2 live checks opt-in) | commits last session: 26
+stories: 30 done · 0 review · 0 in progress · 9 to do · 10 parked | tests: 303 unit + 113 e2e pass (3 e2e opt-in skips; 2 live checks opt-in) | commits this session: 22
 
 ## Last session
-- done: TASK-16 rewrite (lib/generate/rewrite.ts, word diff, Instruction box + Proposal card, live on Sonnet 5.5: 3-4 s, ~3,200 in); TASK-17 Structure tab; TASK-18 Design tab; TASK-19 revisions (server coalescing < 60 s per key) + undo (50 steps, bursts). New: TASK-47 template spacing calibration (split from 18)
-- decisions: validator rejects blank text (bullets go with remove); summary/paragraph rewrites are grounded in the resume's entries; token note = 380 + chars/2 (fitted live); hand edits locked while a rewrite runs or is pending; native HTML5 drag (no dnd-kit); undo labels are revision labels ("Undid: Moved Summary down"); saves are queued in order and each change keeps its own revision
-- gotchas: Zustand updates don't animate with React <ViewTransition>: use document.startViewTransition + flushSync (StructureTab glide); structure reorders apply inside the transition, so e2e must poll; mock adapter spy window.__llmCalls (define it via addInitScript); Ctrl+Z skips text fields only (TEXT_FIELD in Workspace.tsx)
-- correction: none new; user keeps going across cards in one session
+- done: TASK-20 rules engine (lib/checks/run.ts), TASK-45 job panel + Regenerate, TASK-21 Checks tab + AddEvidenceDialog (components/kb), TASK-22 History drawer + restore, TASK-23 Export PDF (lib/doc/filename.ts). Moved the flagged-bullet tooltip and the preview scroll/flash to TASK-46. Parked TASK-48 (banned phrases in employer names), TASK-49 (toggle aria-expanded)
+- decisions: numbers are compared as tokens and years ignored; banned phrases match whole words; notes live in the workspace store (PATCH project); Regenerate uses its own `regenerating` flag (selection doesn't cancel it); store goTo/jump for Checks jumps; inspector tab and left tab are controlled; viewing a revision makes the inspector inert; Export is disabled with nothing ticked
+- gotchas: Next 16 allows one `next dev` per folder (startup e2e fails while the owner's dev server runs); Playwright role queries still see inert subtrees (assert focus instead); a just-opened drawer with a visibility transition can't take focus (flip visibility at once on open); don't run prettier (no config: it reformats whole files); e2e that writes the KB must use its own entries (kb.spec and studio.spec read the seed in parallel)
+- correction: the user wants cards run back to back without stopping for approval or wrap up; pick the recommended option
