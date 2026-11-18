@@ -1,10 +1,10 @@
 ---
 id: TASK-13
 title: Generate documents with patch validation
-status: Review
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-18T08:41:00Z'
+updated_date: '2026-11-18T08:44:00Z'
 labels:
   - m5
 dependencies:
@@ -65,6 +65,13 @@ Tests (tests/unit)
 Out of scope
 - Step 4 screen, project save, draft clearing, rendering, live Anthropic proof (TASK-43); rewrite call (TASK-16); checks stage and findings toast (TASK-20); prompt caching (TASK-41, parked).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Skeleton builder, one-call generate (mock fixture fits any KB) and patch validator (generation + rewrite whitelists, source check on added bullets, nothing mutated on rejection); SPEC §3/§8.3/§10.2/§18.1 updated.
+Screen, save, compile check and live Anthropic proof are TASK-43; SPEC §14.4 stage list and mock change land there.
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 

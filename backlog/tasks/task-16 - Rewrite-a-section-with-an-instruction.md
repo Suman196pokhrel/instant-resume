@@ -4,7 +4,7 @@ title: Rewrite a section with an instruction
 status: To Do
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-18T08:44:00Z'
 labels:
   - m6
 dependencies:
@@ -32,3 +32,15 @@ As a job seeker, I can ask for one section to be rewritten and review the change
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-18T08:44:00Z
+
+---
+
+From TASK-13 review: rewriteRules(i) and validatePatch exist in lib/patch/validate.ts. A rewrite 'replace' of a bullet's text with an empty string is accepted today; decide whether that should be rejected (or treated as remove) when building rewrite.
+
+---
+<!-- COMMENTS:END -->
