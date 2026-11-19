@@ -81,3 +81,29 @@ describe("skeleton builder", () => {
     }
   });
 });
+
+describe("imported sections (real-resume bugs)", () => {
+  const kb = () => {
+    const k = seed();
+    k.additional = [
+      { id: "add-sum", title: "PROFESSIONAL SUMMARY", notes: "Retail professional with 1.5 years in Adelaide." },
+      { id: "add-av", title: "AVAILABILITY", notes: "Weekends and late nights." },
+    ];
+    k.skills = [{ id: "sk-1", group: "KEY SKILLS", items: ["POS", "Stock control"] }];
+    return k;
+  };
+  const sections = () => buildSkeleton(kb(), brief, ["add-sum", "add-av"], THEME_DEFAULTS).resume.sections;
+
+  it("a summary kept under Additional isn't a second summary on the page", () => {
+    expect(sections().map((s) => s.title)).not.toContain("Professional summary");
+    expect(sections().filter((s) => s.kind === "summary")).toHaveLength(1);
+  });
+
+  it("capitalised headings read as sentence case, and an Additional item doesn't repeat its title", () => {
+    const av = sections().find((s) => s.kind === "additional") as Extract<Section, { items: unknown }>;
+    expect(av.title).toBe("Availability");
+    expect(av.items[0]).toMatchObject({ heading: "", line: "Weekends and late nights." });
+    const skills = sections().find((s) => s.kind === "skills") as Extract<Section, { items: unknown }>;
+    expect(skills.items[0].heading).toBe("Key skills");
+  });
+});

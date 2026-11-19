@@ -1,4 +1,5 @@
 import { z } from "zod";
+import { tidyHeading } from "../utils";
 import type { LlmAdapter } from "@/lib/llm/adapter";
 import type { ParsedDraft } from "./parse";
 
@@ -32,6 +33,7 @@ const SYSTEM = `You sort a resume into the requested JSON structure.
 - Never fill in work rights. Work rights, visa or citizenship text goes in "additional" with its heading.
 - Every section that doesn't fit a field goes in "additional" (its heading as title, its text as notes). Never drop content.
 - Each bullet is one highlight. "text" is the bullet as written, without the bullet symbol. "metric" is the measurable result copied exactly from that bullet (such as "25%" or "4.2s to 1.1s"), or "". "skills" are the tools, technologies or skills named in that bullet.
+- Skills: when the resume lists skills in one block, sort them into 2 to 5 groups with short names (such as "Customer service", "Technical", "Tools and systems", "Languages"). Keep each skill as written; never add one.
 - Volunteer roles go in "volunteering", projects in "portfolio", and certifications, awards, publications and patents in "credentials" with that kind.
 - Keep the resume's own spelling and wording.`;
 
@@ -56,10 +58,10 @@ export function toDraft(x: Extraction, original: string): ParsedDraft {
     volunteering: entries(x.volunteering, withHighlights),
     portfolio: entries(x.portfolio, withHighlights),
     education: entries(x.education),
-    skills: entries(x.skills, (g) => ({ group: g.group || "Skills", items: [...new Set(g.items.map((i) => i.trim()).filter(Boolean))] })),
+    skills: entries(x.skills, (g) => ({ group: tidyHeading(g.group) || "Skills", items: [...new Set(g.items.map((i) => i.trim()).filter(Boolean))] })),
     credentials: entries(x.credentials),
     referees: entries(x.referees),
-    additional: [...entries(x.additional), { title: "Original resume text (reference)", notes: original, referenceOnly: true }],
+    additional: [...entries(x.additional, (a) => ({ ...a, title: tidyHeading(a.title) })), { title: "Original resume text (reference)", notes: original, referenceOnly: true }],
   };
 }
 

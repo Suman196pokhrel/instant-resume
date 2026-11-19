@@ -1,9 +1,9 @@
 import { describe, expect, it } from "vitest";
-import { fitPages, type FitStep } from "@/lib/generate/fit";
+import { fitPages, MAX_COMPILES, type FitStep } from "@/lib/generate/fit";
 import type { ResumeDocument, Section } from "@/lib/schemas/document";
 import { THEME_DEFAULTS } from "@/lib/schemas/theme";
 
-// SPEC §9.4 page fitting: a deterministic loop of at most 8 compiles against a fake compiler (TASK-25).
+// SPEC §9.4 page fitting: a deterministic loop of at most 16 compiles against a fake compiler (TASK-25; 1-page target).
 type Doc = Omit<ResumeDocument, "id" | "projectId">;
 const bullets = (n: number, role: string) => Array.from({ length: n }, (_, i) => ({ id: `${role}-b${i}`, text: i === 0 ? "Built React apps" : `Did task ${i}`, source: "hl" }));
 const doc = (): Doc => ({
@@ -44,27 +44,46 @@ describe("fitPages", () => {
     expect(r.compiles).toBe(2);
   });
 
-  it("goes through the adjustments in order, never past the floors, within 8 compiles", async () => {
+  it("goes through the adjustments in order, repeating the content steps, never past the floors, within 16 compiles", async () => {
     const r = await run(2, 40);
-    expect(r.compiles).toBeLessThanOrEqual(8);
-    expect(r.steps.slice(1, 7).map((s) => s.action)).toEqual(["Tightening line spacing", "Reducing space between sections", "Narrowing the margins", "Reducing the text size", "Dropping the least relevant bullet", "Shortening the summary"]);
+    expect(r.compiles).toBeLessThanOrEqual(MAX_COMPILES);
+    const actions = r.steps.slice(1).map((s) => s.action);
+    expect([...new Set(actions)]).toEqual(["Tightening line spacing", "Reducing space between sections", "Narrowing the margins", "Reducing the text size", "Dropping the least relevant bullet", "Shortening the summary"]);
+    expect(actions.filter((a) => a === "Dropping the least relevant bullet")).toHaveLength(3); // one per compile until each role has 2
     expect(r.doc.theme.lineHeight).toBeGreaterThanOrEqual(1.15);
     expect(r.doc.theme.margin).toBeGreaterThanOrEqual(12);
     expect(r.doc.theme.sectionGap).toBeGreaterThanOrEqual(6);
     expect(r.doc.theme.baseSize).toBeGreaterThanOrEqual(9.5);
   });
 
-  it("drops the least relevant bullet from the oldest role and keeps 2 per role", async () => {
-    const r = await run(2, 40);
+  it("drops the least relevant bullets, oldest role first, down to 2 per role, then shortens the summary to one sentence", async () => {
+    const steps: string[] = [];
+    const r = await fitPages(doc(), { budget: 2, keywords: ["React"], compile: fake(40), onStep: (s) => steps.push(s.action) });
     const exp = r.doc.sections.find((s) => s.kind === "experience") as Extract<Section, { items: unknown }>;
-    expect(exp.items.map((i) => i.bullets!.map((b) => b.id))).toEqual([["new-b0", "new-b1", "new-b2", "new-b3"], ["old-b0", "old-b1"]]); // "Did task 2" of the old role: no keyword, oldest, last
+    expect(exp.items.map((i) => i.bullets!.map((b) => b.id))).toEqual([["new-b0", "new-b1"], ["old-b0", "old-b1"]]); // the old role's "Did task 2" went first
     const summary = r.doc.sections[0] as { text: string };
-    expect(summary.text).toBe("First sentence. Second sentence.");
+    expect(summary.text).toBe("First sentence.");
   });
 
-  it("with a one-page budget, the last step hides Portfolio, Certifications and Referees; never with two", async () => {
+  it("a cover letter loses sentences from its longest paragraph, keeping one in each", async () => {
+    const letter: Doc = {
+      kind: "coverLetter",
+      theme: { ...THEME_DEFAULTS },
+      sections: [
+        { id: "p0", kind: "paragraph", title: "Opening", hidden: false, text: "One. Two." },
+        { id: "p1", kind: "paragraph", title: "Evidence", hidden: false, text: "A long first sentence here. A second one. A third one." },
+      ] as Section[],
+    };
+    const r = await fitPages(letter, { budget: 1, keywords: [], compile: async (d) => (d.sections.map((s) => ("text" in s ? s.text : "")).join(" ").length > 35 ? 2 : 1) });
+    expect(r.fits).toBe(true);
+    expect(r.doc.sections.map((s) => ("text" in s ? s.text : ""))).toEqual(["One.", "A long first sentence here."]);
+  });
+
+  it("with a one-page budget, Portfolio, Certifications and Referees go before any content, and Additional sections last; never with two", async () => {
     const one = await run(1, 40);
-    expect(one.steps.map((s) => s.action)).toContain("Hiding Portfolio, Certifications and Referees");
+    const actions = one.steps.map((s) => s.action);
+    expect(actions.indexOf("Hiding Portfolio, Certifications and Referees")).toBeGreaterThan(0);
+    expect(actions.indexOf("Hiding Portfolio, Certifications and Referees")).toBeLessThan(actions.indexOf("Dropping the least relevant bullet"));
     expect(one.doc.sections.filter((s) => s.hidden).map((s) => s.kind)).toEqual(["portfolio", "credentials", "referees"]);
     const two = await run(2, 40);
     expect(two.doc.sections.some((s) => s.hidden)).toBe(false);

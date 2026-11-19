@@ -663,9 +663,9 @@ Name parts are hyphen-joined; the company is sanitised to `[A-Za-z0-9-]`. If che
 
 ### 9.4 Page fitting (Quick generate "Fitting to N pages", and an optional Studio action)
 
-Deterministic loop, maximum 8 compiles:
+Deterministic loop, maximum 16 compiles:
 1. Compile. If `pages ≤ budget`, done.
-2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role); drop the last sentence of the summary; hide Portfolio, Certifications and awards, and Referees (1-page budget only; one step, so the whole list fits in 8 compiles). An adjustment already at its floor, or with nothing to drop, is skipped (`lib/generate/fit.ts`).
+2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); hide Portfolio, Certifications and awards, and Referees (1-page budget only, one step); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role), repeated one bullet per compile; drop the last sentence of the summary, repeated down to one sentence; drop the last sentence of the longest cover letter paragraph, repeated down to one sentence each (the cover letter is fitted to 1 page the same way); hide Additional sections (1-page budget only, last resort). An adjustment already at its floor, or with nothing to drop, is skipped (`lib/generate/fit.ts`).
 3. Emit progress events `{ value: pagesEstimate, action }` after each compile, for example "Tightening line spacing" or "Shortening the summary", ending with "Fits on 2 pages".
 
 If it still doesn't fit after the loop, finish with a warning: "Still {n} pages. Trim content in Studio."
