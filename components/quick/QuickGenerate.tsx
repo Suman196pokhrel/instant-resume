@@ -178,45 +178,45 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
 
   if (!run)
     return (
-      <div className="max-w-[760px]">
-        <h1>Paste a job description</h1>
-        <p className="mt-1 mb-4 text-muted-foreground">{`You'll get a tailored resume${q.coverLetter ? " and cover letter" : ""}, written only from facts in your knowledge base.`}</p>
+      <section className="mx-auto max-w-[780px] rounded-lg border border-line bg-surface p-6 shadow-card max-[900px]:px-4 max-[900px]:py-[18px]">
+        <h1 className="text-[22px]">Paste a job description</h1>
+        <p className="mt-1 text-muted-foreground">{`You'll get a tailored resume${q.coverLetter ? " and cover letter" : ""}, written only from facts in your knowledge base.`}</p>
         {!active && connections !== null && (
-          <Callout variant="warn" className="mb-4">
+          <Callout variant="warn" className="mt-3.5">
             <KeyRound />
             <div>
               <strong>No API key connected.</strong> Generation runs on your own provider account. <Link href="/settings">Add a key in Settings</Link>
             </div>
           </Callout>
         )}
-        <Field id="quick-jd" label="Job description" error={short}>
-          <Textarea rows={14} value={d.jdText} onChange={(e) => update({ jdText: e.target.value })} placeholder={"Senior Frontend Engineer\nCompany, Sydney NSW\n\nWhat you'll do…"} className="min-h-[300px]" />
+        <Field id="quick-jd" label={<span className="sr-only">Job description</span>} error={short} className="mt-3.5">
+          <Textarea rows={14} value={d.jdText} onChange={(e) => update({ jdText: e.target.value })} placeholder="Paste the whole job ad here, including the requirements" className="min-h-[300px]" />
         </Field>
-        <div className="mt-1 text-right text-[13px] text-muted-foreground tabular-nums">{`${d.jdText.length.toLocaleString("en-AU")} characters`}</div>
         <Field id="quick-notes" label="Notes for this application" optional className="mt-3">
           <Textarea rows={2} value={d.notes} onChange={(e) => update({ notes: e.target.value })} placeholder="Why you want this job, what to emphasise, who referred you" />
         </Field>
         <p className="mt-1 text-[13px] text-muted-foreground">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</p>
-        <div className="mt-5 flex flex-wrap items-center justify-between gap-3 border-t border-line pt-4">
-          <div className="flex flex-col gap-1 text-[13px] text-muted-foreground">
-            <span className="inline-flex items-center gap-1.5">
-              <Zap aria-hidden className="size-3 text-primary" /> Uses your knowledge base and default theme. You can tweak everything afterwards.
-            </span>
-            <span>
-              {`Defaults: ${q.theme.charAt(0).toUpperCase()}${q.theme.slice(1)} theme, ${plural(q.pages, "page")}, cover letter ${q.coverLetter ? `on (${q.tone.toLowerCase()} tone)` : "off"}. `}
-              <Link href="/settings">Change defaults</Link>
-            </span>
-          </div>
+        <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
+          <span className="text-[13px] text-muted-foreground tabular-nums">{`${d.jdText.length.toLocaleString("en-AU")} characters`}</span>
           <Button onClick={() => start()} disabled={!active || !d.jdText.trim()}>
             <Sparkles /> Generate
           </Button>
         </div>
-      </div>
+        <div className="mt-4 flex flex-col gap-1 border-t border-line pt-3.5 text-[13px] text-muted-foreground">
+          <span className="inline-flex items-center gap-1.5">
+            <Zap aria-hidden className="size-3 text-primary" /> Uses your knowledge base and default theme. You can tweak everything afterwards.
+          </span>
+          <span>
+            {`Defaults: ${q.theme.charAt(0).toUpperCase()}${q.theme.slice(1)} theme, ${plural(q.pages, "page")}, cover letter ${q.coverLetter ? `on (${q.tone.toLowerCase()} tone)` : "off"}. `}
+            <Link href="/settings">Change defaults</Link>
+          </span>
+        </div>
+      </section>
     );
 
   const title = run.brief ? `Generating for ${run.brief.title} at ${run.brief.company}` : "Generating your documents";
   return (
-    <div className="max-w-[1040px]">
+    <div className="mx-auto max-w-[980px]">
       <div className="flex items-start justify-between gap-4">
         <div>
           <h1>{title}</h1>

@@ -1,7 +1,7 @@
 import { redirect } from "next/navigation";
 import { QuickGenerate } from "@/components/quick/QuickGenerate";
 import { RenderWarmup } from "@/components/render/RenderWarmup";
-import { Content, TopBar } from "@/components/shell/TopBar";
+import { Content, Crumbs, TopBar } from "@/components/shell/TopBar";
 import { getDb } from "@/lib/db/client";
 import { readKb } from "@/lib/db/kb";
 import { readPrefs } from "@/lib/db/settings";
@@ -14,7 +14,7 @@ export default async function Page() {
   return (
     <>
       <RenderWarmup />
-      <TopBar title="New application / Quick generate" />
+      <TopBar title={<Crumbs trail={[{ label: "Applications", href: "/dashboard" }, { label: "New application", href: "/new" }, { label: "Quick generate" }]} />} />
       <Content>
         <QuickGenerate kb={kb} prefs={await readPrefs(db)} />
       </Content>

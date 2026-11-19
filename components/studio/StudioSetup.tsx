@@ -97,7 +97,7 @@ export function StudioSetup({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) 
   }
 
   return (
-    <div className="max-w-[860px]">
+    <div className="mx-auto max-w-[900px]">
       <ol className="mb-5 flex flex-wrap items-center gap-2.5" aria-label="Studio steps">
         {STEPS.map((label, i) => (
           <li
@@ -200,7 +200,7 @@ function JdStep(props: {
           </div>
         </Callout>
       )}
-      <Field id="jd-text" label="Job description" error={error}>
+      <Field id="jd-text" label={<span className="sr-only">Job description</span>} error={error}>
         <Textarea
           rows={14}
           value={d.jdText}
