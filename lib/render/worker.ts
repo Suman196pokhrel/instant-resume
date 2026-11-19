@@ -2,7 +2,7 @@
 import { createTypstCompiler, type TypstCompiler } from "@myriaddreamin/typst.ts/compiler";
 import { createTypstRenderer, type TypstRenderer } from "@myriaddreamin/typst.ts/renderer";
 import { loadFonts } from "@myriaddreamin/typst.ts/options.init";
-import type { RenderReply, RenderRequest } from "./types";
+import type { Layout, RenderReply, RenderRequest } from "./types";
 
 // Typst renderer (SPEC §9.1): loads the compiler WASM, the bundled fonts and the templates once, then compiles
 // a document from /data.json on each message. Runs in a Web Worker so typing never waits on it.
@@ -57,7 +57,8 @@ self.onmessage = async ({ data: msg }: MessageEvent<RenderRequest>) => {
         const vector = await world.vector({ diagnostics: "unix" });
         if (!vector.result) throw new Error(String(vector.diagnostics?.join("\n") ?? "Vector export failed"));
         const svg = await (await svgRenderer()).renderSvg({ format: "vector", artifactContent: vector.result, data_selection: { body: true, defs: true, css: true, js: false } }); // no scripts in the page
-        return { pages: Number(pages) || 0, artifact: new Uint8Array(), svg };
+        const [layout] = (await world.query<Layout[]>({ selector: "<ir-layout>", field: "value" })) ?? [];
+        return { pages: Number(pages) || 0, artifact: new Uint8Array(), svg, layout };
       }
       const pdf = await world.pdf({ diagnostics: "unix" });
       if (!pdf.result) throw new Error(String(pdf.diagnostics?.join("\n") ?? "PDF export failed"));

@@ -8,5 +8,7 @@ export type RenderInput = {
   spelling: "en-AU" | "en-US";
 };
 export type RenderRequest = { type: "compile"; id: number; kind: RenderKind; data: RenderInput; format: "pdf" | "svg" };
-export type RenderResult = { pages: number; artifact: Uint8Array; svg?: string; ms: number };
+/** Where each section ("s" start, "e" end) and bullet ("b", "be") sits, in pt from its page's top-left (templates' layout()). */
+export type Layout = { w: number; h: number; marks: { k: "s" | "e" | "b" | "be"; id: string; page: number; x: number; y: number }[] };
+export type RenderResult = { pages: number; artifact: Uint8Array; svg?: string; layout?: Layout; ms: number };
 export type RenderReply = ({ id: number } & RenderResult) | { id: number; error: string };

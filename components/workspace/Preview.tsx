@@ -7,6 +7,10 @@ import type { Prefs } from "@/lib/schemas/settings";
 import { History, PanelLeft, Zap } from "lucide-react";
 import { cn } from "cn";
 import { useWorkspace } from "@/lib/stores/workspace";
+import { boxes } from "@/lib/render/layout";
+import type { Layout } from "@/lib/render/types";
+import type { ResumeDocument } from "@/lib/schemas/document";
+import { SheetOverlay } from "./SheetOverlay";
 import { clockTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -33,7 +37,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const regenerating = useWorkspace((s) => s.regenerating);
   const leftOpen = useWorkspace((s) => s.leftOpen);
   const toggleLeft = useWorkspace((s) => s.toggleLeft);
-  const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean } | null>(null);
+  const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean; doc: ResumeDocument; layout?: Layout } | null>(null);
   const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
   const [fit, setFit] = useState(1);
@@ -50,7 +54,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
         const { render } = await import("@/lib/render/client");
         const r = await render(kind, { document: doc, kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling }, "svg");
         if (n !== latest.current) return; // a newer change is already rendering
-        setOut({ svg: r.svg ?? "", ms: r.ms, pages: r.pages, design });
+        setOut({ svg: r.svg ?? "", ms: r.ms, pages: r.pages, design, doc, layout: r.layout });
         setRenderMs(r.ms);
         setError("");
       } catch (e) {
@@ -68,6 +72,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
     return () => observer.disconnect();
   }, []);
 
+  const placed = useMemo(() => out?.layout && boxes(out.layout, out.pages, out.doc.theme.baseSize * out.doc.theme.lineHeight), [out]);
   const z = zoom ?? fit;
   const step = (d: number) => setZoom(clampZoom(z + d));
   const icon = (label: string, onClick: () => void, children: React.ReactNode) => (
@@ -117,8 +122,9 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
           </div>
         )}
         {out ? (
-          <div style={{ zoom: z }} className="mx-auto w-fit">
+          <div style={{ zoom: z }} className="relative mx-auto w-fit">
             <div data-sheet className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease) [&_svg]:block [&_svg]:h-auto [&_svg]:w-full", regenerating && "opacity-35")} dangerouslySetInnerHTML={{ __html: out.svg }} />
+            {placed && !viewing && <SheetOverlay {...placed} doc={out.doc} kb={kb} brief={brief} />}
           </div>
         ) : (
           !error && (

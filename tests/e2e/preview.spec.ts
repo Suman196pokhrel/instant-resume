@@ -1,0 +1,86 @@
+import { expect, test, type Page } from "@playwright/test";
+import { makeProject } from "./projects";
+
+// SPEC §9.1, §14.5 Preview (TASK-46): section outlines and bullet sources placed from Typst's labelled positions.
+const inspector = (page: Page) => page.getByRole("complementary", { name: "Inspector" });
+const panel = (page: Page) => page.getByRole("complementary", { name: "Job and checks" });
+const section = (page: Page, id: string) => page.locator(`[data-preview-section="${id}"]`);
+const bullet = (page: Page, id: string) => page.locator(`[data-preview-bullet="${id}"]`);
+const resumeSections = [
+  { id: "s-sum", kind: "summary", title: "Summary", hidden: false, text: "Engineer with eight years in web apps." },
+  {
+    id: "s-exp",
+    kind: "experience",
+    title: "Experience",
+    hidden: false,
+    items: [
+      {
+        id: "i-1",
+        ref: "role-brightwater",
+        heading: "Senior Software Engineer",
+        sub: "Brightwater Logistics",
+        bullets: [
+          { id: "b-ok", text: "Cut page load from 4.2s to 1.1s", source: "hl-bw-1" },
+          { id: "b-off", text: "Cut page load from 4.2s to 0.9s", source: "hl-bw-1" },
+          { id: "b-gone", text: "Ran the release train", source: "hl-deleted" },
+        ],
+      },
+    ],
+  },
+];
+
+/** The pointer leaves, so the next hover's tooltip is the only one. */
+async function away(page: Page) {
+  await page.mouse.move(0, 0);
+  await expect(page.getByRole("tooltip")).toHaveCount(0);
+}
+
+async function open(page: Page) {
+  const { id } = await makeProject(page, { resumeSections });
+  await page.goto(`/projects/${id}`);
+  await expect(section(page, "s-exp")).toBeAttached({ timeout: 30_000 }); // the renderer is warm and the marks are placed
+}
+
+test("selecting a section in Content outlines it in the preview and flashes it (AC1, AC2)", async ({ page }) => {
+  await open(page);
+  const box = await section(page, "s-exp").boundingBox();
+  const heading = await page.locator("[data-sheet]").getByText("Experience", { exact: true }).boundingBox();
+  expect(heading!.y).toBeGreaterThanOrEqual(box!.y - 2); // the outline sits over its own section
+  expect(heading!.y).toBeLessThan(box!.y + box!.height);
+  await inspector(page).getByRole("button", { name: /Experience/ }).click();
+  await expect(section(page, "s-exp")).toHaveAttribute("data-selected", "true");
+  await expect(section(page, "s-exp")).toHaveClass(/animate-flash/);
+  await expect(section(page, "s-sum")).not.toHaveAttribute("data-selected");
+});
+
+test("clicking a section in the preview selects it (AC4)", async ({ page }) => {
+  await open(page);
+  await section(page, "s-sum").click();
+  await expect(inspector(page).getByRole("heading", { name: "Summary" })).toBeVisible();
+  await expect(section(page, "s-sum")).toHaveAttribute("data-selected", "true");
+  await expect(section(page, "s-sum")).not.toHaveClass(/animate-flash/); // already in view: no scroll, no flash
+});
+
+test("hovering a bullet in the selected section shows its source, a difference, or no source (AC3, AC5)", async ({ page }) => {
+  await open(page);
+  await expect(bullet(page, "b-ok")).toHaveCount(0); // only in the selected section
+  await inspector(page).getByRole("button", { name: /Experience/ }).click();
+  await bullet(page, "b-ok").hover();
+  await expect(page.getByRole("tooltip")).toContainText("From your knowledge base");
+  await expect(page.getByRole("tooltip")).toContainText("Rebuilt the shipment tracking dashboard");
+  await away(page);
+  await bullet(page, "b-off").hover();
+  await expect(page.getByRole("tooltip")).toContainText("Differs from your knowledge base");
+  await expect(page.getByRole("tooltip")).toContainText("Rebuilt the shipment tracking dashboard");
+  await away(page);
+  await bullet(page, "b-gone").hover();
+  await expect(page.getByRole("tooltip")).toContainText("No source found");
+});
+
+test("a Checks finding's Go to flashes its section in the preview (AC6)", async ({ page }) => {
+  await open(page);
+  await panel(page).getByRole("tab", { name: /Checks/ }).click();
+  await panel(page).getByRole("button", { name: /0\.9s.*Go to Experience/ }).click();
+  await expect(section(page, "s-exp")).toHaveAttribute("data-selected", "true");
+  await expect(section(page, "s-exp")).toHaveClass(/animate-flash/);
+});

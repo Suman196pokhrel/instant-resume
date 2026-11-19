@@ -53,6 +53,9 @@
   --color-danger-soft: var(--danger-soft);
   --color-danger-line: var(--danger-line);
   --color-ok: var(--ok);
+  --color-proposed: var(--proposed);
+  --color-proposed-soft: var(--proposed-soft);
+  --color-flash: var(--flash);
 
   --radius-sm: 6px;
   --radius-md: 8px;
@@ -75,6 +78,7 @@
   --animate-grow: grow 350ms var(--ease) both; /* Studio generation ghost page lines */
   --animate-sweep: sweep 1.2s var(--ease) infinite; /* the "Rewriting with {model}" strip's shimmer */
   --animate-ring-in: ring-in 700ms var(--ease) both; /* Checks keyword ring draws in when the tab opens */
+  --animate-flash: flash 1.2s var(--ease); /* SPEC §12 section flash in the preview */
 
   --color-on-ink: var(--on-ink);
   --color-prov-anthropic: var(--prov-anthropic);
@@ -106,6 +110,9 @@
   --danger-soft: #fcebe8;
   --danger-line: #f1b5ac;
   --ok: #2f7a3a;
+  --proposed: #d9a440; /* SPEC §11.1 special colours: a proposed change's dashed outline and tag */
+  --proposed-soft: #fffbf1;
+  --flash: #fff4c9; /* a section flash (from a finding, after accept), fading to transparent */
   --on-ink: #eef2f0; /* light text on ink: tooltips */
   --toast-action: #8fd6c6; /* toast action text on ink */
   --prov-anthropic: #c46a3a; /* provider dots (mock .prov-*) */
@@ -276,6 +283,15 @@ html[data-vt="reorder"]::view-transition-new(root) {
 @keyframes grow {
   from {
     transform: scaleX(0);
+  }
+}
+@keyframes flash {
+  0%,
+  30% {
+    background-color: var(--flash);
+  }
+  100% {
+    background-color: transparent;
   }
 }
 @keyframes sweep {

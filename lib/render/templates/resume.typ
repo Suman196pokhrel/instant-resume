@@ -3,7 +3,8 @@
 #show: setup
 #header()
 
-#let section-heading(title) = block(above: t.sectionGap * 1pt, below: 0.5em, sticky: true, {
+#let section-heading(id, title) = block(above: t.sectionGap * 1pt, below: 0.5em, sticky: true, {
+  mark("s", id) // inside the block, so the outline starts at the heading, not the gap above it
   text(size: t.headingSize * 1pt, weight: "bold", fill: accent, title)
   v(-0.55em)
   line(length: 100%, stroke: 0.75pt + accent)
@@ -20,11 +21,11 @@
   let detail = it.at("line", default: "")
   if detail != "" [\ #detail]
   let bullets = it.at("bullets", default: ())
-  if bullets.len() > 0 { v(0.25em); list(..bullets.map(b => b.text)) }
+  if bullets.len() > 0 { v(0.25em); list(..bullets.map(b => [#mark("b", b.id)#b.text#mark("be", b.id)])) }
 })
 
 #for s in d.document.sections.filter(s => not s.hidden) {
-  section-heading(s.title)
+  section-heading(s.id, s.title)
   if s.kind in ("summary", "paragraph") {
     par(s.text)
   } else if s.kind == "skills" {
@@ -32,6 +33,8 @@
   } else {
     for it in s.items { entry(it) }
   }
+  mark("e", s.id)
 }
 
 #page-count()
+#layout()

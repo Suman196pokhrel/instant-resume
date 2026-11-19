@@ -25,3 +25,12 @@
 
 // Read back by the worker (world.query "<pages>") so it knows the page count without parsing the PDF.
 #let page-count() = context [#metadata(counter(page).final().first()) <pages>]
+
+// Preview layout (SPEC §9.1): invisible marks where each section and bullet starts and ends. The worker reads
+// them back (world.query "<ir-layout>") to outline sections and show bullet sources over the SVG.
+#let mark(k, id) = [#metadata((k: k, id: id)) <ir>]
+#let layout() = context [#metadata((
+  w: page.width.pt(),
+  h: page.height.pt(),
+  marks: query(<ir>).map(m => { let p = m.location().position(); (k: m.value.k, id: m.value.id, page: p.page, x: p.x.pt(), y: p.y.pt()) }),
+)) <ir-layout>]

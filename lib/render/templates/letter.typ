@@ -10,10 +10,13 @@
 #block(below: 1em, strong[Re: #d.brief.title])
 #block(below: 1em)[Dear #r.name,]
 #for s in d.document.sections.filter(s => not s.hidden) {
+  mark("s", s.id)
   block(below: 0.9em, par(s.text))
+  mark("e", s.id)
 }
 #v(0.4em)
 Kind regards,\
 #strong(c.name)
 
 #page-count()
+#layout()
