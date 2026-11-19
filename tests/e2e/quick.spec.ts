@@ -46,6 +46,12 @@ test("the five stages run with live results, a monotonic bar and announcements, 
   await page.goto("/new/quick");
   await page.getByLabel("Job description").fill(MINTLEAF);
   await page.getByLabel(/Notes for this application/).fill("Referred by Dana Okafor");
+  // A fast run replaces the progress screen before a poll could see its last cards, so record each card as it appears.
+  await page.evaluate(() => {
+    const seen: string[] = [];
+    (window as unknown as { seenCards: string[] }).seenCards = seen;
+    new MutationObserver(() => document.querySelectorAll("section[aria-label]").forEach((s) => seen.includes(s.ariaLabel!) || seen.push(s.ariaLabel!))).observe(document.body, { childList: true, subtree: true });
+  });
   await page.getByRole("button", { name: "Generate" }).click();
   await expect(page.getByRole("heading", { level: 1 })).toHaveText("Generating your documents");
   await expect(page.getByText("Results appear here as each step finishes.")).toBeVisible();
@@ -61,9 +67,9 @@ test("the five stages run with live results, a monotonic bar and announcements, 
   await expect(page.getByRole("region", { name: "Matched from your knowledge base" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("region", { name: "Job brief" }).getByText("Matched:").first()).toBeAttached();
   await expect(page.getByRole("region", { name: "Draft" })).toContainText("Jordan Whitlock", { timeout: 15_000 });
-  await expect(page.getByRole("region", { name: "Page fit" })).toBeVisible({ timeout: 30_000 });
   await expect(page.getByRole("status").filter({ hasText: /Fitting to 2 pages|Running checks|Your documents are ready/ })).toBeAttached();
   await expect(page.getByRole("heading", { level: 1, name: "Your documents are ready" })).toBeFocused({ timeout: 30_000 });
+  expect(await page.evaluate(() => (window as unknown as { seenCards: string[] }).seenCards)).toEqual(expect.arrayContaining(["Job brief", "Matched from your knowledge base", "Draft", "Page fit", "Checks"]));
   clearInterval(sample);
   expect(seen.length).toBeGreaterThan(3);
   expect(seen).toEqual([...seen].sort((a, b) => a - b)); // the bar never moves back
