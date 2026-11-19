@@ -1,15 +1,15 @@
 # Smart Dev state: Instant Resume
 stage: spec
 task: -
-next: board empty (all M0–M11 cards done). Owner decides how to handle bugs_after_manual_review.txt (their manual-test list + run notes at the end); turn the chosen items into cards (fast lane for small ones) and start with the first they pick
+next: board empty and the owner's bug list is fixed (status at the end of bugs_after_manual_review.txt). Ask the owner what's next; candidates: the open item there (thin summaries after fitting), the screens not yet compared with the mock, parked cards
 blockers: none
-updated: 2026-11-19 15:03 · session 11
+updated: 2026-11-19 17:20 · session 12
 
 ## Numbers
-stories: 41 done · 0 review · 0 in progress · 0 to do · 11 parked | tests: 331 unit + 139 e2e pass (3 e2e opt-in skips; 3 live checks opt-in); fresh clone passes | commits last session: 23
+stories: 41 done · 0 review · 0 in progress · 0 to do · 11 parked | tests: 340 unit + 144 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 20
 
 ## Last session
-- done: TASK-51 Quick defaults (Settings section, theme preset into generation), TASK-38 paper/spelling, TASK-27 backup (lib/db/backup.ts, /api/backup), TASK-28 unlock screen + Settings → Access, TASK-46 preview overlays from Typst marks (layout() in common.typ, lib/render/layout.ts, SheetOverlay), TASK-47 template spacing from the mock's CSS, TASK-29 setup checklist + a11y sweep (AC5 partial: unreviewed screens listed in the bugs file); parked dev-only sample JDs
-- decisions: one PrefsSettings state so each full-prefs PUT can't clobber; validation errors are 422; KB top bar hides backup buttons below 900px; proxy redirects to an absolute URL on the forwarded host (relative Location made password mode 500); --muted is #5F6964 (AA) in app, SPEC and mock; class-less links are underlined; letter header has no work-rights line
-- gotchas: e2e on a file's own server (runOnEmptyServer(port, { env, seed })) must take Origin from page.url(); Next's route announcer is also role=alert, so scope alerts; a scratch .mjs in the repo root sends `next dev` into a reload loop (keep scripts in the scratchpad); e2e DB is shared, so prefs/backup writes are stubbed or done on own servers
-- correction: owner said finish every ticket without asking, fix small bugs on the way, log big ones in bugs_after_manual_review.txt; the bug list waits for their instructions
+- done: the owner's 9 manual-test bugs, verified live with two real resumes (outside the repo) against two real job ads: 1-page resume + 1-page letter every run (pdfinfo). Page budget default 1 on every generation path; fit loop (lib/generate/fit.ts, 24 compiles) repeats content steps, trims skills, fits the letter; Export offers "Fit to 1 page". Preview: page-break gaps, shadow-root SVG, one render at a time; colour picker 200 ms; reorder flash; Add evidence "New role…"; DELETE /api/kb + Settings button
+- decisions: imported summary/profile/target-role sections skip the resume skeleton but stay facts; ALL-CAPS headings → sentence case (tidyHeading); employer()/roleAt() hide "Not stated"; regenerate keeps the user's theme unless fitting passes one
+- gotchas: a scratch script in the repo root or a commit during `next dev` can start the reload loop: rm -rf ./.next/dev; measure perf on a production build with CPU throttle (headless numbers hide it); never put real resume data in the repo (scratchpad only)
+- correction: owner asked to fix the bug list using their real resumes and real job ads, commit, and push without asking (no credentials)

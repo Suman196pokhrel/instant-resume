@@ -7,3 +7,4 @@
 2026-11-18 22:08 | Instant Resume | spec+build+review ×4 → spec | TASK-16, TASK-17, TASK-18, TASK-19 | rewrite with diff (live on Anthropic), Structure and Design tabs, revisions and undo done; TASK-20 next
 2026-11-18 23:25 | Instant Resume | spec/build/review × 9 cards → spec | TASK-51 | Rules engine, job panel, Checks, History, Export, match call, Quick generate pipeline, page fitting and result screen; 320 unit + 119 e2e
 2026-11-19 15:03 | Instant Resume | spec/build/review × 7 cards → spec | - | Quick defaults, preferences, backup, unlock/Access, preview overlays, template spacing, setup checklist + a11y; board empty, bug list next; 331 unit + 139 e2e
+2026-11-19 17:20 | Instant Resume | bug pass (fast lane) → spec | - | Owner's 9 bugs fixed and verified live with real resumes and ads (1-page resume + letter); perf measured; 340 unit + 144 e2e
