@@ -1,10 +1,10 @@
 ---
 id: TASK-38
 title: 'Settings: preferences (paper size and spelling)'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-17T11:30:00Z'
-updated_date: '2026-11-19T03:33:00Z'
+updated_date: '2026-11-19T03:37:00Z'
 labels:
   - m4
 dependencies: []
@@ -19,8 +19,8 @@ As a job seeker, I can choose A4 or Letter and Australian or US conventions, sav
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Paper size (A4/Letter) and Spelling and conventions (Australian/US) use the Segmented control and save immediately via PUT /api/settings with the toast "Preference saved"
-- [ ] #2 The choices survive a reload and default to A4 and Australian
+- [x] #1 Paper size (A4/Letter) and Spelling and conventions (Australian/US) use the Segmented control and save immediately via PUT /api/settings with the toast "Preference saved"
+- [x] #2 The choices survive a reload and default to A4 and Australian
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -38,3 +38,9 @@ Tests:
 
 Out of scope: Your data (TASK-27), Access (TASK-28).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Preferences section in PrefsSettings (shared state with Quick generate defaults). Round trip covered by tests/api/settings.test.ts; e2e stubs the PUT because the e2e DB is shared.
+<!-- SECTION:NOTES:END -->

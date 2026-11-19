@@ -1,10 +1,10 @@
 ---
 id: TASK-51
 title: 'Settings: Quick generate defaults'
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-18T12:48:00Z'
-updated_date: '2026-11-19T03:30:00Z'
+updated_date: '2026-11-19T03:32:00Z'
 labels: []
 dependencies: []
 ordinal: 48000
@@ -18,8 +18,8 @@ As a job seeker, I set the theme, page budget, cover letter and tone that Quick 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Settings has Default theme (Classic, Modern, Compact), Page budget (1 or 2 pages), Cover letter switch and tone (disabled when off), saved immediately with the toast 'Preference saved'
-- [ ] #2 Quick generate applies the theme preset, the page budget, the cover letter switch and the tone
+- [x] #1 Settings has Default theme (Classic, Modern, Compact), Page budget (1 or 2 pages), Cover letter switch and tone (disabled when off), saved immediately with the toast 'Preference saved'
+- [x] #2 Quick generate applies the theme preset, the page budget, the cover letter switch and the tone
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -40,3 +40,9 @@ Tests:
 
 Out of scope: paper size and spelling (TASK-38), Studio using the preset.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Settings → Quick generate defaults (components/settings/Prefs.tsx, one prefs state so each PUT sends the full set; rollback + error toast on failure). Pipeline passes THEME_PRESETS[prefs.quick.theme] into generateDocuments (optional theme input).
+<!-- SECTION:NOTES:END -->
