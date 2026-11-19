@@ -84,3 +84,12 @@ test("a Checks finding's Go to flashes its section in the preview (AC6)", async 
   await expect(section(page, "s-exp")).toHaveAttribute("data-selected", "true");
   await expect(section(page, "s-exp")).toHaveClass(/animate-flash/);
 });
+
+test("a second page shows as its own sheet, with a labelled gap at the break (owner's bug: 2 pages looked like 1)", async ({ page }) => {
+  const long = Array.from({ length: 160 }, (_, i) => `Sentence ${i + 1} about shipping web apps for customers.`).join(" ");
+  const { id } = await makeProject(page, { resumeSections: [{ id: "s-sum", kind: "summary", title: "Summary", hidden: false, text: long }, ...resumeSections.slice(1)] });
+  await page.goto(`/projects/${id}`);
+  await expect(page.getByText(/Rendered in \d+ ms · 2 pages/)).toBeVisible({ timeout: 30_000 });
+  await expect(page.locator("[data-page-break]")).toHaveCount(1);
+  await expect(page.locator("[data-page-break]")).toContainText("Page 2");
+});

@@ -126,6 +126,12 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
         {out ? (
           <div style={{ zoom: z }} className="relative mx-auto w-fit">
             <div data-sheet className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease) [&_svg]:block [&_svg]:h-auto [&_svg]:w-full", regenerating && "opacity-35")} dangerouslySetInnerHTML={{ __html: out.svg }} />
+            {/* Typst stacks the pages; a gap at each break shows where one sheet ends (it sits in the page margins) */}
+            {Array.from({ length: out.pages - 1 }, (_, k) => (
+              <div key={k} data-page-break aria-hidden style={{ top: `${((k + 1) / out.pages) * 100}%` }} className="absolute -inset-x-6 h-4 -translate-y-1/2 bg-sunken">
+                <span className="absolute top-1/2 right-6 -translate-y-1/2 text-[10px] font-medium text-muted-foreground">{`Page ${k + 2}`}</span>
+              </div>
+            ))}
             {placed && !viewing && <SheetOverlay {...placed} doc={out.doc} kb={kb} brief={brief} />}
           </div>
         ) : (
