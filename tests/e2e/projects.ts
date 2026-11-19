@@ -18,7 +18,7 @@ export async function makeProject(page: Page, { role = unique("Platform Engineer
   };
   const letter = { kind: "coverLetter", theme: THEME_DEFAULTS, recipient: { name: "Hiring team", company, location: "Sydney NSW" }, sections: ["Opening", "Evidence", "Fit", "Close"].map((t, i) => ({ id: `p-${i}`, kind: "paragraph", title: t, hidden: false, text: `${t} paragraph.` })) };
   const res = await page.request.post("/api/projects", {
-    headers: { origin: new URL(test.info().project.use.baseURL!).origin }, // state-changing requests must come from the app's origin
+    headers: { origin: new URL(page.url().startsWith("http") ? page.url() : test.info().project.use.baseURL!).origin }, // state-changing requests must come from the app's origin (a file's own server once the page is on it)
     data: { project: { company, role, location: "Sydney NSW", jdText, brief, selected: ["role-brightwater"], source: "studio" }, documents: [resume, letter] },
   });
   expect(res.status()).toBe(201);

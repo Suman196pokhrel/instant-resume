@@ -1,10 +1,10 @@
 ---
 id: TASK-29
 title: Setup checklist, responsive layout and accessibility pass
-status: To Do
+status: In Progress
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-16T00:51:00Z'
+updated_date: '2026-11-19T04:10:00Z'
 labels:
   - m10
 dependencies:
@@ -33,3 +33,25 @@ As any user, the app guides my first run and works by keyboard, at phone width a
 - [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
 - [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
+
+## Implementation Plan
+
+<!-- SECTION:PLAN:BEGIN -->
+Approach:
+1. Setup checklist (SPEC §13.1, mock setupChecklistHtml): components/dashboard/SetupChecklist.tsx (client) above the page head. Steps: connection exists (useLlmChoice, browser), KB saved (server: readKb non-null), an application exists (server). Hidden at 3 of 3 or when prefs.dismissedOnboardingBanner; × PUTs the prefs with it set. Renders only once the browser connections are known (no count flicker). Mock styles: surface card, accent-line border, numbered circles (accent + check when done), first unfinished action primary, others ghost; 'or enter it manually' → /onboarding.
+2. Phone width + console: an e2e sweep at 390px over the main screens (dashboard, KB, settings, new, quick, studio, workspace, import) asserting no horizontal scroll and no console errors; fix what it finds.
+3. Reduced motion + axe: add @axe-core/playwright (dev). e2e: axe (wcag2a/aa) on the main screens with no violations; with reducedMotion 'reduce' a transition computes to ~0 s. Fix violations.
+4. Fresh clone: clone to a temp folder, pnpm install, playwright install check, pnpm test:e2e.
+5. Side-by-side review: screenshot each main screen against the mock; fix small inconsistencies, log big ones in bugs_after_manual_review.txt.
+
+Files: components/dashboard/SetupChecklist.tsx, app/(shell)/dashboard/page.tsx, tests/e2e/setup.spec.ts, tests/e2e/a11y.spec.ts, package.json, plus fixes found.
+
+Tests:
+- e2e (empty server): 0 of 3 → key → 1 → onboarding saved → 2 → dismiss hides (and stays hidden after reload) → un-dismiss → first application → gone at 3 of 3 (AC1)
+- e2e: phone-width sweep, no horizontal scroll, no console errors (AC2)
+- e2e: axe on main screens; reduced motion zeroes transitions (AC3)
+- fresh-clone run of the full suite (AC4)
+- review notes on the card (AC5)
+
+Out of scope: new features found during review (Parked).
+<!-- SECTION:PLAN:END -->

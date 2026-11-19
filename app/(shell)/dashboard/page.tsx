@@ -1,14 +1,18 @@
 import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Dashboard } from "@/components/dashboard/Dashboard";
+import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
 import { Content, TopBar } from "@/components/shell/TopBar";
 import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/lib/db/client";
+import { readKb } from "@/lib/db/kb";
 import { listProjects } from "@/lib/db/projects";
+import { readPrefs } from "@/lib/db/settings";
 
-// Applications (SPEC §13.1). The setup checklist arrives with TASK-29.
+// Applications (SPEC §13.1), with the setup checklist on a first run.
 export default async function Page() {
-  const projects = await listProjects(await getDb());
+  const db = await getDb();
+  const [projects, kb, prefs] = await Promise.all([listProjects(db), readKb(db), readPrefs(db)]);
   return (
     <>
       <TopBar
@@ -19,6 +23,7 @@ export default async function Page() {
         }
       />
       <Content>
+        <SetupChecklist hasKb={!!kb} hasProject={projects.length > 0} prefs={prefs} />
         <Dashboard projects={projects} />
       </Content>
     </>
