@@ -126,7 +126,7 @@ describe("knowledge base routes (AC3)", () => {
 
 describe("settings (AC4)", () => {
   it("GET fills the AU defaults; PUT saves and keeps the other defaults; invalid is 422", async () => {
-    expect(await body(await settings.GET())).toMatchObject({ paper: "A4", spelling: "en-AU", quick: { theme: "classic", pages: 2 } });
+    expect(await body(await settings.GET())).toMatchObject({ paper: "A4", spelling: "en-AU", quick: { theme: "classic", pages: 1 } });
     const res = await settings.PUT(req("PUT", { paper: "Letter", ...SECRET }));
     expect(res.status).toBe(200);
     noSecrets(await res.json());

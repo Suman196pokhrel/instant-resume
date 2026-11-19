@@ -8,7 +8,7 @@ import { AddEvidenceDialog } from "@/components/kb/AddEvidenceDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Pill } from "@/components/ui/pill";
-import { fileName } from "@/lib/doc/filename";
+import { fileName, roleAt } from "@/lib/doc/filename";
 import { plainText } from "@/lib/doc/plain-text";
 import { downloadFile } from "@/lib/download";
 import type { DocFinding, QuickSummary } from "@/lib/generate/pipeline";
@@ -167,7 +167,7 @@ export function QuickResult({ done, kb, prefs, onRegenerate }: { done: QuickDone
           <h1 ref={head} tabIndex={-1} className="outline-none">
             {letter ? "Your documents are ready" : "Your resume is ready"}
           </h1>
-          <p className="mt-1 text-muted-foreground">{`${brief.title} at ${brief.company}. Generated in ${done.seconds.toFixed(1)}s with ${done.model}.`}</p>
+          <p className="mt-1 text-muted-foreground">{`${roleAt(brief.title, brief.company)}. Generated in ${done.seconds.toFixed(1)}s with ${done.model}.`}</p>
         </div>
         <div className="flex flex-wrap items-center gap-2">
           <Button size="sm" variant="link" onClick={onRegenerate}>

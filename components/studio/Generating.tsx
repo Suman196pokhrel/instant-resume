@@ -5,12 +5,14 @@ import { Check, ChevronLeft } from "lucide-react";
 import { cn } from "cn";
 import { LlmErrorCallout } from "@/components/llm/LlmErrorCallout";
 import { Button } from "@/components/ui/button";
+import { fitDocuments } from "@/lib/generate/fit";
 import { generateDocuments } from "@/lib/generate/generate";
 import { getAdapter } from "@/lib/llm/adapter";
 import { LlmError } from "@/lib/llm/errors";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
+import { employer } from "@/lib/doc/filename";
 
 // Studio step 4 (SPEC §14.4): one generate call, then a compile check, then the project is saved. Nothing is saved
 // on failure, and the draft stays as it was. Each attempt is a fresh mount (the parent changes its key).
@@ -71,17 +73,16 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
         next(3);
         next(4);
         // shortcut: a compile or save failure reruns the LLM call on Try again; keep the documents if that gets common
-        const { render } = await import("@/lib/render/client");
-        const data = { kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: draft.brief.title }, paper: prefs.paper, spelling: prefs.spelling };
-        await render("resume", { ...data, document: out.resume });
-        await render("coverLetter", { ...data, document: out.coverLetter });
+        const { pagesOf } = await import("@/lib/render/client");
+        const compile = pagesOf({ kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: draft.brief.title }, paper: prefs.paper, spelling: prefs.spelling });
+        const fitted = await fitDocuments(out, { budget: prefs.quick.pages, keywords: draft.brief.keywords, compile, signal: controller.signal }); // the page budget applies to Studio too
         const { brief, jdText, notes, selected } = draft;
         const res = await fetch("/api/projects", {
           method: "POST",
           headers: { "content-type": "application/json" },
           body: JSON.stringify({
             project: { company: brief.company, role: brief.title, location: brief.location, jdText, brief, selected, source: "studio", notes: notes.trim() || undefined },
-            documents: [out.resume, out.coverLetter], // the server drops their "draft" id and projectId and makes its own
+            documents: [fitted.resume, fitted.coverLetter], // the server drops their "draft" id and projectId and makes its own
           }),
           signal: controller.signal,
         });
@@ -110,7 +111,7 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
     <div className="grid grid-cols-[1fr_300px] gap-8 max-[860px]:grid-cols-1">
       <div>
         <h1 ref={heading} tabIndex={-1} className="outline-none">
-          Generating for {draft.brief.company}
+          Generating for {employer(draft.brief.company) || draft.brief.title}
         </h1>
         <p className="mt-1 text-muted-foreground">Using {model}. Only facts from the entries you chose can be used.</p>
         <ol aria-label="Generation stages" className="mt-[22px] mb-3.5 flex flex-col gap-1">

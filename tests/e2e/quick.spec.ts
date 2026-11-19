@@ -37,7 +37,7 @@ test("Generate waits for a key and text; a short ad asks for the whole thing (in
   await expect(page.getByText("16 characters")).toBeVisible();
   await page.getByRole("button", { name: "Generate" }).click();
   await expect(page.getByText("That looks too short to be a full job description. Paste the whole ad, including the requirements.")).toBeVisible();
-  await expect(page.getByText(/Defaults: Classic theme, 2 pages, cover letter on \(professional tone\)\./)).toBeVisible();
+  await expect(page.getByText(/Defaults: Classic theme, 1 page, cover letter on \(professional tone\)\./)).toBeVisible();
 });
 
 test("the five stages run with live results, a monotonic bar and announcements, then open the project (AC1, AC2)", async ({ page }) => {
@@ -67,7 +67,7 @@ test("the five stages run with live results, a monotonic bar and announcements, 
   await expect(page.getByRole("region", { name: "Matched from your knowledge base" })).toBeVisible({ timeout: 15_000 });
   await expect(page.getByRole("region", { name: "Job brief" }).getByText("Matched:").first()).toBeAttached();
   await expect(page.getByRole("region", { name: "Draft" })).toContainText("Jordan Whitlock", { timeout: 15_000 });
-  await expect(page.getByRole("status").filter({ hasText: /Fitting to 2 pages|Running checks|Your documents are ready/ })).toBeAttached();
+  await expect(page.getByRole("status").filter({ hasText: /Fitting to 1 page|Running checks|Your documents are ready/ })).toBeAttached();
   await expect(page.getByRole("heading", { level: 1, name: "Your documents are ready" })).toBeFocused({ timeout: 30_000 });
   expect(await page.evaluate(() => (window as unknown as { seenCards: string[] }).seenCards)).toEqual(expect.arrayContaining(["Job brief", "Matched from your knowledge base", "Draft", "Page fit", "Checks"]));
   clearInterval(sample);
@@ -101,9 +101,9 @@ test("an error stops at its stage; Retry from this step completes, and Start ove
   await page.getByLabel("Job description").fill(MINTLEAF);
   await page.getByRole("button", { name: "Generate" }).click();
   const alert = page.getByRole("alert").filter({ hasText: "Stopped at" });
-  await expect(alert).toContainText('Stopped at "Fitting to 2 pages"', { timeout: 30_000 });
+  await expect(alert).toContainText('Stopped at "Fitting to 1 page"', { timeout: 30_000 });
   await expect(alert).toContainText("The renderer stopped while laying out page 2. The steps before this one are kept.");
-  await expect(stage(page, "Fitting to 2 pages")).toHaveAttribute("data-state", "error");
+  await expect(stage(page, "Fitting to 1 page")).toHaveAttribute("data-state", "error");
   await expect(stage(page, "Writing your resume and cover letter")).toHaveAttribute("data-state", "done");
   await expect(alert.getByRole("button", { name: "Retry from this step" })).toBeFocused();
 

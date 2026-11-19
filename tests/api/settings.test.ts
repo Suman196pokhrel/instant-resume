@@ -13,7 +13,7 @@ beforeAll(() => process.chdir(mkdtempSync(join(tmpdir(), "ir-settings-"))));
 
 describe("prefs", () => {
   it("default to A4 and Australian (AC2)", async () => {
-    expect(await get()).toMatchObject({ paper: "A4", spelling: "en-AU", quick: { theme: "classic", pages: 2, coverLetter: true, tone: "Professional" } });
+    expect(await get()).toMatchObject({ paper: "A4", spelling: "en-AU", quick: { theme: "classic", pages: 1, coverLetter: true, tone: "Professional" } });
   });
 
   it("a saved choice is what the next load reads (AC2)", async () => {

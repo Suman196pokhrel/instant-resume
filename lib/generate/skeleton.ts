@@ -3,6 +3,7 @@ import type { ResumeDocument, Section } from "@/lib/schemas/document";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Theme } from "@/lib/schemas/theme";
 import { newId, tidyHeading } from "@/lib/utils";
+import { employer } from "@/lib/doc/filename";
 
 // The skeleton documents (SPEC §8.3 call 3, §6.3): built on the device from the selected entries, with empty
 // summary, paragraph text and bullets for the LLM to fill. id and projectId are "draft" until the project is saved.
@@ -42,7 +43,7 @@ export function buildSkeleton(kb: KnowledgeBase, brief: JobBrief, selected: stri
       kind: "coverLetter",
       theme,
       sections: ["Opening", "Evidence", "Fit", "Close"].map((t) => text("paragraph", t)),
-      recipient: { name: "Hiring team", company: brief.company, location: brief.location },
+      recipient: { name: "Hiring team", company: employer(brief.company), location: brief.location },
     },
   };
 }

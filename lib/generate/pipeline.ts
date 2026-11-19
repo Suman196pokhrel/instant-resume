@@ -122,11 +122,13 @@ export function createPipeline(input: { jdText: string; notes: string }, deps: P
       ctx.docs = letter ? [fit.doc, letter] : [fit.doc];
       ctx.pages = { resume: fit.pages };
       if (letter) {
-        ctx.pages.coverLetter = await deps.compile("coverLetter", letter);
-        if (controller.signal.aborted) throw new DOMException("cancelled", "AbortError");
-        emit({ type: "pages", kind: "coverLetter", value: ctx.pages.coverLetter, action: `Laid out on ${prefs.paper}`, done: true, budget: 1 });
+        const lf = await fitPages(letter, { budget: 1, keywords: ctx.brief!.keywords, compile: (d) => deps.compile("coverLetter", d), signal: controller.signal }); // the letter is always one page
+        ctx.docs = [fit.doc, lf.doc];
+        ctx.pages.coverLetter = lf.pages;
+        emit({ type: "pages", kind: "coverLetter", value: lf.pages, action: `Laid out on ${prefs.paper}`, done: true, budget: 1 });
       }
       if (!fit.fits) return { status: "warning", note: `Still ${fit.pages} pages. Trim content in Studio.` };
+      if (ctx.pages.coverLetter && ctx.pages.coverLetter > 1) return { status: "warning", note: `The cover letter is still ${ctx.pages.coverLetter} pages. Trim it in Studio.` };
       const p = ctx.pages;
       return { note: [`Resume ${pages(p.resume!)}`, p.coverLetter ? `cover letter ${pages(p.coverLetter)}` : ""].filter(Boolean).join(", ") };
     },

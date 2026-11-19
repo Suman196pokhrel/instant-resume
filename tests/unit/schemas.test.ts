@@ -107,7 +107,7 @@ describe("settings", () => {
     expect(prefsSchema.parse({})).toEqual({
       paper: "A4",
       spelling: "en-AU",
-      quick: { theme: "classic", pages: 2, coverLetter: true, tone: "Professional" },
+      quick: { theme: "classic", pages: 1, coverLetter: true, tone: "Professional" },
       dismissedOnboardingBanner: false,
     });
   });

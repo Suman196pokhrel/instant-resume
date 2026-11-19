@@ -19,6 +19,7 @@ import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
 import { QuickResult, type QuickDone } from "./QuickResult";
+import { employer, roleAt } from "@/lib/doc/filename";
 
 // Quick generate (SPEC §14.3; mock views-quick.js): paste a job description, watch the five-stage pipeline, then
 // open the result. The pipeline is lib/generate/pipeline.ts; this screen only listens to its events.
@@ -214,7 +215,7 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
       </section>
     );
 
-  const title = run.brief ? `Generating for ${run.brief.title} at ${run.brief.company}` : "Generating your documents";
+  const title = run.brief ? `Generating for ${roleAt(run.brief.title, run.brief.company)}` : "Generating your documents";
   return (
     <div className="mx-auto max-w-[980px]">
       <div className="flex items-start justify-between gap-4">
@@ -319,7 +320,7 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
       <Card title="Job brief">
         <div className="font-semibold">{brief.title}</div>
         <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
-          {[brief.company, brief.location].filter(Boolean).join(", ")} <Pill>{brief.seniority}</Pill>
+          {[employer(brief.company), brief.location].filter(Boolean).join(", ")} <Pill>{brief.seniority}</Pill>
         </div>
         <div className="mt-2.5 text-xs font-semibold text-ink-2">Must-haves</div>
         <ul className="mt-1.5 flex flex-wrap gap-1.5">

@@ -12,7 +12,7 @@ function quickScenario() {
 
 function quickPrefs() {
   const prefs = Store.state.prefs;
-  if (!prefs.quick) prefs.quick = { theme: 'classic', pages: 2, coverLetter: true, tone: 'Professional' };
+  if (!prefs.quick) prefs.quick = { theme: 'classic', pages: 1, coverLetter: true, tone: 'Professional' };
   return prefs.quick;
 }
 

@@ -96,3 +96,13 @@ export async function fitPages(start: Doc, { budget, keywords, compile, onStep, 
     doc = changed;
   }
 }
+
+/** A fresh pair from generation: the resume fitted to the page budget, the cover letter to one page (SPEC §9.4). */
+export async function fitDocuments<D extends Doc>(
+  docs: { resume: D; coverLetter: D },
+  { budget, keywords, compile, signal }: { budget: 1 | 2; keywords: string[]; compile: (kind: Doc["kind"], doc: Doc) => Promise<number>; signal?: AbortSignal }
+): Promise<{ resume: D; coverLetter: D }> {
+  const resume = await fitPages(docs.resume, { budget, keywords, compile: (d) => compile("resume", d), signal });
+  const letter = await fitPages(docs.coverLetter, { budget: 1, keywords, compile: (d) => compile("coverLetter", d), signal });
+  return { resume: { ...docs.resume, ...resume.doc }, coverLetter: { ...docs.coverLetter, ...letter.doc } };
+}

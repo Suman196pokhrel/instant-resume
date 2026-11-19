@@ -30,3 +30,6 @@ export function render(kind: RenderKind, data: RenderInput, format: "pdf" | "svg
     start().postMessage({ type: "compile", id, kind, data, format });
   });
 }
+
+/** A page counter for one application's documents (page fitting compiles PDFs and only needs the count). */
+export const pagesOf = (data: Omit<RenderInput, "document">) => async (kind: RenderKind, document: unknown) => (await render(kind, { ...data, document }, "pdf")).pages;

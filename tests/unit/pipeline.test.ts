@@ -18,7 +18,7 @@ function setup(over: Partial<PipelineDeps> = {}, scenario: "happy" | "gaps" = "h
   const mock = createMockAdapter({ fixtures: MOCK_FIXTURES, scenario });
   const adapter: LlmAdapter = { generateObject: (args) => (calls.push(args.name), (prompts[args.name] = String(args.prompt)), mock.generateObject(args)) };
   const save = vi.fn<(project: ProjectIn, documents: { kind: string }[]) => Promise<string>>(async () => "p-new");
-  const deps: PipelineDeps = { kb, prefs: prefsSchema.parse({}), getAdapter: async () => adapter, compile: async (kind) => (kind === "resume" ? 2 : 1), save, ...over };
+  const deps: PipelineDeps = { kb, prefs: prefsSchema.parse({ quick: { pages: 2 } }), getAdapter: async () => adapter, compile: async (kind) => (kind === "resume" ? 2 : 1), save, ...over };
   const p = createPipeline({ jdText, notes: "Referred by Dana" }, deps);
   const events: PipelineEvent[] = [];
   for (const type of ["stage", "progress", "brief", "match", "draft", "pages", "checks", "done", "error"] as const) p.on(type, (e) => events.push(e));

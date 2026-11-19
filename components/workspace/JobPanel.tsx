@@ -12,6 +12,7 @@ import { Chip } from "@/components/ui/pill";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 import type { Project } from "@/lib/schemas/project";
 import { sectionText } from "@/lib/doc/plain-text";
+import { fitDocuments } from "@/lib/generate/fit";
 import { generateDocuments } from "@/lib/generate/generate";
 import { getAdapter } from "@/lib/llm/adapter";
 import { LlmError, outputError } from "@/lib/llm/errors";
@@ -22,6 +23,7 @@ import type { Prefs } from "@/lib/schemas/settings";
 import { useWorkspace } from "@/lib/stores/workspace";
 import { toast } from "@/lib/toast";
 import { KIND_LABEL } from "./Workspace";
+import { employer } from "@/lib/doc/filename";
 
 // Job panel (left), Job tab (SPEC §14.5; mock views-workspace.js renderLeft 'job'). TASK-21 adds the Checks tab beside it.
 
@@ -74,8 +76,11 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
     toast(`Regenerating with ${model}…`);
     try {
       const out = await generateDocuments({ kb, brief, selected: project.selected, notes, tone: prefs.quick.tone, spelling: prefs.spelling }, await getAdapter(), controller.signal);
+      const { pagesOf } = await import("@/lib/render/client");
+      const compile = pagesOf({ kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling });
+      const fitted = await fitDocuments(out, { budget: prefs.quick.pages, keywords: brief.keywords, compile, signal: controller.signal });
       if (controller.signal.aborted) return;
-      regenerate(out);
+      regenerate({ ...out, ...fitted });
       toast("Both documents regenerated");
     } catch (e) {
       if (controller.signal.aborted) return;
@@ -89,7 +94,7 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
       <div>
         <h2 className="mb-[3px] text-base font-semibold tracking-[-0.015em]">{brief.title}</h2>
         <div className="text-[13px] text-muted-foreground">
-          {[brief.company, brief.location].filter(Boolean).join(" · ")}
+          {[employer(brief.company), brief.location].filter(Boolean).join(" · ")}
         </div>
       </div>
       <section aria-label="Requirements">

@@ -23,6 +23,7 @@ import { HistoryDrawer } from "./HistoryDrawer";
 import { JobPanel } from "./JobPanel";
 import { Preview } from "./Preview";
 import { StructureTab } from "./StructureTab";
+import { employer } from "@/lib/doc/filename";
 
 // The Workspace (SPEC §14.5, mock views-workspace.js): bar, job panel, preview and inspector. History and export join
 // the bar with their cards.
@@ -96,7 +97,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
           </Link>
           <span className="text-muted-foreground">/</span>
           <span className="truncate font-semibold max-[900px]:hidden">
-            {project.role} <span className="font-normal text-muted-foreground">at {project.company}</span>
+            {project.role} {employer(project.company) && <span className="font-normal text-muted-foreground">at {project.company}</span>}
           </span>
         </div>
         <Tabs value={kind} onValueChange={(v) => setKind(v as Kind)}>

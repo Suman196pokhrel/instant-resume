@@ -97,5 +97,5 @@ it("round-trips the on-device parser's draft for the mock provider", () => {
   const d = toDraft(toExtraction(parseResume(text)), text);
   expect(d.contact).toMatchObject({ name: "Sam Lee", email: "sam@example.com" });
   expect(d.roles).toEqual([{ title: "Support Engineer", company: "Harbour Health", highlights: [{ text: "Answered 40 tickets a day", skills: [] }] }]);
-  expect(d.additional?.map((a) => a.title)).toEqual(["LANGUAGES", "Original resume text (reference)"]);
+  expect(d.additional?.map((a) => a.title)).toEqual(["Languages", "Original resume text (reference)"]);
 });

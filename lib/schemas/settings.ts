@@ -19,7 +19,7 @@ export const prefsSchema = z.object({
   quick: z
     .object({
       theme: z.enum(["classic", "modern", "compact"]).default("classic"),
-      pages: z.union([z.literal(1), z.literal(2)]).default(2),
+      pages: z.union([z.literal(1), z.literal(2)]).default(1), // a one-page resume is the target
       coverLetter: z.boolean().default(true),
       tone: z.enum(["Professional", "Warm", "Concise"]).default("Professional"),
     })
