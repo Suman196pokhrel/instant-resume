@@ -103,3 +103,18 @@ test("moving a section in Structure flashes it in the list and, once laid out, i
   await expect(section(page, "s-exp")).toHaveClass(/animate-flash/);
   expect((await section(page, "s-exp").boundingBox())!.y).toBeLessThan(before); // flashed at its new place
 });
+
+test("Export warns when the resume runs past the page budget, and Fit to 1 page fixes it (owner's bug: long resume exported on 2 pages)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const long = Array.from({ length: 72 }, (_, i) => `Sentence ${i + 1} about shipping web apps for customers.`).join(" ");
+  const { id } = await makeProject(page, { resumeSections: [{ id: "s-sum", kind: "summary", title: "Summary", hidden: false, text: long }, ...resumeSections.slice(1)] });
+  await page.goto(`/projects/${id}`);
+  await expect(page.getByText(/Rendered in \d+ ms · 2 pages/)).toBeVisible({ timeout: 30_000 });
+  await page.getByRole("button", { name: "Export PDF" }).click();
+  const dialog = page.getByRole("dialog", { name: "Export PDF" });
+  await expect(dialog).toContainText("Resume: 2 pages (target 1).");
+  await dialog.getByRole("button", { name: "Fit to 1 page" }).click();
+  await expect(page.getByText("Fitted. Check the preview, then export.")).toBeVisible({ timeout: 30_000 });
+  await expect(dialog.getByText(/Resume: 2 pages/)).toHaveCount(0);
+  await expect(page.getByText(/Rendered in \d+ ms · 1 page/)).toBeVisible();
+});

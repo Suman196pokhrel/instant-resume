@@ -671,6 +671,8 @@ Deterministic loop, maximum 16 compiles:
 
 If it still doesn't fit after the loop, finish with a warning: "Still {n} pages. Trim content in Studio."
 
+Studio action: the Export dialog counts each document's pages when it opens. When the resume runs past the page budget, or the cover letter past 1 page, a warn callout reads "Resume: {n} pages (target {budget})." with a ghost "Fit to {budget} page(s)" button ("Fitting" with a spinner while it runs). It runs this loop on the current document and saves the result as one undoable revision, "Fitted to {n} page(s)". Toast: "Fitted. Check the preview, then export.", or "{Document} is still {n} pages. Trim it in Content." Regenerate in the job panel fits from the user's current design and keeps the fitted theme.
+
 ---
 
 ## 10. Rules engine (checks)

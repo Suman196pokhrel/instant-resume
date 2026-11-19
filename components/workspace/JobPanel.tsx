@@ -47,6 +47,7 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
   const { brief } = project;
   const kind = useWorkspace((s) => s.kind);
   const doc = useWorkspace((s) => s.docs[s.kind]);
+  const docs = useWorkspace((s) => s.docs);
   const notes = useWorkspace((s) => s.notes);
   const setNotes = useWorkspace((s) => s.setNotes);
   const busy = useWorkspace((s) => !!s.busy || s.regenerating);
@@ -78,7 +79,8 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
       const out = await generateDocuments({ kb, brief, selected: project.selected, notes, tone: prefs.quick.tone, spelling: prefs.spelling }, await getAdapter(), controller.signal);
       const { pagesOf } = await import("@/lib/render/client");
       const compile = pagesOf({ kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling });
-      const fitted = await fitDocuments(out, { budget: prefs.quick.pages, keywords: brief.keywords, compile, signal: controller.signal });
+      const themed = { resume: { ...out.resume, theme: docs.resume?.theme ?? out.resume.theme }, coverLetter: { ...out.coverLetter, theme: docs.coverLetter?.theme ?? out.coverLetter.theme } }; // keep the user's design
+      const fitted = await fitDocuments(themed, { budget: prefs.quick.pages, keywords: brief.keywords, compile, signal: controller.signal });
       if (controller.signal.aborted) return;
       regenerate({ ...out, ...fitted });
       toast("Both documents regenerated");
