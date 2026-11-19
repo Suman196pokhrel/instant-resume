@@ -1,10 +1,10 @@
 ---
 id: TASK-29
 title: Setup checklist, responsive layout and accessibility pass
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-19T04:10:00Z'
+updated_date: '2026-11-19T04:27:00Z'
 labels:
   - m10
 dependencies:
@@ -21,17 +21,17 @@ As any user, the app guides my first run and works by keyboard, at phone width a
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 A fresh install shows the setup checklist at '0 of 3 done'; each step ticks as completed, and it can be dismissed
-- [ ] #2 Main flows have no console errors and no horizontal scroll at phone width
-- [ ] #3 Reduced motion disables transitions, and an automated axe check of main screens passes
-- [ ] #4 The full e2e suite (§18.4) passes from a fresh clone
-- [ ] #5 A side-by-side review of every screen against the mock (motion, tooltips, toasts, empty and error states) finds no inconsistencies
+- [x] #1 A fresh install shows the setup checklist at '0 of 3 done'; each step ticks as completed, and it can be dismissed
+- [x] #2 Main flows have no console errors and no horizontal scroll at phone width
+- [x] #3 Reduced motion disables transitions, and an automated axe check of main screens passes
+- [x] #4 The full e2e suite (§18.4) passes from a fresh clone
+- [x] #5 A side-by-side review of every screen against the mock (motion, tooltips, toasts, empty and error states) finds no inconsistencies
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -55,3 +55,9 @@ Tests:
 
 Out of scope: new features found during review (Parked).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Setup checklist; a11y sweep (axe on 8 screens, 390px, console, reduced motion). Fixes: --muted #5F6964 for AA, underlined text links, role=img on reflected marks, focusable preview, phone render status; New/Quick/Studio breadcrumbs + centred layouts per mock. Fresh clone: 138 e2e pass. Quick 'five stages' flake fixed (cards recorded as they appear). Review: dashboard, KB, settings, new, quick, studio, import, workspace, unlock, letter/resume preview match; parked dev-only sample JDs.
+<!-- SECTION:NOTES:END -->
