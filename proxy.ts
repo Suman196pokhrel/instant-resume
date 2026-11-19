@@ -25,11 +25,14 @@ function contentSecurityPolicy(nonce: string, dev: boolean): string {
 
 const STATE_CHANGING = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
-/** Same-site check for state-changing API calls (SPEC §4.1). Behind a reverse proxy the public host is x-forwarded-host. */
+/** The host the browser used. Behind a reverse proxy that's x-forwarded-host. */
+const publicHost = (request: NextRequest) => request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+
+/** Same-site check for state-changing API calls (SPEC §4.1). */
 function sameOrigin(request: NextRequest): boolean {
   const origin = request.headers.get("origin");
   if (!origin) return false;
-  const host = request.headers.get("x-forwarded-host") ?? request.headers.get("host") ?? request.nextUrl.host;
+  const host = publicHost(request);
   try {
     return new URL(origin).host === host;
   } catch {
@@ -48,8 +51,10 @@ async function gate(request: NextRequest): Promise<NextResponse | null> {
   if (pathname === "/unlock" || (pathname === "/api/unlock" && request.method === "POST")) return null;
   if (await verifySession(request.cookies.get(SESSION_COOKIE)?.value)) return null;
   if (api) return NextResponse.json({ error: "locked" }, { status: 401 });
-  // Relative Location: request.url may carry the internal host or scheme behind a reverse proxy.
-  return new NextResponse(null, { status: 307, headers: { Location: `/unlock?${new URLSearchParams({ next: pathname + search })}` } });
+  // Next.js needs an absolute Location; build it from the public host and scheme, since request.url may carry the
+  // internal ones behind a reverse proxy.
+  const proto = request.headers.get("x-forwarded-proto")?.split(",")[0].trim() || request.nextUrl.protocol.replace(":", "");
+  return NextResponse.redirect(`${proto}://${publicHost(request)}/unlock?${new URLSearchParams({ next: pathname + search })}`, 307);
 }
 
 const isPrefetch = (request: NextRequest) =>

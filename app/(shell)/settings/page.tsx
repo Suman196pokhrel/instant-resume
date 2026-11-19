@@ -1,11 +1,12 @@
 import { BackupButtons } from "@/components/backup/BackupButtons";
+import { AccessSettings } from "@/components/settings/Access";
 import { Connections } from "@/components/settings/Connections";
 import { PrefsSettings } from "@/components/settings/Prefs";
 import { Content, TopBar } from "@/components/shell/TopBar";
 import { getDb } from "@/lib/db/client";
 import { readPrefs } from "@/lib/db/settings";
 
-// Settings (SPEC §13.3). Access joins with TASK-28.
+// Settings (SPEC §13.3).
 export default async function Page() {
   const prefs = await readPrefs(await getDb());
   return (
@@ -25,6 +26,7 @@ export default async function Page() {
             <BackupButtons />
           </div>
         </section>
+        <AccessSettings passwordMode={!!process.env.APP_PASSWORD} />
       </Content>
     </>
   );

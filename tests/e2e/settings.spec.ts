@@ -172,3 +172,11 @@ test("Preferences: paper size and spelling save at once with a toast (AC1)", asy
   await expect.poll(() => sent.length).toBe(2);
   expect(sent.at(-1)).toMatchObject({ paper: "Letter", spelling: "en-US", quick: { theme: "classic" } });
 });
+
+test("Settings → Access in local mode says so, with no Lock now (TASK-28)", async ({ page }) => {
+  await page.goto("/settings");
+  const access = page.locator("section").filter({ has: page.getByRole("heading", { name: "Access" }) });
+  await expect(access).toContainText("Local only");
+  await expect(access).toContainText("This computer only");
+  await expect(access.getByRole("button", { name: "Lock now" })).toHaveCount(0);
+});

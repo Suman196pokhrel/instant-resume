@@ -15,7 +15,7 @@ const NAV = [
 ];
 
 /** Sidebar + main column (SPEC §11.4, §13). Compact in the Workspace; a bottom bar at ≤900px. Mock: core.js shell(). */
-export function AppShell({ children }: { children: React.ReactNode }) {
+export function AppShell({ children, server = false }: { children: React.ReactNode; server?: boolean }) {
   const pathname = usePathname();
   const compact = pathname.startsWith("/projects/");
 
@@ -79,7 +79,7 @@ export function AppShell({ children }: { children: React.ReactNode }) {
         <div className="mt-auto flex flex-col gap-1.5 max-[900px]:hidden">
           <div className="flex items-center gap-2 px-2.5 py-1.5 text-xs text-muted-foreground group-data-[shell=compact]/shell:justify-center group-data-[shell=compact]/shell:px-0">
             <span aria-hidden className="size-[7px] flex-none rounded-full bg-primary" />
-            <span className="group-data-[shell=compact]/shell:sr-only">Stored on this device</span>
+            <span className="group-data-[shell=compact]/shell:sr-only">{server ? "Stored on your server" : "Stored on this device"}</span>
           </div>
         </div>
       </aside>

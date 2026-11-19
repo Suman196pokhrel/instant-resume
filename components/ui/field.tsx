@@ -13,6 +13,7 @@ function Field({
   optional,
   error,
   aside,
+  alert,
   className,
   children,
 }: {
@@ -22,6 +23,8 @@ function Field({
   error?: string
   /** Sits beside the control, such as a Show/Hide button. */
   aside?: React.ReactNode
+  /** The error is announced as it appears (role="alert"), for errors that come back from a submit. */
+  alert?: boolean
   className?: string
   children: React.ReactElement<ControlProps>
 }) {
@@ -42,7 +45,7 @@ function Field({
         control
       )}
       {error && (
-        <p id={errorId} className="text-[12.5px] text-danger">
+        <p id={errorId} role={alert ? "alert" : undefined} className="text-[12.5px] text-danger">
           {error}
         </p>
       )}

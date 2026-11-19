@@ -77,8 +77,11 @@ describe("password lock (AC2–AC5)", () => {
     expect(codes.filter((c) => c === 429)).toHaveLength(7);
   });
 
-  it("redirects with a relative Location, so a reverse proxy's public host and scheme are kept", async () => {
-    expect((await proxy(req("/kb/roles"))).headers.get("location")).toBe("/unlock?next=%2Fkb%2Froles");
+  // Next.js rejects a relative Location from the proxy (500 under next start), so it's absolute, on the public origin.
+  it("redirects to an absolute URL on the reverse proxy's public host and scheme", async () => {
+    expect((await proxy(req("/kb/roles"))).headers.get("location")).toBe("http://app.test/unlock?next=%2Fkb%2Froles");
+    const behind = await proxy(req("/kb/roles", { headers: { "x-forwarded-host": "resume.example.net", "x-forwarded-proto": "https" } }));
+    expect(behind.headers.get("location")).toBe("https://resume.example.net/unlock?next=%2Fkb%2Froles");
   });
 
   it("AC3: wrong → 401, 6th attempt → 429; the right one sets the cookie and opens the page", async () => {
