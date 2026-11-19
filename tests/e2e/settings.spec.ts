@@ -133,3 +133,27 @@ test("a key that can't use any listed model is saved with a clear warning, not m
   await expect(openai.getByText("In use")).toHaveCount(0);
   await expect(openai.getByRole("button", { name: "Use OpenAI" })).toHaveCount(0);
 });
+
+// TASK-51, SPEC §13.3 item 2. The PUT is stubbed: the e2e database is shared by parallel tests, so nothing is saved.
+test("Quick generate defaults save each change with a toast; tone follows the cover letter switch (AC1)", async ({ page }) => {
+  const sent: { quick: Record<string, unknown> }[] = [];
+  await page.route("/api/settings", (route) => (sent.push(route.request().postDataJSON()), route.fulfill({ json: sent.at(-1) })));
+  await page.goto("/settings");
+  const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Quick generate defaults" }) });
+  await section.getByLabel("Default theme").selectOption("Modern");
+  await expect(page.getByText("Preference saved")).toBeVisible();
+  await section.getByRole("radio", { name: "1 page" }).click();
+  await section.getByRole("switch", { name: "Cover letter" }).click();
+  await expect(section.getByLabel("Cover letter tone")).toBeDisabled();
+  await expect.poll(() => sent.length).toBe(3);
+  expect(sent.at(-1)).toMatchObject({ paper: "A4", quick: { theme: "modern", pages: 1, coverLetter: false, tone: "Professional" } });
+});
+
+test("a preference that fails to save goes back and says so", async ({ page }) => {
+  await page.route("/api/settings", (route) => route.fulfill({ status: 500, json: { error: "boom" } }));
+  await page.goto("/settings");
+  const theme = page.getByLabel("Default theme");
+  await theme.selectOption("Compact");
+  await expect(page.getByText("Couldn't save that preference. Try again.")).toBeVisible();
+  await expect(theme).toHaveValue("classic");
+});
