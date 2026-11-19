@@ -8,3 +8,7 @@
 -> In the left checks tab , when there are missing sections , right now there is simple "+ Add it " button , which opens a dialogbox that asks user to select from dropdown menu from existing experience, User shuold be allowed to directly create a new expeerience if needed . And shorten the "Only add it if it's true. It's saved as a highlight, so every future resume can use it." line to just simple short sentence.
 -> Exporting the same long resume results in 2 paged resume (not the target , our target is to get 1 page resume)
 -> Add a quick method to wipe all the knowledge base
+# Found during the ticket run (2026-11-19)
+-> Not yet compared side by side with the mock (TASK-29 review covered dashboard, KB, settings, new, quick input, studio setup, import, unlock and the resume/letter preview only): onboarding wizard, Quick generate progress and result screens, the Workspace layout with its Structure and Design tabs, History drawer and Export dialog, and motion, tooltips, toasts, empty and error states.
+-> Note for the 1-page bug: TASK-47 made the templates match the mock's spacing, which makes resumes a little taller than before, so the page-fit loop has more to trim.
+-> Note for the sluggish preview and typing bugs: since TASK-46 the preview draws section and bullet overlays (mix-blend-multiply) over the SVG and runs the checks once more, so profile those first.

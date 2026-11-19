@@ -58,3 +58,14 @@ test("the checklist ticks each step, can be dismissed, and goes at 3 of 3 (AC1)"
   await expect(page.getByRole("heading", { name: "Applications", exact: true })).toBeVisible();
   await expect(checklist(page)).toHaveCount(0); // 3 of 3: done
 });
+
+// TASK-51 AC2, on this file's own database (the shared one must keep the defaults): Quick generate reads the saved defaults.
+test("Quick generate shows the saved defaults, and drops the cover letter from its promise when it's off", async ({ page }) => {
+  await page.goto("/settings");
+  const prefs = await (await page.request.get("/api/settings")).json();
+  const put = await page.request.put("/api/settings", { headers: origin(page), data: { ...prefs, quick: { theme: "modern", pages: 1, coverLetter: false, tone: "Warm" } } });
+  expect(put.ok()).toBe(true);
+  await page.goto("/new/quick");
+  await expect(page.getByText("Defaults: Modern theme, 1 page, cover letter off.")).toBeVisible();
+  await expect(page.getByText("You'll get a tailored resume, written only from facts in your knowledge base.")).toBeVisible();
+});

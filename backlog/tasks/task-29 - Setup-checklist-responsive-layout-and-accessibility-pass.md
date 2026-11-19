@@ -4,7 +4,7 @@ title: Setup checklist, responsive layout and accessibility pass
 status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-19T04:27:00Z'
+updated_date: '2026-11-19T04:32:00Z'
 labels:
   - m10
 dependencies:
@@ -59,5 +59,5 @@ Out of scope: new features found during review (Parked).
 ## Implementation Notes
 
 <!-- SECTION:NOTES:BEGIN -->
-Setup checklist; a11y sweep (axe on 8 screens, 390px, console, reduced motion). Fixes: --muted #5F6964 for AA, underlined text links, role=img on reflected marks, focusable preview, phone render status; New/Quick/Studio breadcrumbs + centred layouts per mock. Fresh clone: 138 e2e pass. Quick 'five stages' flake fixed (cards recorded as they appear). Review: dashboard, KB, settings, new, quick, studio, import, workspace, unlock, letter/resume preview match; parked dev-only sample JDs.
+Setup checklist; a11y sweep (axe on 8 screens, 390px, console, reduced motion). Fixes: --muted #5F6964 for AA, underlined text links, role=img on reflected marks, focusable preview, phone render status; New/Quick/Studio breadcrumbs + centred layouts per mock. Fresh clone: 138 e2e pass; Quick 'five stages' flake fixed. AC5 PARTIAL: side by side covered dashboard, KB, settings, new, quick input, studio setup, import, unlock and the resume/letter preview; the rest (onboarding, Quick progress/result, Workspace tabs, drawer, export dialog, motion/toast/empty/error states) is listed in bugs_after_manual_review.txt. Parked: dev-only sample JDs.
 <!-- SECTION:NOTES:END -->
