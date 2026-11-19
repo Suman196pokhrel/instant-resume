@@ -1,10 +1,10 @@
 ---
 id: TASK-27
 title: Backup export and import
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-19T03:38:00Z'
+updated_date: '2026-11-19T03:42:00Z'
 labels:
   - m10
 dependencies:
@@ -22,15 +22,15 @@ As a job seeker, I can back up everything except my API keys and restore it late
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 One click exports the KB, projects and settings to a file
-- [ ] #2 A deep scan of the export finds no connections, key or apiKey fields
-- [ ] #3 Importing the file restores deleted projects and leaves the data unchanged
+- [x] #1 One click exports the KB, projects and settings to a file
+- [x] #2 A deep scan of the export finds no connections, key or apiKey fields
+- [x] #3 Importing the file restores deleted projects and leaves the data unchanged
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -54,6 +54,12 @@ Tests:
 
 Out of scope: merge-style import, onboarding draft in backups.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+lib/db/backup.ts (export, Zod-validated import in one transaction, bundle ownership checked) + /api/backup; BackupButtons in Settings → Your data and the KB top bar (hidden below 900px; SPEC + mock updated). Round trip in tests/api/backup.test.ts; e2e stubs the import (shared DB).
+<!-- SECTION:NOTES:END -->
 
 ## Comments
 
