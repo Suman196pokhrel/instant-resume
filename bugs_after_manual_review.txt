@@ -12,3 +12,18 @@
 -> Not yet compared side by side with the mock (TASK-29 review covered dashboard, KB, settings, new, quick input, studio setup, import, unlock and the resume/letter preview only): onboarding wizard, Quick generate progress and result screens, the Workspace layout with its Structure and Design tabs, History drawer and Export dialog, and motion, tooltips, toasts, empty and error states.
 -> Note for the 1-page bug: TASK-47 made the templates match the mock's spacing, which makes resumes a little taller than before, so the page-fit loop has more to trim.
 -> Note for the sluggish preview and typing bugs: since TASK-46 the preview draws section and bullet overlays (mix-blend-multiply) over the SVG and runs the checks once more, so profile those first.
+
+# Status after the bug pass (2026-11-19). Verified live: two real resumes (a 1-page and a 2-page PDF) against two
+# current job ads (retail, IT service desk); every run exported a 1-page resume and a 1-page cover letter (pdfinfo),
+# from Quick generate and from Studio's Export.
+-> Fixed: PDF scroll. Measured smooth at 4x CPU throttle; the Typst SVG now sits in a shadow root so new renders don't restyle the page.
+-> Fixed: 2 pages looked like 1. Each page break shows as a labelled gap ("Page 2").
+-> Fixed: Skills in one paragraph. Import sorts skills into 2 to 5 named groups; capitalised headings read in sentence case.
+-> Fixed: Colour picker. 30-event drag at 4x throttle: 10.2 s of main-thread work -> 1.4 s, frames p95 167 ms -> 17 ms.
+-> Fixed: Reorder felt abrupt. The moved section flashes in the Structure list and, once laid out, in the preview.
+-> Fixed: Typing lag. One preview render at a time (newest first); longest pause 145 ms -> 105 ms at 4x throttle.
+-> Fixed: Add it dialog. "New role…" creates the role with the fact; the note is now "Only add what's true. Future resumes can use it."
+-> Fixed: 2-page export. Page budget defaults to 1 page and is applied on every generation path; the cover letter is fitted to 1 page; the fit loop trims skills and bullets when needed; Export warns and offers "Fit to 1 page" for documents edited later.
+-> Fixed: Wipe the knowledge base. Settings > Your data > Delete knowledge base (asks first; applications stay).
+-> Also fixed: an imported summary or target-role tagline no longer prints as an extra section; "at Not stated" when an ad names no employer.
+-> Open: generated summaries are sometimes one thin sentence after fitting (seen on the IT-support resume). Worth a prompt look.
