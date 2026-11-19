@@ -785,6 +785,7 @@ input[type=range]:focus-visible::-moz-range-thumb { box-shadow: 0 0 0 4px var(--
   .sidebar-foot { margin: 0; flex-direction: row; }
   .main { order: 1; min-height: calc(100vh - 56px); }
   .topbar { padding: 0 16px; }
+  .topbar [data-import], .topbar [data-export] { display: none; } /* Settings → Your data keeps them */
   .content { padding: 20px 16px; }
   .kb-layout { grid-template-columns: 1fr; }
   .kb-nav { position: static; flex-direction: row; overflow-x: auto; padding-bottom: 4px; }

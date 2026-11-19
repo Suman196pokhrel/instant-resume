@@ -899,7 +899,7 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 
 ### 13.2 Knowledge base
 
-- Head: "Knowledge base", "Every fact here is entered once. Resumes and cover letters can only use what's stored here." Top bar actions: "Import resume", "Import backup" and "Export backup". Resume import starts a review draft; backup import is a separate restore operation.
+- Head: "Knowledge base", "Every fact here is entered once. Resumes and cover letters can only use what's stored here." Top bar actions: "Import resume", "Import backup" and "Export backup" (below 900px only "Import resume"; the backup buttons stay in Settings → Your data). Resume import starts a review draft; backup import is a separate restore operation.
 - Left sub-nav lists the sections with counts. Right: the section title and "Add {noun}".
 - Entry card: title, sub, meta, the KB ID (small monospace) and an Edit button. Roles and portfolio items list their highlights in rows, each with a metric pill on the right. Skill groups show chips.
 - Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base".

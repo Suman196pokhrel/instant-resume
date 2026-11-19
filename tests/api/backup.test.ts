@@ -1,4 +1,3 @@
-/* eslint-disable @typescript-eslint/no-explicit-any -- response bodies are inspected loosely */
 import { mkdtempSync } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
