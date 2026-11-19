@@ -131,7 +131,7 @@
   --secondary: var(--surface);
   --secondary-foreground: var(--ink);
   --muted: var(--sunken);
-  --muted-foreground: #74807a; /* SPEC --muted */
+  --muted-foreground: #5f6964; /* SPEC --muted: 4.5:1 or more on every surface (WCAG AA) */
   --accent: var(--sunken);
   --accent-foreground: var(--ink);
   --destructive: var(--danger);
@@ -190,6 +190,11 @@
   }
   a {
     color: var(--accent-ink);
+  }
+  /* Links in running text keep the browser's underline (preflight removes it), so colour isn't their only cue (WCAG 1.4.1). */
+  a:not([class]) {
+    text-decoration: underline;
+    text-underline-offset: 2px;
   }
   :focus-visible {
     outline: 2px solid var(--primary);

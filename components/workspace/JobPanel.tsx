@@ -101,6 +101,7 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
           {reqs.map(({ r, state }) => (
             <li key={r} data-state={state} className={cn("grid grid-cols-[16px_1fr] items-start gap-2", state === "ok" && "text-ink")}>
               <span
+                role={state === "none" ? undefined : "img"} // a label needs a role (WCAG 4.1.2)
                 aria-label={state === "ok" ? "Reflected" : state === "miss" ? "Not reflected" : undefined}
                 className={cn(
                   "mt-0.5 grid size-[15px] place-items-center rounded-full",

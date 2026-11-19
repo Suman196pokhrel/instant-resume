@@ -725,7 +725,7 @@ Style: **refined neutral.** Warm paper ground, green-black ink, one teal accent,
 | `--sunken` | #E7E5DF | Preview background, segmented control track, hover on nav |
 | `--ink` | #1A2320 | Primary text, brand mark background, toasts |
 | `--ink-2` | #47514D | Secondary text |
-| `--muted` | #74807A | Tertiary text, placeholders, icons |
+| `--muted` | #5F6964 | Tertiary text, placeholders, icons (AA: at least 4.5:1 on every surface, sunken included) |
 | `--line` | #E2E0D9 | Borders and dividers |
 | `--line-2` | #CFCCC3 | Input borders, dashed empty states |
 | `--accent` | #0E7466 | Primary buttons, active states, progress, focus ring |

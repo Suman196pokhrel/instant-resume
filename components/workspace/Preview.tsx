@@ -103,12 +103,14 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
           </Tooltip>
           {icon("Zoom in", () => step(0.1), "+")}
         </div>
-        <span className="ml-auto inline-flex items-center gap-1 text-[13px] whitespace-nowrap text-muted-foreground">
+        {/* mock .render-status: smaller on phones, and never wider than the bar */}
+        <span className="ml-auto inline-flex min-w-0 items-center gap-1 overflow-hidden text-[13px] whitespace-nowrap text-muted-foreground max-[900px]:text-[11.5px]">
           {out?.design && !error && <Zap aria-hidden className="size-3 text-primary" />}
           {error ? "Couldn't render this document" : out ? `Rendered in ${out.ms} ms · ${out.pages} ${out.pages === 1 ? "page" : "pages"} · ${prefs.paper}` : ""}
         </span>
       </div>
-      <div ref={scroll} className="relative min-h-0 flex-1 overflow-auto p-6">
+      {/* focusable, so the keyboard can scroll the pages (axe scrollable-region-focusable) */}
+      <div ref={scroll} tabIndex={0} className="relative min-h-0 flex-1 overflow-auto p-6">
         {viewing && (
           <div className="sticky -top-6 z-[5] -mx-6 -mt-6 mb-5 flex flex-wrap items-center gap-2.5 bg-ink px-4 py-2.5 text-[13px] text-background">
             <History aria-hidden className="size-[15px]" />
