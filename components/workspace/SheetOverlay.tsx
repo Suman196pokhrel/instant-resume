@@ -24,7 +24,6 @@ export function SheetOverlay({ sections, bullets, doc, kb, brief }: { sections: 
   const busy = useWorkspace((s) => !!s.busy);
   const pending = useWorkspace((s) => (s.pending?.kind === s.kind ? s.pending : null));
   const saved = useWorkspace((s) => s.docs[s.kind]);
-  const checks = useChecks(kb, brief);
   const root = useRef<HTMLDivElement>(null);
   const clicked = useRef<string | null>(null); // a click in the preview selects without scrolling or flashing
   const [flash, setFlash] = useState({ id: "", n: 0 });
@@ -56,11 +55,6 @@ export function SheetOverlay({ sections, bullets, doc, kb, brief }: { sections: 
     el?.scrollIntoView({ block: "center", behavior: prefersReducedMotion() ? "auto" : "smooth" }); // not returned: Chrome's returns a promise
   }, [flash, shownIds]);
 
-  const sources = useMemo(
-    () => new Map([...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio].flatMap((o) => o.highlights.map((h) => [h.id, h.text] as const))),
-    [kb]
-  );
-  const flagged = new Set(checks?.findings.flatMap((f) => (f.type === "grounding" && f.bulletId ? [f.bulletId] : [])));
   const section = doc.sections.find((s) => s.id === selected);
   const ownBullets = new Map(section && "items" in section ? section.items.flatMap((it) => it.bullets ?? []).map((b) => [b.id, b.source]) : []);
 
@@ -91,25 +85,35 @@ export function SheetOverlay({ sections, bullets, doc, kb, brief }: { sections: 
           </div>
         );
       })}
-      {bullets
-        .filter((b) => ownBullets.has(b.id))
-        .map((b) => {
-          const text = sources.get(ownBullets.get(b.id) ?? "");
-          const ok = !!text && !flagged.has(b.id);
-          const title = !text ? "No source found" : flagged.has(b.id) ? "Differs from your knowledge base" : "From your knowledge base";
-          return (
-            <Tooltip key={b.id}>
-              <TooltipTrigger
-                render={<div data-preview-bullet={b.id} />}
-                style={at(b)}
-                className={cn("absolute -mx-1 cursor-help rounded-[2px] mix-blend-multiply transition-colors duration-(--t-fast)", ok ? "hover:bg-accent-soft" : "hover:bg-warn-soft")}
-              />
-              <TooltipContent title={<span className={ok ? undefined : "text-proposed"}>{title}</span>}>
-                {text ?? "This bullet doesn't trace to a fact in your knowledge base. Checks flag it."}
-              </TooltipContent>
-            </Tooltip>
-          );
-        })}
+      {ownBullets.size > 0 && <BulletSources boxes={bullets.filter((b) => ownBullets.has(b.id))} own={ownBullets} kb={kb} brief={brief} />}
     </div>
   );
+}
+
+/** The selected section's bullets and the facts they came from. Only mounted with a selection, so the checks it needs
+ * don't run on every keystroke otherwise. */
+function BulletSources({ boxes, own, kb, brief }: { boxes: Box[]; own: Map<string, string>; kb: KnowledgeBase; brief: JobBrief }) {
+  const checks = useChecks(kb, brief);
+  const sources = useMemo(
+    () => new Map([...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio].flatMap((o) => o.highlights.map((h) => [h.id, h.text] as const))),
+    [kb]
+  );
+  const flagged = new Set(checks?.findings.flatMap((f) => (f.type === "grounding" && f.bulletId ? [f.bulletId] : [])));
+  return boxes.map((b) => {
+    const text = sources.get(own.get(b.id) ?? "");
+    const ok = !!text && !flagged.has(b.id);
+    const title = !text ? "No source found" : flagged.has(b.id) ? "Differs from your knowledge base" : "From your knowledge base";
+    return (
+      <Tooltip key={b.id}>
+        <TooltipTrigger
+          render={<div data-preview-bullet={b.id} />}
+          style={at(b)}
+          className={cn("absolute -mx-1 cursor-help rounded-[2px] mix-blend-multiply transition-colors duration-(--t-fast)", ok ? "hover:bg-accent-soft" : "hover:bg-warn-soft")}
+        />
+        <TooltipContent title={<span className={ok ? undefined : "text-proposed"}>{title}</span>}>
+          {text ?? "This bullet doesn't trace to a fact in your knowledge base. Checks flag it."}
+        </TooltipContent>
+      </Tooltip>
+    );
+  });
 }

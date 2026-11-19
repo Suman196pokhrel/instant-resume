@@ -1,5 +1,6 @@
 "use client";
 
+import { useEffect, useRef } from "react";
 import { Radio } from "@base-ui/react/radio";
 import { RadioGroup } from "@base-ui/react/radio-group";
 import { RotateCcw, Zap } from "lucide-react";
@@ -33,9 +34,25 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
   );
 }
 
+/** The colour picker fires on every pixel of a drag; one update per COLOUR_MS keeps the page and the renderer up. */
+const COLOUR_MS = 200; // each new preview costs ~100 ms of page work; 200 ms leaves the drag room and stays under the 300 ms target
+function useLatestEvery(fn: (v: string) => void, ms: number) {
+  const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
+  const value = useRef("");
+  useEffect(() => () => clearTimeout(timer.current), []);
+  return (v: string) => {
+    value.current = v;
+    timer.current ??= setTimeout(() => {
+      timer.current = undefined;
+      fn(value.current);
+    }, ms);
+  };
+}
+
 export function DesignTab() {
   const theme = useWorkspace((s) => s.docs[s.kind]?.theme);
   const setTheme = useWorkspace((s) => s.setTheme);
+  const setAccent = useLatestEvery((accent) => setTheme({ accent }), COLOUR_MS);
   const resetTheme = useWorkspace((s) => s.resetTheme);
   const ms = useWorkspace((s) => s.renderMs);
   if (!theme) return null;
@@ -88,7 +105,7 @@ export function DesignTab() {
             );
           })}
           <label title="Custom colour" className="relative size-[30px] cursor-pointer overflow-hidden rounded-full swatch-custom has-focus-visible:outline-2 has-focus-visible:outline-offset-4 has-focus-visible:outline-primary">
-            <input type="color" aria-label="Custom accent colour" value={theme.accent} onChange={(e) => setTheme({ accent: e.target.value })} className="size-full cursor-pointer opacity-0" />
+            <input type="color" aria-label="Custom accent colour" value={theme.accent} onChange={(e) => setAccent(e.target.value)} className="size-full cursor-pointer opacity-0" />
           </label>
         </div>
       </Group>

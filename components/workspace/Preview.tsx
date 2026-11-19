@@ -19,6 +19,7 @@ import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip
 // the newest render wins), zoomable from 40% to 160%, Fit to width by default.
 
 const DEBOUNCE = 120;
+const BURST_GAP = 150;
 const SHEET_PX = 794; // 210 mm at 96 dpi
 const clampZoom = (z: number) => Math.min(1.6, Math.max(0.4, +z.toFixed(2)));
 
@@ -44,22 +45,43 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const latest = useRef(0);
   const scroll = useRef<HTMLDivElement>(null);
 
+  // One render at a time, newest change first: a burst of edits never queues compiles in the worker.
+  const job = useRef<{ busy: boolean; next: (() => Promise<void>) | null }>({ busy: false, next: null });
+  const kindNow = useRef(kind);
+  useEffect(() => {
+    kindNow.current = kind;
+  }, [kind]);
   useEffect(() => {
     if (!doc) return;
     const n = ++latest.current;
     const design = !!shown.current && shown.current !== doc && shown.current.sections === doc.sections && shown.current.theme !== doc.theme;
     shown.current = doc;
-    const t = setTimeout(async () => {
+    const run = async () => {
       try {
         const { render } = await import("@/lib/render/client");
         const r = await render(kind, { document: doc, kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling }, "svg");
-        if (n !== latest.current) return; // a newer change is already rendering
+        if ((n !== latest.current && job.current.next) || kind !== kindNow.current) return; // a newer change is waiting, or the other document is open
         setOut({ svg: r.svg ?? "", ms: r.ms, pages: r.pages, design, doc, layout: r.layout });
         setRenderMs(r.ms);
         setError("");
       } catch (e) {
         if (n === latest.current) setError(e instanceof Error ? e.message : String(e));
       }
+    };
+    const pump = async () => {
+      const j = job.current;
+      if (j.busy || !j.next) return;
+      const go = j.next;
+      j.next = null;
+      j.busy = true;
+      await go();
+      if (j.next) await new Promise((r) => setTimeout(r, BURST_GAP)); // still changing (a colour drag): let the newest change replace the ones between
+      j.busy = false;
+      void pump();
+    };
+    const t = setTimeout(() => {
+      job.current.next = run;
+      void pump();
     }, design ? 0 : DEBOUNCE); // design changes render at once (SPEC §9.1); typing is debounced
     return () => clearTimeout(t);
   }, [doc, kind, kb, brief.title, prefs.paper, prefs.spelling, setRenderMs]);
@@ -125,7 +147,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
         )}
         {out ? (
           <div style={{ zoom: z }} className="relative mx-auto w-fit">
-            <div data-sheet className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease) [&_svg]:block [&_svg]:h-auto [&_svg]:w-full", regenerating && "opacity-35")} dangerouslySetInnerHTML={{ __html: out.svg }} />
+            <Sheet svg={out.svg} className={cn("w-[210mm] bg-surface shadow-pop transition-opacity duration-(--t) ease-(--ease)", regenerating && "opacity-35")} />
             {/* Typst stacks the pages; a gap at each break shows where one sheet ends (it sits in the page margins) */}
             {Array.from({ length: out.pages - 1 }, (_, k) => (
               <div key={k} data-page-break aria-hidden style={{ top: `${((k + 1) / out.pages) * 100}%` }} className="absolute -inset-x-6 h-4 -translate-y-1/2 bg-sunken">
@@ -148,4 +170,17 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
       </div>
     </section>
   );
+}
+
+/** The Typst SVG in a shadow root: its own <style> and 3,000-odd nodes stay out of the page's style and layout work,
+ * so swapping in a new render (every edit and colour change) doesn't restyle the whole Workspace. */
+function Sheet({ svg, className }: { svg: string; className: string }) {
+  const host = useRef<HTMLDivElement>(null);
+  useEffect(() => {
+    const el = host.current;
+    if (!el) return;
+    const root = el.shadowRoot ?? el.attachShadow({ mode: "open" });
+    root.innerHTML = `<style>svg{display:block;width:100%;height:auto}</style>${svg}`;
+  }, [svg]);
+  return <div ref={host} data-sheet className={className} />;
 }

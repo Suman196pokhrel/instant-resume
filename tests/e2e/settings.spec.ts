@@ -142,11 +142,11 @@ test("Quick generate defaults save each change with a toast; tone follows the co
   const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Quick generate defaults" }) });
   await section.getByLabel("Default theme").selectOption("Modern");
   await expect(page.getByText("Preference saved")).toBeVisible();
-  await section.getByRole("radio", { name: "1 page" }).click();
+  await section.getByRole("radio", { name: "2 pages" }).click(); // 1 page is the default
   await section.getByRole("switch", { name: "Cover letter" }).click();
   await expect(section.getByLabel("Cover letter tone")).toBeDisabled();
   await expect.poll(() => sent.length).toBe(3);
-  expect(sent.at(-1)).toMatchObject({ paper: "A4", quick: { theme: "modern", pages: 1, coverLetter: false, tone: "Professional" } });
+  expect(sent.at(-1)).toMatchObject({ paper: "A4", quick: { theme: "modern", pages: 2, coverLetter: false, tone: "Professional" } });
 });
 
 test("a preference that fails to save goes back and says so", async ({ page }) => {
