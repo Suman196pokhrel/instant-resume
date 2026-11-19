@@ -53,7 +53,8 @@ type State = {
   regenerating: boolean;
   setRegenerating: (on: boolean) => void;
   /** Replaces both documents with a fresh generation, keeping each theme; one revision and undo step each. */
-  regenerate: (out: Record<Kind, Pick<ResumeDocument, "sections" | "recipient" | "theme">>) => void;
+  /** New content for both documents. The theme stays the user's, unless page fitting adjusted it (`fitted`). */
+  regenerate: (out: Record<Kind, Pick<ResumeDocument, "sections" | "recipient">>, fitted?: Record<Kind, ResumeDocument["theme"]>) => void;
   /** Page fitting from Studio (SPEC §9.4): the fitted sections and theme, as one undoable revision. */
   applyFit: (kind: Kind, fitted: Pick<ResumeDocument, "sections" | "theme">, pages: number) => void;
   /** Checks (TASK-21): the left and inspector tabs, and a jump from a finding to its section. */
@@ -261,9 +262,10 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       },
       regenerating: false,
       setRegenerating: (regenerating) => set({ regenerating }),
-      regenerate: (out) => {
+      regenerate: (out, fitted) => {
         set({ selected: null, pending: null, busy: null, regenerating: false, viewing: null });
-        for (const kind of ["resume", "coverLetter"] as const) commit(kind, { sections: out[kind].sections, recipient: out[kind].recipient, theme: out[kind].theme }, { kind: "generation", label: "Regenerated from job brief" });
+        for (const kind of ["resume", "coverLetter"] as const)
+          commit(kind, { sections: out[kind].sections, recipient: out[kind].recipient, ...(fitted && { theme: fitted[kind] }) }, { kind: "generation", label: "Regenerated from job brief" });
       },
       applyFit: (kind, { sections, theme }, pages) => commit(kind, { sections, theme }, { kind: "adjustment", label: `Fitted to ${pages} ${pages === 1 ? "page" : "pages"}` }),
     };

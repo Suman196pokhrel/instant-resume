@@ -310,6 +310,14 @@ describe("workspace store: job panel (TASK-45)", () => {
     expect(text(store)).toBe("Old.");
   });
 
+  it("regenerate takes page fitting's theme when given one (1-page target)", () => {
+    const store = createWorkspaceStore([{ ...resume, theme: { ...THEME_DEFAULTS, margin: 22 } }, letter], project);
+    const fresh: Section = { id: "s-new", kind: "summary", title: "Summary", hidden: false, text: "Fresh." };
+    const out = { resume: { ...resume, sections: [fresh] }, coverLetter: { ...letter, sections: [fresh] } };
+    store.getState().regenerate(out, { resume: { ...THEME_DEFAULTS, margin: 14 }, coverLetter: letter.theme });
+    expect(store.getState().docs.resume).toMatchObject({ theme: { margin: 14 }, sections: [fresh] });
+  });
+
   it("toggleLeft sets the opposite of what is shown", () => {
     const store = createWorkspaceStore([resume, letter], project);
     expect(store.getState().leftOpen).toBeNull();

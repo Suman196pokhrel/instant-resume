@@ -82,7 +82,7 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
       const themed = { resume: { ...out.resume, theme: docs.resume?.theme ?? out.resume.theme }, coverLetter: { ...out.coverLetter, theme: docs.coverLetter?.theme ?? out.coverLetter.theme } }; // keep the user's design
       const fitted = await fitDocuments(themed, { budget: prefs.quick.pages, keywords: brief.keywords, compile, signal: controller.signal });
       if (controller.signal.aborted) return;
-      regenerate({ ...out, ...fitted });
+      regenerate(fitted, { resume: fitted.resume.theme, coverLetter: fitted.coverLetter.theme });
       toast("Both documents regenerated");
     } catch (e) {
       if (controller.signal.aborted) return;
