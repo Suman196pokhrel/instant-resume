@@ -6,6 +6,7 @@ import type { LlmAdapter } from "@/lib/llm/adapter";
 import { createMockAdapter, MOCK_FIXTURES } from "@/lib/llm/mock";
 import { kbSchema } from "@/lib/schemas/kb";
 import { prefsSchema } from "@/lib/schemas/settings";
+import { THEME_PRESETS } from "@/lib/schemas/theme";
 
 // SPEC §14.3 Quick generate pipeline, §18.1 Pipeline: an event emitter the UI only listens to (TASK-24).
 const kb = kbSchema.parse(structuredClone(fixture));
@@ -13,14 +14,15 @@ const jdText = readFileSync("tests/fixtures/jds/mintleaf.txt", "utf8");
 
 function setup(over: Partial<PipelineDeps> = {}, scenario: "happy" | "gaps" = "happy") {
   const calls: string[] = [];
+  const prompts: Record<string, string> = {};
   const mock = createMockAdapter({ fixtures: MOCK_FIXTURES, scenario });
-  const adapter: LlmAdapter = { generateObject: (args) => (calls.push(args.name), mock.generateObject(args)) };
+  const adapter: LlmAdapter = { generateObject: (args) => (calls.push(args.name), (prompts[args.name] = String(args.prompt)), mock.generateObject(args)) };
   const save = vi.fn<(project: ProjectIn, documents: { kind: string }[]) => Promise<string>>(async () => "p-new");
   const deps: PipelineDeps = { kb, prefs: prefsSchema.parse({}), getAdapter: async () => adapter, compile: async (kind) => (kind === "resume" ? 2 : 1), save, ...over };
   const p = createPipeline({ jdText, notes: "Referred by Dana" }, deps);
   const events: PipelineEvent[] = [];
   for (const type of ["stage", "progress", "brief", "match", "draft", "pages", "checks", "done", "error"] as const) p.on(type, (e) => events.push(e));
-  return { p, events, calls, save };
+  return { p, events, calls, save, prompts };
 }
 const stages = (events: PipelineEvent[]) => events.flatMap((e) => (e.type === "stage" ? [`${e.id}:${e.status}`] : []));
 
@@ -79,6 +81,13 @@ describe("pipeline", () => {
     await p.run();
     expect(save.mock.calls[0][1].map((d: { kind: string }) => d.kind)).toEqual(["resume"]);
     expect(save.mock.calls[0][0]).toMatchObject({ coverLetterOff: true });
+  });
+
+  it("applies the default theme preset to both documents and the tone to the writing (TASK-51)", async () => {
+    const { p, save, prompts } = setup({ prefs: prefsSchema.parse({ quick: { theme: "modern", tone: "Warm" } }) });
+    await p.run();
+    for (const doc of save.mock.calls[0][1]) expect(doc).toMatchObject({ theme: { font: THEME_PRESETS.modern.font, accent: THEME_PRESETS.modern.accent } });
+    expect(prompts.generate).toContain("Tone: Warm");
   });
 });
 

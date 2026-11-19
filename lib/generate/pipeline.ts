@@ -11,6 +11,7 @@ import type { ResumeDocument } from "@/lib/schemas/document";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Project } from "@/lib/schemas/project";
 import type { Prefs } from "@/lib/schemas/settings";
+import { THEME_PRESETS } from "@/lib/schemas/theme";
 
 // Quick generate (SPEC §14.3): five stages as an event emitter, so the UI only listens. The context survives a
 // failure, so Retry runs again from the failed stage with the earlier results kept. Nothing is saved until all
@@ -104,7 +105,7 @@ export function createPipeline(input: { jdText: string; notes: string }, deps: P
       return gaps.length ? { status: "warning", note: `${gaps.length} must-haves have no evidence in your knowledge base` } : { note: `${entries.length} entries and ${skills.length} skills match` };
     },
     async () => {
-      const out = await generateDocuments({ kb, brief: ctx.brief!, selected: ctx.match!.selected, notes: input.notes, tone: prefs.quick.tone, spelling: prefs.spelling }, await deps.getAdapter(), controller.signal);
+      const out = await generateDocuments({ kb, brief: ctx.brief!, selected: ctx.match!.selected, notes: input.notes, tone: prefs.quick.tone, spelling: prefs.spelling, theme: THEME_PRESETS[prefs.quick.theme] }, await deps.getAdapter(), controller.signal);
       ctx.docs = prefs.quick.coverLetter ? [out.resume, out.coverLetter] : [out.resume];
       for (const s of out.resume.sections) {
         if (s.kind === "summary" && "text" in s) emit({ type: "draft", kind: "summary", text: s.text });

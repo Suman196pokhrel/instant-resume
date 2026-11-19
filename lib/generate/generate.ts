@@ -5,7 +5,7 @@ import { GENERATION, validatePatch } from "@/lib/patch/validate";
 import { BANNED_PHRASES } from "@/lib/rules/banned-phrases";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
-import { THEME_DEFAULTS } from "@/lib/schemas/theme";
+import { THEME_DEFAULTS, type Theme } from "@/lib/schemas/theme";
 import { buildSkeleton } from "./skeleton";
 
 // Generate (SPEC §8.3 call 3, §8.4): one call fills both skeletons with RFC 6902 ops, and nothing the model
@@ -24,6 +24,8 @@ export type GenerateInput = {
   notes?: string;
   tone: "Professional" | "Warm" | "Concise";
   spelling: "en-AU" | "en-US";
+  /** Quick generate's default theme preset; Studio starts from the template defaults. */
+  theme?: Theme;
 };
 type Draft = ReturnType<typeof buildSkeleton>["resume"];
 
@@ -88,7 +90,7 @@ function prompt({ kb, brief, selected, notes, tone, spelling }: GenerateInput, s
 
 /** Both documents, filled and validated, plus the number of operations applied. Retries once if the patch is rejected. */
 export async function generateDocuments(input: GenerateInput, adapter: LlmAdapter, signal?: AbortSignal): Promise<{ resume: Draft; coverLetter: Draft; count: number }> {
-  const skeleton = buildSkeleton(input.kb, input.brief, input.selected, THEME_DEFAULTS);
+  const skeleton = buildSkeleton(input.kb, input.brief, input.selected, input.theme ?? THEME_DEFAULTS);
   const args = { name: "generate", schema: generationSchema, system: SYSTEM, prompt: prompt(input, skeleton), maxOutputTokens: 8000, signal };
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
