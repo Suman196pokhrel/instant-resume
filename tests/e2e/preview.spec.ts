@@ -93,3 +93,13 @@ test("a second page shows as its own sheet, with a labelled gap at the break (ow
   await expect(page.locator("[data-page-break]")).toHaveCount(1);
   await expect(page.locator("[data-page-break]")).toContainText("Page 2");
 });
+
+test("moving a section in Structure flashes it in the list and, once laid out, in the preview (owner's bug: reorder felt abrupt)", async ({ page }) => {
+  await open(page);
+  await inspector(page).getByRole("tab", { name: "Structure" }).click();
+  const before = (await section(page, "s-exp").boundingBox())!.y;
+  await inspector(page).getByRole("listitem", { name: /^Experience/ }).getByRole("button", { name: "Move up" }).click();
+  await expect(inspector(page).getByRole("listitem", { name: /^Experience/ }).locator(".animate-flash")).toBeAttached();
+  await expect(section(page, "s-exp")).toHaveClass(/animate-flash/);
+  expect((await section(page, "s-exp").boundingBox())!.y).toBeLessThan(before); // flashed at its new place
+});

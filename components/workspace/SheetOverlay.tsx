@@ -48,6 +48,21 @@ export function SheetOverlay({ sections, bullets, doc, kb, brief }: { sections: 
     if (now && same({ ...now, hidden: p.after.hidden }, p.after)) flashTo(p.sectionId);
   }, [pending, saved]);
 
+  // A move in Structure: flash the section once the render with its new place arrives.
+  const moved = useWorkspace((s) => s.moved);
+  const waiting = useRef<string | null>(null);
+  useEffect(() => {
+    if (moved) waiting.current = moved.id;
+  }, [moved]);
+  const placedAt = sections.map((s) => `${s.id}:${s.top.toFixed(2)}`).join();
+  useEffect(() => {
+    const id = waiting.current;
+    if (id && sections.some((s) => s.id === id)) {
+      waiting.current = null;
+      flashTo(id);
+    }
+  }, [placedAt]); // eslint-disable-line react-hooks/exhaustive-deps -- runs when the boxes move, not on every render
+
   const shownIds = sections.map((s) => s.id).join();
   useEffect(() => {
     if (!flash.id) return;

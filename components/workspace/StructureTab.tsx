@@ -26,6 +26,7 @@ export function StructureTab() {
   const sections = useWorkspace((s) => s.docs[s.kind]?.sections ?? []);
   const moveSection = useWorkspace((s) => s.moveSection);
   const toggleHidden = useWorkspace((s) => s.toggleHidden);
+  const moved = useWorkspace((s) => s.moved);
   const [said, setSaid] = useState("");
   const [drag, setDrag] = useState<{ id: string; over?: string; above?: boolean } | null>(null);
   const rows = useRef(new Map<string, HTMLLIElement>());
@@ -91,6 +92,7 @@ export function StructureTab() {
               drag?.over === s.id && drag.id !== s.id && (drag.above ? "shadow-[0_-3px_0_0_var(--primary)]" : "shadow-[0_3px_0_0_var(--primary)]")
             )}
           >
+            {moved?.id === s.id && <span key={moved.n} aria-hidden className="pointer-events-none absolute inset-0 animate-flash rounded-md mix-blend-multiply" />}
             <GripVertical aria-hidden className="size-[15px] cursor-grab text-muted-foreground" />
             <span className="flex min-w-0 items-center gap-2 font-medium">
               <span className={cn("truncate", s.hidden && "text-muted-foreground line-through decoration-line-2")}>{s.title}</span>

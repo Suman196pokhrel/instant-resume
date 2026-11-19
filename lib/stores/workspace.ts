@@ -62,6 +62,8 @@ type State = {
   jump: { prefill?: string } | null; // one shot: the inspector focuses the section, or the instruction box with a prefill
   goTo: (sectionId: string, prefill?: string) => void;
   clearJump: () => void;
+  /** A section that moved or reappeared in Structure: the preview flashes it once it's laid out (SPEC §12). */
+  moved: { id: string; n: number } | null;
   /** History (TASK-22): an older revision shown in the preview, with the inspector locked. */
   viewing: Revision | null;
   view: (rev: Revision | null) => void;
@@ -189,12 +191,14 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
         const [moved] = sections.splice(from, 1);
         sections.splice(to, 0, moved);
         commit(kind, { sections }, { kind: "structure", label: `Moved ${moved.title}${drag ? "" : to < from ? " up" : " down"}` });
+        set({ moved: { id, n: (get().moved?.n ?? 0) + 1 } });
       },
       toggleHidden: (id) => {
         const { kind, docs } = get();
         const s = docs[kind]?.sections.find((x) => x.id === id);
         if (!s) return;
         commit(kind, { sections: docs[kind]!.sections.map((x) => (x.id === id ? { ...x, hidden: !x.hidden } : x)) }, { kind: "structure", label: `${s.hidden ? "Showed" : "Hid"} ${s.title}` });
+        if (s.hidden) set({ moved: { id, n: (get().moved?.n ?? 0) + 1 } }); // shown again: flash it where it lands
       },
       setTheme: (patch) => {
         const { kind, docs } = get();
@@ -241,6 +245,7 @@ export function createWorkspaceStore(docs: ResumeDocument[], project?: { id: str
       tab: "content",
       setTab: (tab) => set({ tab }),
       jump: null,
+      moved: null,
       goTo: (selected, prefill) => set({ selected, tab: "content", jump: prefill ? { prefill } : {}, ...drop() }),
       clearJump: () => set({ jump: null }),
       viewing: null,
