@@ -133,31 +133,34 @@ function readHighlights(root, prev = []) {
 }
 
 /* ---------- Add evidence for a gap (from Quick generate results and Workspace checks) ----------
-   Saves one highlight on an existing role, volunteer role or portfolio item. The keyword is tagged on the
-   highlight so the next generation can match it. Nothing is invented: the user writes the fact. */
+   Saves one highlight on an existing role, volunteer role or portfolio item, or on a new role made here. The keyword
+   is tagged on the highlight so the next generation can match it. Nothing is invented: the user writes the fact. */
 function openAddEvidence({ requirement, keyword, onSaved }) {
   const kb = Store.state.kb;
   const groups = [['roles', 'Experience', (e) => `${e.title}, ${e.company}`], ['volunteering', 'Volunteer work', (e) => `${e.title}, ${e.company}`], ['portfolio', 'Portfolio', (e) => e.name]];
   const owners = groups.flatMap(([k]) => kb[k]);
-  if (!owners.length) {
-    openModal({ title: 'Add to your knowledge base', body: `<p>Add a role, volunteer role or portfolio item first. Highlights belong to one of those.</p>`, actions: [{ label: 'Cancel' }, { label: 'Open knowledge base', kind: 'btn-primary', fn: () => { location.hash = '#/kb/roles'; } }] });
-    return;
-  }
+  const roleFields = [['title', 'Job title', 'Retail Sales Assistant', 'Enter the job title'], ['company', 'Employer', 'Company name', 'Enter the employer'], ['start', 'Start', 'Mar 2022', 'Enter when you started'], ['end', 'End', 'Present', 'Enter when it ended, or Present']];
   openModal({
     title: 'Add to your knowledge base',
     body: `
       <p>The job asks for <strong>${esc(requirement)}</strong>.</p>
-      <div class="callout">${icon('info', 16)}<div>Only add it if it's true. It's saved as a highlight, so every future resume can use it.</div></div>
+      <div class="callout">${icon('info', 16)}<div>Only add what's true. Future resumes can use it.</div></div>
       <form class="kb-form form-grid" novalidate>
-        <div class="field field-wide"><label for="ev-owner">Add it to</label><select id="ev-owner" name="owner">${groups.map(([k, label, name]) => kb[k].length ? `<optgroup label="${label}">${kb[k].map((e) => `<option value="${e.id}">${esc(name(e))}</option>`).join('')}</optgroup>` : '').join('')}</select></div>
+        <div class="field field-wide"><label for="ev-owner">Add it to</label><select id="ev-owner" name="owner">${groups.map(([k, label, name]) => kb[k].length ? `<optgroup label="${label}">${kb[k].map((e) => `<option value="${e.id}">${esc(name(e))}</option>`).join('')}</optgroup>` : '').join('')}<option value="new" ${owners.length ? '' : 'selected'}>New role…</option></select></div>
+        ${roleFields.map(([k, label, ph]) => `<div class="field" data-new-role data-field="${k}" ${owners.length ? 'hidden' : ''}><label for="ev-${k}">${label}</label><input id="ev-${k}" name="${k}" placeholder="${ph}"><div class="field-error" hidden></div></div>`).join('')}
         <div class="field field-wide" data-field="text"><label for="ev-text">What you did and the result</label><textarea id="ev-text" name="text" rows="3" placeholder="What you did, where, and what changed because of it. Include numbers if you have them."></textarea><div class="field-error" hidden></div></div>
         <div class="field field-wide"><label for="ev-metric">Metric <span class="optional">optional</span></label><input id="ev-metric" name="metric" placeholder="e.g. 40 to 8 minutes"></div>
       </form>`,
     actions: [{ label: 'Cancel' }, { label: 'Save to knowledge base', kind: 'btn-primary', fn: (r) => {
       const text = $('[name="text"]', r).value.trim();
       const wrap = $('[data-field="text"]', r);
+      const isNew = $('[name="owner"]', r).value === 'new';
+      const missing = isNew ? roleFields.filter(([k]) => !$(`[name="${k}"]`, r).value.trim()) : [];
+      missing.forEach(([k, , , msg]) => { const f = $(`[data-field="${k}"]`, r); f.classList.add('has-error'); $('.field-error', f).hidden = false; $('.field-error', f).textContent = msg; });
+      if (missing.length) { $(`[name="${missing[0][0]}"]`, r).focus(); return false; }
       if (!text) { wrap.classList.add('has-error'); $('.field-error', wrap).hidden = false; $('.field-error', wrap).textContent = 'Describe what you did'; $('textarea', wrap).focus(); return false; }
-      const owner = owners.find((e) => e.id === $('[name="owner"]', r).value);
+      const owner = isNew ? Object.fromEntries([['id', uid('role')], ...roleFields.map(([k]) => [k, $(`[name="${k}"]`, r).value.trim()]), ['highlights', []]]) : owners.find((e) => e.id === $('[name="owner"]', r).value);
+      if (isNew) kb.roles.push(owner);
       const skills = Array.from(new Set([keyword, ...Docs.matchedKeywords(text, MOCK.jds.flatMap((j) => j.brief.keywords))]));
       owner.highlights = owner.highlights || [];
       owner.highlights.push({ id: uid('hl'), text, metric: $('[name="metric"]', r).value.trim(), skills, evidenceFor: requirement });
@@ -167,6 +170,8 @@ function openAddEvidence({ requirement, keyword, onSaved }) {
       onSaved && onSaved(label);
     } }],
   });
+  const sel = $('#ev-owner');
+  sel.onchange = () => $$('[data-new-role]').forEach((f) => (f.hidden = sel.value !== 'new'));
 }
 
 /* ---------- Dashboard ---------- */

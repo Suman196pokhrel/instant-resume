@@ -69,3 +69,30 @@ test("Quick generate shows the saved defaults, and drops the cover letter from i
   await expect(page.getByText("Defaults: Modern theme, 1 page, cover letter off.")).toBeVisible();
   await expect(page.getByText("You'll get a tailored resume, written only from facts in your knowledge base.")).toBeVisible();
 });
+
+// Owner's bug: Add evidence could only add to an existing entry. It writes the KB, so it runs on this file's server.
+test("Add evidence can create a new role for the fact, with its details required", async ({ page }) => {
+  test.setTimeout(60_000);
+  await page.goto("/dashboard");
+  const { id } = await makeProject(page, { keywords: ["Elixir"], requirements: ["Elixir in production"] });
+  await page.goto(`/projects/${id}`);
+  const panel = page.getByRole("complementary", { name: "Job and checks" });
+  await panel.getByRole("tab", { name: /Checks/ }).click();
+  await panel.getByRole("button", { name: "Add Elixir" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add to your knowledge base" });
+  await expect(dialog).toContainText("Only add what's true. Future resumes can use it.");
+  await dialog.getByLabel("Add it to").selectOption({ label: "New role…" });
+  await dialog.getByRole("button", { name: "Save to knowledge base" }).click();
+  await expect(dialog.getByText("Enter the job title")).toBeVisible();
+  await expect(dialog.getByLabel("Job title")).toBeFocused();
+  await dialog.getByLabel("Job title").fill("Backend Developer");
+  await dialog.getByLabel("Employer").fill("Harbour Queue Co");
+  await dialog.getByLabel("Start").fill("Jan 2021");
+  await dialog.getByLabel("End").fill("Dec 2021");
+  await dialog.getByLabel("What you did and the result").fill("Ran the Elixir job queue in production");
+  await dialog.getByRole("button", { name: "Save to knowledge base" }).click();
+  await expect(page.getByText("Added to Backend Developer, Harbour Queue Co")).toBeVisible();
+  const kb = await (await page.request.get("/api/kb")).json();
+  const role = kb.roles.find((r: { company: string }) => r.company === "Harbour Queue Co");
+  expect(role).toMatchObject({ title: "Backend Developer", start: "Jan 2021", end: "Dec 2021", highlights: [{ text: "Ran the Elixir job queue in production", skills: ["Elixir"], evidenceFor: "Elixir" }] });
+});
