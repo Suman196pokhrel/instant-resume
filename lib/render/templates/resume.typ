@@ -3,25 +3,25 @@
 #show: setup
 #header()
 
-#let section-heading(id, title) = block(above: t.sectionGap * 1pt, below: 0.5em, sticky: true, {
-  mark("s", id) // inside the block, so the outline starts at the heading, not the gap above it
-  text(size: t.headingSize * 1pt, weight: "bold", fill: accent, title)
-  v(-0.55em)
-  line(length: 100%, stroke: 0.75pt + accent)
+// .doc-section margin-top (section gap), .doc-h: padding-bottom .15em, a .75pt rule, margin-bottom .45em.
+#let section-heading(id, title) = block(above: gap(B, H, t.sectionGap * 1pt), below: 0.45 * H + over(B), sticky: true, {
+  // the mark shares the heading's line, so the outline starts at the heading, not the gap above it
+  stack(spacing: under(H) + 0.15 * H, [#mark("s", id)#text(size: H, weight: "bold", fill: accent, title)], line(length: 100%, stroke: 0.75pt + accent))
 })
 
-#set list(indent: 0.15em, body-indent: 0.6em, spacing: 0.12em + (t.lineHeight - 0.7) * 1em, marker: [•])
+#set list(indent: 0.15em, body-indent: 0.6em, spacing: lead + 0.12em, marker: [•]) // .entry li: margin .12em
 
-#let entry(it) = block(above: 0.7em, below: 0em, breakable: true, {
+// .entry: title and meta on one line, then sub and detail lines; .entry + .entry: margin-top .6em; ul margin-top .25em.
+#let entry(it, first) = block(above: if first { 0pt } else { lead + 0.6em }, below: 0pt, breakable: true, {
   [*#it.heading*]
   let meta = it.at("meta", default: "")
   if meta != "" [#h(1fr)#text(size: 0.92em, fill: muted, meta)]
   let sub = it.at("sub", default: "")
-  if sub != "" [\ #emph(sub)]
+  if sub != "" [\ #text(fill: rgb("#333333"), emph(sub))]
   let detail = it.at("line", default: "")
-  if detail != "" [\ #detail]
+  if detail != "" [\ #text(fill: rgb("#333333"), detail)]
   let bullets = it.at("bullets", default: ())
-  if bullets.len() > 0 { v(0.25em); list(..bullets.map(b => [#mark("b", b.id)#b.text#mark("be", b.id)])) }
+  if bullets.len() > 0 { block(above: lead + 0.25em, below: 0pt, list(..bullets.map(b => [#mark("b", b.id)#b.text#mark("be", b.id)]))) }
 })
 
 #for s in d.document.sections.filter(s => not s.hidden) {
@@ -29,9 +29,9 @@
   if s.kind in ("summary", "paragraph") {
     par(s.text)
   } else if s.kind == "skills" {
-    for it in s.items { block(above: 0.35em, below: 0em)[*#it.heading:* #it.at("line", default: "")] }
+    for (i, it) in s.items.enumerate() { block(above: if i == 0 { 0pt } else { lead + 0.15em }, below: 0pt)[*#it.heading:* #it.at("line", default: "")] } // .skill-row + .skill-row: .15em
   } else {
-    for it in s.items { entry(it) }
+    for (i, it) in s.items.enumerate() { entry(it, i == 0) }
   }
   mark("e", s.id)
 }
