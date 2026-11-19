@@ -664,9 +664,9 @@ Name parts are hyphen-joined; the company is sanitised to `[A-Za-z0-9-]`. If che
 
 ### 9.4 Page fitting (Quick generate "Fitting to N pages", and an optional Studio action)
 
-Deterministic loop, maximum 16 compiles:
+Deterministic loop, maximum 24 compiles:
 1. Compile. If `pages ≤ budget`, done.
-2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); hide Portfolio, Certifications and awards, and Referees (1-page budget only, one step); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role), repeated one bullet per compile; drop the last sentence of the summary, repeated down to one sentence; drop the last sentence of the longest cover letter paragraph, repeated down to one sentence each (the cover letter is fitted to 1 page the same way); hide Additional sections (1-page budget only, last resort). An adjustment already at its floor, or with nothing to drop, is skipped (`lib/generate/fit.ts`).
+2. Apply the next adjustment in order, within these floors: lineHeight −0.05 (floor 1.15); sectionGap −2pt (floor 6); margin −2mm (floor 12); baseSize −0.5pt (floor 9.5); hide Portfolio, Certifications and awards, and Referees (1-page budget only, one step); keep only the skills the job's keywords name, dropping groups left empty but never the whole Skills section (1-page budget only); drop the lowest-ranked bullet (fewest keyword matches, oldest role first, keep at least 2 bullets per role), repeated one bullet per compile; drop the last sentence of the summary, repeated down to one sentence; drop the last sentence of the longest cover letter paragraph, repeated down to one sentence each (the cover letter is fitted to 1 page the same way); hide Additional sections (1-page budget only); then drop bullets down to one per role (1-page budget only, last resort). An adjustment already at its floor, or with nothing to drop, is skipped (`lib/generate/fit.ts`).
 3. Emit progress events `{ value: pagesEstimate, action }` after each compile, for example "Tightening line spacing" or "Shortening the summary", ending with "Fits on 1 page".
 
 If it still doesn't fit after the loop, finish with a warning: "Still {n} pages. Trim content in Studio."
@@ -1234,7 +1234,7 @@ Vitest for unit, component and route-handler tests; Playwright for end-to-end. E
 | Rules engine: banned phrases | Word boundaries ("dynamic" vs "dynamically" policy documented); one finding per section |
 | Rules engine: grounding | "40%" flagged against 25%; "4.2s to 1.1s" passes; a tech term not in the source is flagged; a skill not in the KB is flagged; the parenthesised skill isn't split; summary numbers checked against the KB; years ignored |
 | Parse safety | A non-standard heading fails with its hint |
-| Page fit | Reaches the budget within 16 iterations given a fake compiler that reports pages from content length; respects floors; adjustments happen in order; emits the expected `pages` events; warns if it can't fit |
+| Page fit | Reaches the budget within 24 iterations given a fake compiler that reports pages from content length; respects floors; adjustments happen in order; emits the expected `pages` events; warns if it can't fit |
 | Pipeline | Event order for `happy`; `progress` is monotonic from 0 to 1; `gaps` warns at stage 2; `findings` warns at stage 5 with 3 findings; `error-stage-3` emits an error at index 2, then `run(2)` completes; `cancel()` stops further events and rejects pending waits |
 | Text utils | File names (`Jordan-Whitlock-Cover-Letter-Mintleaf.pdf`, company sanitised); word diff output; the time-ago formatter; token estimate |
 | Crypto keystore | Encrypt and decrypt round-trip (Node webcrypto); masked key format; the stored record contains no plaintext |

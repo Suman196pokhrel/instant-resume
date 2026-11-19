@@ -98,3 +98,28 @@ describe("fitPages", () => {
     expect(r.steps.map((s) => s.value)).toEqual([...r.steps.map((s) => s.value)].sort((a, b) => b - a)); // pages never go up
   });
 });
+
+describe("fitPages: one-page last steps (real-resume bug: a long skills list kept it on 2 pages)", () => {
+  const withSkills = (): Doc => {
+    const d = doc();
+    d.sections.push({ id: "s-sk", kind: "skills", title: "Skills", hidden: false, items: [
+      { id: "g1", ref: "sk1", heading: "Software", line: "React, Cobol, Fortran" },
+      { id: "g2", ref: "sk2", heading: "Personal", line: "Punctual, Reliable" },
+    ] } as Section);
+    return d;
+  };
+  const skills = (d: Doc) => (d.sections.find((s) => s.kind === "skills") as Extract<Section, { items: unknown }>).items.map((i) => `${i.heading}: ${i.line}`);
+
+  it("keeps only the skills the job asks for, dropping a group with none", async () => {
+    let n = 0;
+    const r = await fitPages(withSkills(), { budget: 1, keywords: ["React"], compile: async (d) => (skills(d).length > 1 || ++n < 6 ? 2 : 1) });
+    expect(skills(r.doc)).toEqual(["Software: React"]);
+  });
+
+  it("never empties the Skills section, and as a last resort keeps one bullet per role", async () => {
+    const r = await fitPages(withSkills(), { budget: 1, keywords: ["Kotlin"], compile: async () => 2 });
+    expect(skills(r.doc)).toHaveLength(2); // nothing matched, so the skills stay
+    const exp = r.doc.sections.find((s) => s.kind === "experience") as Extract<Section, { items: unknown }>;
+    expect(exp.items.map((i) => i.bullets!.length)).toEqual([1, 1]);
+  });
+});
