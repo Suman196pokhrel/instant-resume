@@ -13,6 +13,14 @@ const THEMES = [
   { value: "compact", label: "Compact" },
 ] as const;
 const TONES = ["Professional", "Warm", "Concise"] as const;
+const PAPERS: { value: Prefs["paper"]; label: string }[] = [
+  { value: "A4", label: "A4" },
+  { value: "Letter", label: "Letter" },
+];
+const SPELLINGS: { value: Prefs["spelling"]; label: string }[] = [
+  { value: "en-AU", label: "Australian" },
+  { value: "en-US", label: "US" },
+];
 
 function Pref({ title, help, children }: { title: string; help: string; children: React.ReactNode }) {
   return (
@@ -26,7 +34,7 @@ function Pref({ title, help, children }: { title: string; help: string; children
   );
 }
 
-/** Settings → Quick generate defaults (SPEC §13.3 item 2, mock quickSettingsHtml). One prefs state, so each PUT sends the whole set. */
+/** Settings → Quick generate defaults and Preferences (SPEC §13.3 items 2–3, mock quickSettingsHtml). One prefs state, so each PUT sends the whole set. */
 export function PrefsSettings({ initial }: { initial: Prefs }) {
   const [prefs, setPrefs] = useState(initial);
 
@@ -42,6 +50,7 @@ export function PrefsSettings({ initial }: { initial: Prefs }) {
   const setQuick = (patch: Partial<Prefs["quick"]>) => save({ ...prefs, quick: { ...q, ...patch } });
 
   return (
+    <>
     <section className="mb-[34px]">
       <h2 className="mb-1">Quick generate defaults</h2>
       <p className="mb-3.5 text-muted-foreground">Used when you go straight from a job description to finished documents.</p>
@@ -78,5 +87,17 @@ export function PrefsSettings({ initial }: { initial: Prefs }) {
         </Pref>
       </div>
     </section>
+    <section className="mb-[34px]">
+      <h2 className="mb-3.5">Preferences</h2>
+      <div className="divide-y divide-line rounded-lg border border-line bg-surface">
+        <Pref title="Paper size" help="Used for preview and export">
+          <Segmented aria-label="Paper size" options={PAPERS} value={prefs.paper} onValueChange={(paper) => save({ ...prefs, paper })} />
+        </Pref>
+        <Pref title="Spelling and conventions" help="Australian adds work rights and referees to resumes">
+          <Segmented aria-label="Spelling and conventions" options={SPELLINGS} value={prefs.spelling} onValueChange={(spelling) => save({ ...prefs, spelling })} />
+        </Pref>
+      </div>
+    </section>
+    </>
   );
 }

@@ -157,3 +157,18 @@ test("a preference that fails to save goes back and says so", async ({ page }) =
   await expect(page.getByText("Couldn't save that preference. Try again.")).toBeVisible();
   await expect(theme).toHaveValue("classic");
 });
+
+// TASK-38, SPEC §13.3 item 3. Stubbed for the same reason; tests/api/settings.test.ts covers the stored round trip.
+test("Preferences: paper size and spelling save at once with a toast (AC1)", async ({ page }) => {
+  const sent: Record<string, unknown>[] = [];
+  await page.route("/api/settings", (route) => (sent.push(route.request().postDataJSON()), route.fulfill({ json: sent.at(-1) })));
+  await page.goto("/settings");
+  const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Preferences" }) });
+  await expect(section.getByRole("radio", { name: "A4" })).toBeChecked();
+  await expect(section.getByRole("radio", { name: "Australian" })).toBeChecked();
+  await section.getByRole("radio", { name: "Letter" }).click();
+  await expect(page.getByText("Preference saved")).toBeVisible();
+  await section.getByRole("radio", { name: "US", exact: true }).click();
+  await expect.poll(() => sent.length).toBe(2);
+  expect(sent.at(-1)).toMatchObject({ paper: "Letter", spelling: "en-US", quick: { theme: "classic" } });
+});
