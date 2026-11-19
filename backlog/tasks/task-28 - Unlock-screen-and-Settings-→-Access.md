@@ -1,10 +1,10 @@
 ---
 id: TASK-28
 title: Unlock screen and Settings → Access
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-16T00:09:00Z'
-updated_date: '2026-11-19T03:43:00Z'
+updated_date: '2026-11-19T03:48:00Z'
 labels:
   - m10
 dependencies:
@@ -21,16 +21,16 @@ As a self-hoster, I unlock my install from a clear screen and can lock it again 
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 Empty and wrong passwords show their errors
-- [ ] #2 The 5th failure shows a countdown with Unlock disabled
-- [ ] #3 The right password lands on the originally requested page
-- [ ] #4 Settings → Access shows 'Password lock is on', and Lock now returns to the unlock screen
+- [x] #1 Empty and wrong passwords show their errors
+- [x] #2 The 5th failure shows a countdown with Unlock disabled
+- [x] #3 The right password lands on the originally requested page
+- [x] #4 Settings → Access shows 'Password lock is on', and Lock now returns to the unlock screen
 <!-- AC:END -->
 
 ## Definition of Done
 <!-- DOD:BEGIN -->
-- [ ] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
-- [ ] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
+- [x] #1 UI matches the mock's layout, copy, states and motion, using only the shared tokens and components (SPEC §11–12); no one-off colours, durations or easings
+- [x] #2 Keyboard, focus and reduced motion work for everything this card adds (SPEC §16)
 <!-- DOD:END -->
 
 ## Implementation Plan
@@ -55,3 +55,9 @@ Tests (e2e, password server seeded, SPEC §18.4 #16):
 
 Out of scope: password change UI (server env only by design).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Unlock screen (components/access/UnlockForm.tsx), Settings → Access, 'Stored on your server' footer. Fixed a real bug: the proxy's relative Location made every locked page 500 under next start; now absolute on the forwarded public origin. e2e runs a seeded password server (runOnEmptyServer gained env/seed).
+<!-- SECTION:NOTES:END -->
