@@ -1,7 +1,7 @@
 ---
 id: TASK-47
 title: Calibrate template spacing against the mock
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-18T10:43:00Z'
 updated_date: '2026-11-19T04:09:00Z'
@@ -19,8 +19,8 @@ From TASK-15/TASK-18: the Typst resume and cover letter sit tighter than the moc
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 At the default theme the resume and cover letter preview match the mock's spacing (contact block, section headings, skills lines, bullets) side by side
-- [ ] #2 The render tests and page counts still pass
+- [x] #1 At the default theme the resume and cover letter preview match the mock's spacing (contact block, section headings, skills lines, bullets) side by side
+- [x] #2 The render tests and page counts still pass
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -31,3 +31,9 @@ Files: lib/render/templates/{common,resume,letter}.typ.
 Tests: side-by-side screenshots against the mock (resume and letter, default theme) (AC1); full unit + e2e incl. render/export/quick page counts (AC2).
 Out of scope: per-font metric tuning (Inter, Carlito use Arimo's constants).
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Spacing helpers in common.typ convert the mock's CSS margins to Typst baseline→cap gaps; checked side by side with the mock (resume + letter). Letter header no longer shows work rights (SPEC §9.2).
+<!-- SECTION:NOTES:END -->
