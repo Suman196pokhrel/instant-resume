@@ -54,13 +54,13 @@ const createSchema = z
 const patchSchema = projectInput.omit({ jdText: true, source: true }).partial();
 const saveSchema = z.object({ revision: revisionSchema.pick({ kind: true, label: true, coalesceKey: true }) });
 
-async function insertAll(db: Db, { project, documents: docs, revisions: revs }: ProjectBundle) {
-  await db.transaction(async (tx) => {
-    await tx.insert(projects).values(fromProject(project));
-    if (docs.length) await tx.insert(documents).values(docs.map((d) => fromDocument(d, project.updatedAt)));
-    if (revs.length) await tx.insert(revisions).values(revs.map(fromRevision));
-  });
+/** Inserts a validated bundle; the caller owns the transaction (backup import restores many in one). */
+export async function insertBundle(tx: Pick<Db, "insert">, { project, documents: docs, revisions: revs }: ProjectBundle) {
+  await tx.insert(projects).values(fromProject(project));
+  if (docs.length) await tx.insert(documents).values(docs.map((d) => fromDocument(d, project.updatedAt)));
+  if (revs.length) await tx.insert(revisions).values(revs.map(fromRevision));
 }
+const insertAll = (db: Db, bundle: ProjectBundle) => db.transaction((tx) => insertBundle(tx, bundle));
 
 async function projectRow(db: Db, id: string) {
   const row = await db.select().from(projects).where(eq(projects.id, id)).get();

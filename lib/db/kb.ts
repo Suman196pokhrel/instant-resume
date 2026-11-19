@@ -18,18 +18,22 @@ const LISTS = {
   additional: "additional",
 } as const satisfies Partial<Record<(typeof KB_TYPES)[number], keyof KnowledgeBase>>;
 
-/** Validates, then replaces the whole knowledge base in one transaction. Throws (writing nothing) when invalid. */
-export async function writeKb(db: Db, input: unknown): Promise<KnowledgeBase> {
-  const kb = kbSchema.parse(input);
+/** The kb_entries rows for a validated knowledge base (also used by backup import). */
+export function kbRows(kb: KnowledgeBase) {
   const updatedAt = new Date().toISOString();
-  const rows = [
+  return [
     { id: kb.contact.id, type: "contact" as const, position: 0, data: kb.contact as unknown },
     ...(kb.workRights ? [{ id: kb.workRights.id, type: "workRights" as const, position: 0, data: kb.workRights as unknown }] : []),
     ...Object.entries(LISTS).flatMap(([type, key]) =>
       kb[key].map((data, position) => ({ id: data.id, type: type as keyof typeof LISTS, position, data: data as unknown }))
     ),
   ].map((row) => ({ ...row, schemaVersion: kb.schemaVersion, updatedAt }));
+}
 
+/** Validates, then replaces the whole knowledge base in one transaction. Throws (writing nothing) when invalid. */
+export async function writeKb(db: Db, input: unknown): Promise<KnowledgeBase> {
+  const kb = kbSchema.parse(input);
+  const rows = kbRows(kb);
   await db.transaction(async (tx) => {
     await tx.delete(kbEntries);
     await tx.insert(kbEntries).values(rows);
