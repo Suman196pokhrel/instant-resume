@@ -6,3 +6,4 @@
 2026-11-18 20:26 | Instant Resume | spec+build+review ×4 → spec | TASK-13, TASK-43, TASK-14, TASK-15 | generation core + Studio generate (live on Anthropic), dashboard, Workspace editor done; TASK-16 next
 2026-11-18 22:08 | Instant Resume | spec+build+review ×4 → spec | TASK-16, TASK-17, TASK-18, TASK-19 | rewrite with diff (live on Anthropic), Structure and Design tabs, revisions and undo done; TASK-20 next
 2026-11-18 23:25 | Instant Resume | spec/build/review × 9 cards → spec | TASK-51 | Rules engine, job panel, Checks, History, Export, match call, Quick generate pipeline, page fitting and result screen; 320 unit + 119 e2e
+2026-11-19 15:03 | Instant Resume | spec/build/review × 7 cards → spec | - | Quick defaults, preferences, backup, unlock/Access, preview overlays, template spacing, setup checklist + a11y; board empty, bug list next; 331 unit + 139 e2e
