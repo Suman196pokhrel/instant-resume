@@ -96,3 +96,22 @@ test("Add evidence can create a new role for the fact, with its details required
   const role = kb.roles.find((r: { company: string }) => r.company === "Harbour Queue Co");
   expect(role).toMatchObject({ title: "Backend Developer", start: "Jan 2021", end: "Dec 2021", highlights: [{ text: "Ran the Elixir job queue in production", skills: ["Elixir"], evidenceFor: "Elixir" }] });
 });
+
+// Owner's request: a quick way to wipe the knowledge base. Last in this file: it empties the KB.
+test("Settings → Your data deletes the knowledge base after a confirm, keeps applications, and starts onboarding", async ({ page }) => {
+  await page.goto("/settings");
+  const data = page.locator("section").filter({ has: page.getByRole("heading", { name: "Your data" }) });
+  await data.getByRole("button", { name: "Delete knowledge base" }).click();
+  const dialog = page.getByRole("dialog", { name: "Delete your knowledge base?" });
+  await expect(dialog).toContainText("Your applications stay.");
+  await dialog.getByRole("button", { name: "Cancel" }).click();
+  expect(await (await page.request.get("/api/kb")).json()).not.toBeNull(); // Cancel keeps it
+  await data.getByRole("button", { name: "Delete knowledge base" }).click();
+  await dialog.getByRole("button", { name: "Delete knowledge base" }).click();
+  await expect(page).toHaveURL(/\/onboarding/);
+  await expect(page.getByText("Knowledge base deleted")).toBeVisible();
+  expect(await (await page.request.get("/api/kb")).json()).toBeNull();
+  expect((await (await page.request.get("/api/projects")).json()).length).toBeGreaterThan(0);
+  await page.goto("/settings");
+  await expect(page.getByRole("button", { name: "Delete knowledge base" })).toHaveCount(0); // nothing left to delete
+});

@@ -1,4 +1,5 @@
-import { kbEntries, type KB_TYPES } from "./schema";
+import { eq } from "drizzle-orm";
+import { kbEntries, settings, type KB_TYPES } from "./schema";
 import type { Db } from "./client";
 import { kbSchema, type KnowledgeBase } from "../schemas/kb";
 import { upgrade } from "../schemas/migrate";
@@ -87,4 +88,12 @@ export async function updateKb(db: Db, change: (kb: KnowledgeBase) => void): Pro
   if (!kb) throw new ApiError(409, "no_knowledge_base");
   change(kb);
   return writeKb(db, kb);
+}
+
+/** Deletes the whole knowledge base and any onboarding draft in one go, so onboarding starts fresh. Projects stay. */
+export async function wipeKb(db: Db) {
+  await db.transaction(async (tx) => {
+    await tx.delete(kbEntries);
+    await tx.delete(settings).where(eq(settings.key, "onboarding")); // lib/db/onboarding.ts reads a missing row as the start
+  });
 }

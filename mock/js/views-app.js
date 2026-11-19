@@ -495,7 +495,7 @@ Views.settings = function (root) {
     <section class="settings-section">
       <h2>Your data</h2>
       <p class="muted">Everything lives in a database file on this machine. Export a backup regularly; API keys are left out.</p>
-      <div class="row-gap"><button class="btn btn-ghost" data-export>${icon('download')} Export backup</button><button class="btn btn-ghost" data-import>${icon('upload')} Import backup</button></div>
+      <div class="row-gap"><button class="btn btn-ghost" data-export>${icon('download')} Export backup</button><button class="btn btn-ghost" data-import>${icon('upload')} Import backup</button><button class="btn btn-danger-ghost" data-wipe>${icon('trash')} Delete knowledge base</button></div>
     </section>
     ${accessSettingsHtml(st)}
   `, { route: 'settings', title: '' });
@@ -505,6 +505,11 @@ Views.settings = function (root) {
 
   $('[data-export]', root).onclick = exportBackup;
   $('[data-import]', root).onclick = () => importBackup(() => Router.refresh());
+  $('[data-wipe]', root).onclick = () => openModal({
+    title: 'Delete your knowledge base?',
+    body: '<p>Every entry goes: contact, experience, skills and the rest. Your applications stay. Export a backup first if you might want it back.</p>',
+    actions: [{ label: 'Cancel' }, { label: 'Delete knowledge base', kind: 'btn-danger-ghost', fn: () => { st.kb = normalizeKnowledgeBase({}); st.sampleKb = false; Store.save(); toast('Knowledge base deleted'); location.hash = '#/onboarding'; } }],
+  });
 
   bindQuickSettings(root);
   $$('[data-pref]', root).forEach((seg) => $$('button', seg).forEach((b) => (b.onclick = () => {
