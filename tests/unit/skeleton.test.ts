@@ -88,14 +88,16 @@ describe("imported sections (real-resume bugs)", () => {
     k.additional = [
       { id: "add-sum", title: "PROFESSIONAL SUMMARY", notes: "Retail professional with 1.5 years in Adelaide." },
       { id: "add-av", title: "AVAILABILITY", notes: "Weekends and late nights." },
+      { id: "add-tr", title: "Target Role", notes: "RETAIL SALES ASSISTANT" },
     ];
     k.skills = [{ id: "sk-1", group: "KEY SKILLS", items: ["POS", "Stock control"] }];
     return k;
   };
-  const sections = () => buildSkeleton(kb(), brief, ["add-sum", "add-av"], THEME_DEFAULTS).resume.sections;
+  const sections = () => buildSkeleton(kb(), brief, ["add-sum", "add-av", "add-tr"], THEME_DEFAULTS).resume.sections;
 
   it("a summary kept under Additional isn't a second summary on the page", () => {
     expect(sections().map((s) => s.title)).not.toContain("Professional summary");
+    expect(sections().map((s) => s.title)).not.toContain("Target Role"); // an old tailored resume's tagline
     expect(sections().filter((s) => s.kind === "summary")).toHaveLength(1);
   });
 

@@ -16,7 +16,7 @@ const dates = (start?: string, end?: string) => join(" to ", start, end);
 const items = (title: string, kind: Exclude<Section["kind"], "summary" | "paragraph">, list: Item[]): Section[] =>
   list.length ? [{ id: newId("s"), kind, title, hidden: false, items: list.map((i) => ({ id: newId("i"), ...i })) }] : [];
 // A summary or profile kept under Additional is a fact for the generated Summary, not a second summary on the page.
-const SUMMARY_LIKE = /\b(summary|profile|objective|about me|career overview)\b/i;
+const SUMMARY_LIKE = /\b(summary|profile|objective|about me|career overview|target role|career goals?)\b/i; // also the old tagline of a tailored resume
 const text = (kind: "summary" | "paragraph", title: string): Section => ({ id: newId("s"), kind, title, hidden: false, text: "" });
 
 export function buildSkeleton(kb: KnowledgeBase, brief: JobBrief, selected: string[], theme: Theme): { resume: Draft; coverLetter: Draft } {
