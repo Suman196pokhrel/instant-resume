@@ -1,0 +1,15 @@
+# Never in the image: keys, local data, build output, the mock and tests.
+.env*
+data
+node_modules
+.next
+.git
+mock
+tests
+!tests/fixtures
+test-results
+playwright-report
+backlog
+.smartdev
+*.md
+!README.md
