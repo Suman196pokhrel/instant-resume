@@ -357,6 +357,7 @@ Views.project = function (root, params) {
         <div class="kw-ring">${ring(pct, enter)}<div><strong>${ch.matched.length} of ${p.brief.keywords.length}</strong><span class="muted small">keywords appear in this ${kindName}</span></div></div>
         ${ch.missing.length ? `<ul class="missing-list">${ch.missing.map((m) => `<li><span class="chip chip-missing">${esc(m.keyword)}</span>
           ${m.inKb ? `<button class="link-btn" data-emph="${esc(m.keyword)}" data-tip="It's in your knowledge base. Ask for a rewrite that brings it forward.">${icon('spark', 12)} Emphasise</button>` : `<button class="link-btn" data-add-kw="${esc(m.keyword)}" data-tip="Not in your knowledge base yet. Add what you did, then it can be claimed.">${icon('plus', 12)} Add it</button>`}</li>`).join('')}</ul>` : '<p class="small ok-text">Every keyword from the job brief appears.</p>'}
+        ${ch.missing.some((m) => !m.inKb) ? `<button class="btn btn-ghost btn-sm btn-block miss-btn" data-add-missing>${icon('spark', 13)} Add what's missing</button>` : ''}
       </section>
       ${groups.map(([t, label, clean]) => {
         const fs = ch.findings.filter((f) => f.type === t);
@@ -372,6 +373,7 @@ Views.project = function (root, params) {
       </details>
       <p class="lp-foot">${icon('zap', 12)} Checks run on this device after every change. No LLM call.</p>`;
     $$('[data-goto-section]', body).forEach((b) => (b.onclick = () => selectSection(b.dataset.gotoSection)));
+    $$('[data-add-missing]', body).forEach((b) => (b.onclick = () => openAddMissing({ keywords: ch.missing.filter((m) => !m.inKb).map((m) => m.keyword), onSaved: () => renderLeft() })));
     $$('[data-add-kw]', body).forEach((b) => (b.onclick = () => openAddEvidence({ requirement: b.dataset.addKw, keyword: b.dataset.addKw, onSaved: () => renderLeft() })));
     $$('[data-emph]', body).forEach((b) => (b.onclick = () => {
       const target = doc().sections.find((s) => s.kind === 'experience') || doc().sections[0];

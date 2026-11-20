@@ -8,13 +8,14 @@ import { LlmError, outputError } from "./errors";
 // SPEC §8.1 MockLlmAdapter and §17 scenarios. Deterministic and offline: every automated test runs on it
 // (NEXT_PUBLIC_LLM_MOCK=1). Each call's fixture arrives with that call (brief, match, generate, rewrite, missing).
 
-export const SCENARIOS = ["happy", "gaps", "findings", "error-stage-1", "error-stage-2", "error-stage-3", "error-stage-4", "error-stage-5", "extract-error", "brief-error", "generate-error"] as const;
+export const SCENARIOS = ["happy", "gaps", "findings", "error-stage-1", "error-stage-2", "error-stage-3", "error-stage-4", "error-stage-5", "extract-error", "brief-error", "generate-error", "missing-error"] as const;
 export type Scenario = (typeof SCENARIOS)[number];
 export type Fixture = (args: GenerateArgs<unknown>, scenario: Scenario) => unknown;
 
 let extractFailed = false; // extract-error fails the first extract call only, so Try again succeeds
 let briefFailed = false; // brief-error: the same for the brief call
 let generateFailed = false; // generate-error: the same for the generate call
+let missingFailed = false; // missing-error: the same for the missing call
 
 const busy = () => new LlmError("busy", "Anthropic is having trouble right now", "This is on Anthropic's side. Try again in a few minutes, or switch to another model.", "529 overloaded_error");
 const TECH = ["React", "TypeScript", "JavaScript", "Node.js", "Python", "Go", "Java", "PostgreSQL", "SQL", "GraphQL", "AWS", "Azure", "GCP", "Kubernetes", "Docker", "Terraform", "Redis", "Accessibility", "Testing", "CI/CD"];
@@ -183,7 +184,13 @@ export const MOCK_FIXTURES: Record<string, Fixture> = {
     return generationFor(prompt);
   },
   rewrite: ({ prompt }) => rewriteFor(prompt),
-  missing: ({ prompt }) => missingFor(prompt),
+  missing: ({ prompt }, scenario) => {
+    if (scenario === "missing-error" && !missingFailed) {
+      missingFailed = true;
+      throw busy();
+    }
+    return missingFor(prompt);
+  },
 };
 
 /** The scenario from `?mock=` (SPEC §17), or "happy". */

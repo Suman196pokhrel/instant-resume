@@ -101,3 +101,67 @@ test("Emphasise prefills the rewrite instruction; Add it saves a sourced highlig
     await page.request.delete(`/api/kb/portfolio/${entry.id}`, { headers: origin() });
   }
 });
+
+test("Add what's missing writes bullets from what you say, and adds only the ones you keep (TASK-64)", async ({ page }) => {
+  test.setTimeout(90_000);
+  const [kwA, kwB] = [unique("Elixir"), unique("Haskell")];
+  const [nameA, nameB] = [unique("Missing Alpha"), unique("Missing Beta")];
+  const made = await Promise.all([nameA, nameB].map(async (name) => (await page.request.post("/api/kb/portfolio", { headers: origin(), data: { name, summary: "A test project", highlights: [] } })).json()));
+  try {
+    await openChecks(page, ["engineer", "Playwright", kwA, kwB]);
+    const p = panel(page);
+    await p.getByRole("button", { name: "Add what's missing" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add what's missing" });
+    await expect(dialog.getByRole("checkbox", { name: kwA })).toBeChecked();
+    await expect(dialog.getByRole("checkbox", { name: kwB })).toBeChecked();
+    await expect(dialog.getByRole("checkbox", { name: "Playwright" })).toHaveCount(0); // already in the knowledge base: Emphasise covers it
+    await dialog.getByRole("button", { name: "Write it" }).click();
+    await expect(dialog.getByText("Say where you used them")).toBeVisible();
+
+    const said = `I built the job queue in ${kwA} on ${nameA}. I also used ${kwB} on ${nameB}.`;
+    await dialog.getByLabel("Where did you use them?").fill(said);
+    await dialog.getByRole("checkbox", { name: kwB }).click(); // unticked: the model isn't asked for it
+    await dialog.getByRole("button", { name: "Write it" }).click();
+    await expect(dialog.getByRole("region", { name: nameA })).toBeVisible();
+    await expect(dialog.getByRole("region", { name: nameB })).toHaveCount(0);
+    await dialog.getByRole("button", { name: "Back" }).click();
+    await expect(dialog.getByLabel("Where did you use them?")).toHaveValue(said); // Back keeps what you wrote
+
+    await dialog.getByRole("checkbox", { name: kwB }).click();
+    await dialog.getByRole("button", { name: "Write it" }).click();
+    const a = dialog.getByRole("region", { name: nameA });
+    await expect(a.getByRole("textbox", { name: "Bullet" })).toHaveValue(`I built the job queue in ${kwA} on ${nameA}.`);
+    await expect(a.getByText(kwA, { exact: true })).toBeVisible();
+    await a.getByRole("textbox", { name: "Bullet" }).fill(`Built the job queue in ${kwA}`);
+    await dialog.getByRole("region", { name: nameB }).getByRole("checkbox").click(); // not this one
+    await dialog.getByRole("button", { name: "Add 1 to knowledge base" }).click();
+    await expect(page.getByText("Added 1 to your knowledge base")).toBeVisible();
+    await expect(dialog).toBeHidden();
+    await expect(p.getByRole("button", { name: `Emphasise ${kwA}` })).toBeVisible(); // the checks re-ran on the new KB
+    await expect(p.getByRole("button", { name: `Add ${kwB}` })).toBeVisible();
+
+    const kb = await (await page.request.get("/api/kb")).json();
+    const of = (id: string) => kb.portfolio.find((e: { id: string }) => e.id === id).highlights;
+    expect(of(made[0].id)).toEqual([{ id: expect.any(String), text: `Built the job queue in ${kwA}`, skills: [kwA], evidenceFor: kwA }]);
+    expect(of(made[1].id)).toEqual([]);
+  } finally {
+    await Promise.all(made.map((e) => page.request.delete(`/api/kb/portfolio/${e.id}`, { headers: origin() })));
+  }
+});
+
+test("Add what's missing shows the model's error with Try again, and keeps what you wrote (TASK-64)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const kw = unique("Elixir");
+  const id = await openChecks(page, ["engineer", kw]);
+  await page.goto(`/projects/${id}?mock=missing-error`);
+  await panel(page).getByRole("tab", { name: /Checks/ }).click();
+  await panel(page).getByRole("button", { name: "Add what's missing" }).click();
+  const dialog = page.getByRole("dialog", { name: "Add what's missing" });
+  await dialog.getByLabel("Where did you use them?").fill(`I used ${kw} at work.`);
+  await dialog.getByRole("button", { name: "Write it" }).click();
+  await expect(dialog.getByRole("alert")).toContainText("Anthropic is having trouble right now");
+  await expect(dialog.getByLabel("Where did you use them?")).toHaveValue(`I used ${kw} at work.`);
+  await dialog.getByRole("button", { name: "Try again" }).click();
+  await expect(dialog.getByRole("textbox", { name: "Bullet" })).toHaveValue(`I used ${kw} at work.`);
+  await expect(dialog.getByRole("alert")).toHaveCount(0);
+});

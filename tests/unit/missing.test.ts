@@ -47,9 +47,9 @@ describe("add what's missing", () => {
   });
 
   it("tags a highlight with every brief keyword it names, and answers the requirement that names one", () => {
-    const h = toHighlight({ entryId: "pf-tidewatch", type: "portfolio", label: "Tidewatch", text: "Wrote the Python API and its Terraform", keywords: ["Terraform"] }, brief);
+    const h = toHighlight({ text: "Wrote the Python API and its Terraform", keywords: ["Terraform"] }, brief);
     expect(h).toEqual({ text: "Wrote the Python API and its Terraform", metric: undefined, skills: ["Terraform", "Python"], evidenceFor: "Infrastructure as Code, preferably Terraform" });
-    expect(toHighlight({ entryId: "x", type: "roles", label: "", text: "Ran clusters", keywords: ["Kubernetes"] }, brief).evidenceFor).toBe("Kubernetes"); // no requirement names it
+    expect(toHighlight({ text: "Ran clusters", keywords: ["Kubernetes"] }, brief).evidenceFor).toBe("Kubernetes"); // no requirement names it
   });
 
   it("the mock places each sentence on the entry it names, with the keywords it mentions", async () => {

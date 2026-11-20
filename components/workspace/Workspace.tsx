@@ -160,7 +160,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
               <JobPanel project={project} kb={kb} prefs={prefs} />
             </TabsContent>
             <TabsContent value="checks" className="flex min-h-0 flex-1 flex-col overflow-auto px-3.5 py-4 animate-in duration-(--t) ease-(--ease) fade-in-0">
-              <ChecksTab kb={kb} brief={project.brief} />
+              <ChecksTab kb={kb} brief={project.brief} spelling={prefs.spelling} />
             </TabsContent>
           </Tabs>
         </aside>

@@ -174,6 +174,70 @@ function openAddEvidence({ requirement, keyword, onSaved }) {
   sel.onchange = () => $$('[data-new-role]').forEach((f) => (f.hidden = sel.value !== 'new'));
 }
 
+// Add what's missing (app: components/workspace/AddMissingDialog.tsx): say where you used the missing keywords, check
+// the bullets the (simulated) model writes, add the ones you keep. Each sentence goes on the entry it names, else the first.
+function openAddMissing({ keywords, onSaved }) {
+  const kb = Store.state.kb;
+  const groups = [['roles', (e) => `${e.title}, ${e.company}`], ['volunteering', (e) => `${e.title}, ${e.company}`], ['portfolio', (e) => e.name]];
+  const owners = groups.flatMap(([k, name]) => kb[k].map((e) => ({ e, label: name(e) })));
+  let picked = [...keywords], text = '', rows = null;
+  openModal({
+    title: "Add what's missing",
+    body: '',
+    actions: [{ label: 'Cancel' }],
+    onMount: (root, close) => {
+      const body = $('.modal-body', root), foot = $('.modal-foot', root);
+      const write = () => {
+        text = $('#miss-text', root).value;
+        if (!text.trim()) { const f = $('[data-field="text"]', root); f.classList.add('has-error'); $('.field-error', f).hidden = false; $('#miss-text', root).focus(); return; }
+        const go = $('[data-write]', root); go.disabled = true; go.innerHTML = '<span class="spinner spinner-light spinner-xs"></span> Writing';
+        setTimeout(() => {
+          rows = text.split(/(?<=[.!?])\s+/).map((t) => t.trim()).filter(Boolean).flatMap((t) => {
+            const kws = Docs.matchedKeywords(t, picked);
+            const owner = owners.find((o) => o.label.split(', ').some((part) => Docs.matchedKeywords(t, [part]).length)) || owners[0];
+            return kws.length && owner ? [{ owner, text: t, keywords: kws, on: true }] : [];
+          });
+          review();
+        }, 1200);
+      };
+      const ask = () => {
+        body.innerHTML = `
+          <fieldset class="miss-kws"><legend>Missing from this job</legend>${keywords.map((k) => `<label class="miss-kw"><input type="checkbox" value="${esc(k)}" ${picked.includes(k) ? 'checked' : ''}> ${esc(k)}</label>`).join('')}</fieldset>
+          <div class="field" data-field="text"><label for="miss-text">Where did you use them?</label><textarea id="miss-text" rows="4" placeholder="e.g. I used Docker and Kubernetes in my weather app project, and set up CI/CD with GitHub Actions at my last job">${esc(text)}</textarea><div class="field-error" hidden>Say where you used them</div></div>
+          <p class="muted small">You'll check the bullets before anything is saved. Future resumes can use them too.</p>`;
+        foot.innerHTML = `<button class="btn btn-ghost" data-cancel>Cancel</button><button class="btn btn-primary" data-write ${picked.length ? '' : 'disabled'}>${icon('spark', 14)} Write it</button>`;
+        $$('.miss-kw input', body).forEach((c) => (c.onchange = () => { picked = $$('.miss-kw input:checked', body).map((x) => x.value); $('[data-write]', root).disabled = !picked.length; }));
+        $('#miss-text', root).onkeydown = (e) => { if (e.key === 'Enter' && (e.metaKey || e.ctrlKey)) { e.preventDefault(); write(); } };
+        $('#miss-text', root).oninput = () => { $('[data-field="text"]', root).classList.remove('has-error'); $('.field-error', root).hidden = true; };
+        $('[data-cancel]', root).onclick = close;
+        $('[data-write]', root).onclick = write;
+        $('#miss-text', root).focus();
+      };
+      const review = () => {
+        const kept = () => rows.filter((r) => r.on && r.text.trim()).length;
+        const owned = [...new Set(rows.map((r) => r.owner))];
+        body.innerHTML = owned.length ? owned.map((o) => `<section class="miss-group"><h3>${esc(o.label)}</h3>${rows.map((r, i) => r.owner === o ? `<div class="miss-row"><input type="checkbox" data-keep="${i}" checked aria-label="Keep this bullet"><div><textarea rows="2" data-row="${i}" aria-label="Bullet">${esc(r.text)}</textarea><div class="chips chips-tight">${r.keywords.map((k) => `<span class="chip">${esc(k)}</span>`).join('')}</div></div></div>` : '').join('')}</section>`).join('')
+          : '<p>No bullets came out of that. Go back and say which job or project you used them in.</p>';
+        const label = () => (kept() === 1 ? 'Add 1 to knowledge base' : `Add ${kept()} to knowledge base`);
+        foot.innerHTML = `<button class="btn btn-ghost" data-back>Back</button><button class="btn btn-primary" data-add ${kept() ? '' : 'disabled'}>${label()}</button>`;
+        const sync = () => { const b = $('[data-add]', root); b.textContent = label(); b.disabled = !kept(); };
+        $$('[data-keep]', body).forEach((c) => (c.onchange = () => { const r = rows[+c.dataset.keep]; r.on = c.checked; $(`[data-row="${c.dataset.keep}"]`, body).disabled = !c.checked; sync(); }));
+        $$('[data-row]', body).forEach((t) => (t.oninput = () => { rows[+t.dataset.row].text = t.value; sync(); }));
+        $('[data-back]', root).onclick = ask;
+        $('[data-add]', root).onclick = () => {
+          const keep = rows.filter((r) => r.on && r.text.trim());
+          keep.forEach((r) => { r.owner.e.highlights = r.owner.e.highlights || []; r.owner.e.highlights.push({ id: uid('hl'), text: r.text.trim(), metric: '', skills: r.keywords, evidenceFor: r.keywords[0] }); });
+          Store.save();
+          toast(`Added ${keep.length} to your knowledge base`);
+          close();
+          onSaved && onSaved();
+        };
+      };
+      ask();
+    },
+  });
+}
+
 /* ---------- Dashboard ---------- */
 function monogram(name) {
   const hues = [168, 212, 330, 28, 260, 120];

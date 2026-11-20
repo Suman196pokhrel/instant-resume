@@ -5,6 +5,7 @@ import { useRouter } from "next/navigation";
 import { ArrowRight, Check, Plus, Sparkles, TriangleAlert, Zap } from "lucide-react";
 import { cn } from "cn";
 import { AddEvidenceDialog } from "@/components/kb/AddEvidenceDialog";
+import { Button } from "@/components/ui/button";
 import { Collapsible, CollapsibleContent, CollapsibleTrigger } from "@/components/ui/collapsible";
 import { Chip } from "@/components/ui/pill";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
@@ -12,6 +13,7 @@ import { runChecks, type Finding } from "@/lib/checks/run";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import { useWorkspace } from "@/lib/stores/workspace";
+import { AddMissingDialog } from "./AddMissingDialog";
 
 // Job panel, Checks tab (SPEC §10, §14.5; mock views-workspace.js renderLeft 'checks'): the rules engine on this
 // device, no LLM call. Findings jump to their section.
@@ -64,19 +66,21 @@ const OkRow = ({ children }: { children: React.ReactNode }) => (
 );
 const linkBtn = "inline-flex cursor-pointer items-center gap-1 rounded-sm text-[12.5px] font-medium text-accent-ink outline-none hover:underline focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary";
 
-export function ChecksTab({ kb, brief }: { kb: KnowledgeBase; brief: JobBrief }) {
+export function ChecksTab({ kb, brief, spelling }: { kb: KnowledgeBase; brief: JobBrief; spelling: "en-AU" | "en-US" }) {
   const router = useRouter();
   const kind = useWorkspace((s) => s.kind);
   const sections = useWorkspace((s) => s.docs[s.kind]?.sections ?? []);
   const goTo = useWorkspace((s) => s.goTo);
   const ch = useChecks(kb, brief);
   const [adding, setAdding] = useState({ keyword: "", open: false }); // kept after closing, so the dialog can animate out
+  const [addingAll, setAddingAll] = useState({ n: 0, open: false }); // n: a fresh dialog each opening
   if (!ch) return null;
 
   const noun = kind === "resume" ? "resume" : "cover letter";
   const n = ch.findings.length;
   const total = brief.keywords.length;
   const pct = Math.round((ch.matched.length / Math.max(1, total)) * 100);
+  const notInKb = ch.missing.filter((m) => !m.inKb).map((m) => m.keyword);
   const parseOk = ch.parse.filter((p) => p.ok).length;
   const titleOf = (id: string) => sections.find((s) => s.id === id)?.title ?? "section";
   const emphasise = (kw: string) => {
@@ -160,6 +164,11 @@ export function ChecksTab({ kb, brief }: { kb: KnowledgeBase; brief: JobBrief })
         ) : (
           <p className="mt-2.5 text-[13px] text-ok">Every keyword from the job brief appears.</p>
         )}
+        {notInKb.length > 0 && (
+          <Button size="sm" variant="ghost" onClick={() => setAddingAll((a) => ({ n: a.n + 1, open: true }))} className="mt-3 w-full">
+            <Sparkles aria-hidden /> Add what&apos;s missing
+          </Button>
+        )}
       </section>
       {group("grounding", "Claims not found in your knowledge base", "Every claim traces to your knowledge base")}
       {group("banned", "Banned phrases", "No banned phrases")}
@@ -184,6 +193,7 @@ export function ChecksTab({ kb, brief }: { kb: KnowledgeBase; brief: JobBrief })
         <Zap aria-hidden className="size-3 text-primary" /> Checks run on this device after every change. No LLM call.
       </p>
       <AddEvidenceDialog kb={kb} requirement={adding.keyword} keyword={adding.keyword} keywords={brief.keywords} open={adding.open} onOpenChange={(open) => setAdding((a) => ({ ...a, open }))} onSaved={() => router.refresh()} />
+      <AddMissingDialog key={addingAll.n} kb={kb} brief={brief} keywords={notInKb} spelling={spelling} open={addingAll.open} onOpenChange={(open) => setAddingAll((a) => ({ ...a, open }))} onSaved={() => router.refresh()} />
     </div>
   );
 }

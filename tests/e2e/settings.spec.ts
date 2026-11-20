@@ -211,5 +211,6 @@ test("Writing instructions: start from an example, edit, save, remove; built-in 
   await prompts.getByRole("button", { name: /Writing/ }).click();
   const writing = prompts.getByLabel("Writing prompt");
   await expect(writing).toContainText("never override the rules above");
+  await expect(prompts.getByRole("button", { name: /Add what's missing/ })).toContainText("turns what you say into knowledge base bullets"); // TASK-64
   await expect(prompts.getByRole("textbox")).toHaveCount(0);
 });

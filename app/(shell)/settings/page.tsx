@@ -13,6 +13,7 @@ import { SYSTEM as WRITE } from "@/lib/generate/generate";
 import { SYSTEM as REWRITE } from "@/lib/generate/rewrite";
 import { SYSTEM as IMPORT } from "@/lib/import/extract";
 import { SYSTEM as MATCH } from "@/lib/match/evidence";
+import { SYSTEM as MISSING } from "@/lib/generate/missing";
 
 // Read-only, in the order a resume is made. The adapter also adds the output format; that isn't shown.
 const PROMPTS = [
@@ -21,6 +22,7 @@ const PROMPTS = [
   { name: "Matching", use: "links each must-have to your experience", text: MATCH },
   { name: "Writing", use: "writes the resume and cover letter", text: WRITE },
   { name: "Rewrite", use: "rewrites one section in Studio", text: REWRITE },
+  { name: "Add what's missing", use: "turns what you say into knowledge base bullets", text: MISSING },
 ];
 
 // Settings (SPEC §13.3).
