@@ -68,7 +68,7 @@ function DownloadButton({ label, docs, dl, variant }: { label: string; docs: Doc
   );
 }
 
-function Thumb({ doc, kb, prefs, brief }: { doc: Doc; kb: KnowledgeBase; prefs: Prefs; brief: JobBrief }) {
+function Thumb({ doc, kb, prefs, brief, i }: { doc: Doc; kb: KnowledgeBase; prefs: Prefs; brief: JobBrief; i: number }) {
   const [svg, setSvg] = useState("");
   const [pages, setPages] = useState(0);
   const dl = useDownload(kb, prefs, brief);
@@ -82,7 +82,7 @@ function Thumb({ doc, kb, prefs, brief }: { doc: Doc; kb: KnowledgeBase; prefs: 
   const name = fileName(kb.contact.name, doc.kind, brief.company);
   return (
     // mock .qg-doc: a card, the sheet at 34% (270px) cropped to 300px, and a footer with the file name
-    <figure className="min-w-0 overflow-hidden rounded-lg border border-line bg-surface">
+    <figure className="min-w-0 animate-qg-in overflow-hidden rounded-lg border border-line bg-surface" style={{ "--i": i } as React.CSSProperties}>
       <div className="relative flex h-[300px] justify-center overflow-hidden bg-sunken pt-[18px]">
         {svg && <div aria-hidden className="h-fit w-[270px] shrink-0 bg-surface shadow-pop [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />}
         {pages > 0 && <Pill className="absolute top-2.5 right-2.5 border border-line bg-surface text-[11.5px] font-semibold">{plural(pages, "page")}</Pill>}
@@ -194,8 +194,8 @@ export function QuickResult({ done, kb, prefs, onRegenerate }: { done: QuickDone
         {tile(summary.findings.length > 0, String(summary.findings.length), summary.findings.length === 1 ? "finding" : "findings")}
       </div>
       <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3.5">
-        {docs.map((d) => (
-          <Thumb key={d.kind} doc={d} kb={kb} prefs={prefs} brief={brief} />
+        {docs.map((d, i) => (
+          <Thumb key={d.kind} doc={d} kb={kb} prefs={prefs} brief={brief} i={i} />
         ))}
       </div>
       {n ? (

@@ -79,6 +79,9 @@
   --animate-sweep: sweep 1.2s var(--ease) infinite; /* the "Rewriting with {model}" strip's shimmer */
   --animate-ring-in: ring-in 700ms var(--ease) both; /* Checks keyword ring draws in when the tab opens */
   --animate-flash: flash 1.2s var(--ease); /* SPEC §12 section flash in the preview */
+  --animate-qg-in: qg-in 250ms var(--ease) calc(var(--i, 0) * 80ms) both; /* Quick generate result thumbnails, staggered by --i */
+  --animate-qg-chip: qg-in 200ms var(--ease) calc(var(--i, 0) * 45ms) both; /* Quick generate chips, staggered by --i */
+  --animate-qg-tick: qg-tick 250ms var(--ease); /* Quick generate page count, on each change */
 
   --color-on-ink: var(--on-ink);
   --color-prov-anthropic: var(--prov-anthropic);
@@ -283,6 +286,18 @@ html[data-vt="reorder"]::view-transition-new(root) {
   }
   100% {
     opacity: 0;
+  }
+}
+@keyframes qg-in {
+  from {
+    opacity: 0;
+    transform: translateY(6px);
+  }
+}
+@keyframes qg-tick {
+  from {
+    opacity: 0.3;
+    transform: translateY(-4px);
   }
 }
 @keyframes grow {

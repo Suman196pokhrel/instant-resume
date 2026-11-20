@@ -96,9 +96,12 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
             <ChevronLeft className="size-[15px]" /> Applications
           </Link>
           <span className="text-muted-foreground">/</span>
-          <span className="truncate font-semibold max-[900px]:hidden">
-            {project.role} {employer(project.company) && <span className="font-normal text-muted-foreground">at {project.company}</span>}
-          </span>
+          <Tooltip>
+            <TooltipTrigger render={<span className="truncate font-semibold max-[900px]:hidden" />}>
+              {project.role} {employer(project.company) && <span className="font-normal text-muted-foreground">at {project.company}</span>}
+            </TooltipTrigger>
+            <TooltipContent>{employer(project.company) ? `${project.role} at ${project.company}` : project.role}</TooltipContent>
+          </Tooltip>
         </div>
         <Tabs value={kind} onValueChange={(v) => setKind(v as Kind)}>
           <TabsList aria-label="Document">

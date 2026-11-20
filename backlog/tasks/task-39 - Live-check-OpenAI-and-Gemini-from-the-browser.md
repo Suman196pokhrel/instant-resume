@@ -4,7 +4,7 @@ title: Live-check OpenAI and Gemini from the browser
 status: Parked
 assignee: []
 created_date: '2026-11-18T07:26:00Z'
-updated_date: '2026-11-20T02:37:00Z'
+updated_date: '2026-11-20T08:49:00Z'
 labels: []
 dependencies: []
 ordinal: 36000
@@ -31,6 +31,14 @@ created: 2026-11-20T02:37:00Z
 ---
 
 2026-11-20: tried; OPENAI_API_KEY and GEMINI_API_KEY are empty in .env.keys (Anthropic passed). Needs the owner's keys.
+
+---
+
+created: 2026-11-20T08:49:00Z
+
+---
+
+2026-11-20 (session 15): OPENAI_API_KEY and GEMINI_API_KEY still empty in .env.keys; check skipped.
 
 ---
 <!-- COMMENTS:END -->

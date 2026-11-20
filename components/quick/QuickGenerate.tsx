@@ -304,6 +304,9 @@ export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase
   );
 }
 
+/** Chips enter one after another (SPEC §12 "Quick generate chips"). */
+const stagger = (i: number) => ({ "--i": i }) as React.CSSProperties;
+
 /** A live-results card that scrolls into view when it appears. */
 function Card({ title, icon: Icon, children, done }: { title: string; icon: typeof Check; children: React.ReactNode; done?: boolean }) {
   const el = useRef<HTMLElement>(null);
@@ -340,8 +343,8 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
         </div>
         <div className="text-xs font-semibold text-ink-2">Must-haves</div>
         <ul className="mt-1.5 flex flex-wrap gap-1.5">
-          {brief.requirements.slice(0, 6).map((r) => (
-            <li key={r}>
+          {brief.requirements.slice(0, 6).map((r, k) => (
+            <li key={r} className="animate-qg-chip" style={stagger(k)}>
               <Chip className={cn(match && (gaps.has(r) ? "border-warn-line bg-warn-soft text-warn" : "border-accent-line bg-accent-soft text-accent-ink"))}>
                 {match && (gaps.has(r) ? <TriangleAlert aria-hidden className="size-3" /> : <Check aria-hidden className="size-3" />)}
                 {match && <span className="sr-only">{gaps.has(r) ? "Gap: " : "Matched: "}</span>}
@@ -354,8 +357,8 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
       {match && (
         <Card title="Matched from your knowledge base" icon={BookOpen}>
           <ul className="flex flex-wrap gap-1.5">
-            {[...match.matched, ...match.skills].map((m) => (
-              <li key={m}>
+            {[...match.matched, ...match.skills].map((m, k) => (
+              <li key={m} className="animate-qg-chip" style={stagger(k)}>
                 <Chip className="border-accent-line bg-accent-soft text-accent-ink">
                   <Check aria-hidden className="size-3" />
                   {m}
@@ -369,8 +372,8 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
                 <TriangleAlert aria-hidden className="size-3.5" /> {`${plural(match.gaps.length, "gap")}: no supporting evidence`}
               </div>
               <ul className="mt-1.5 flex flex-wrap gap-1.5">
-                {match.gaps.map((g) => (
-                  <li key={g}>
+                {match.gaps.map((g, k) => (
+                  <li key={g} className="animate-qg-chip" style={stagger(k + match.matched.length + match.skills.length)}>
                     <Chip className="border-warn-line bg-warn-soft text-warn">{g}</Chip>
                   </li>
                 ))}
@@ -406,7 +409,9 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
       {resumePages && (
         <Card title="Page fit" icon={FileText} done={resumePages.done && resumePages.value <= budget}>
           <div className="flex items-baseline gap-2">
-            <span className="text-3xl font-semibold tabular-nums">{resumePages.value}</span>
+            <span key={resumePages.value} className="inline-block animate-qg-tick text-3xl font-semibold tabular-nums">
+              {resumePages.value}
+            </span>
             <span className="text-muted-foreground">{resumePages.value === 1 ? "page" : "pages"}</span>
             {resumePages.done && resumePages.value <= budget && <Check aria-label="Fits" className="size-4 text-primary" />}
           </div>

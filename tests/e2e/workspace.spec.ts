@@ -12,6 +12,8 @@ test("the Workspace shows the bar, a rendered preview and the sections (AC4)", a
   const bar = page.locator("header", { has: page.getByRole("tablist", { name: "Document" }) });
   await expect(bar.getByRole("link", { name: "Applications" })).toHaveAttribute("href", "/dashboard");
   await expect(page.getByText(`${role} at Southerly Energy`)).toBeVisible();
+  await bar.getByText(`${role} at Southerly Energy`).hover(); // the title truncates on narrow screens; the tooltip has it in full
+  await expect(page.getByRole("tooltip")).toHaveText(`${role} at Southerly Energy`);
   await expect(page.getByRole("tab", { name: "Resume" })).toHaveAttribute("aria-selected", "true");
   await expect(page.getByText("Saved", { exact: true })).toBeVisible();
   await expect(sheet(page)).toBeVisible({ timeout: 30_000 });
