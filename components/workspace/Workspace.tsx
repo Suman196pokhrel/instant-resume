@@ -1,6 +1,6 @@
 "use client";
 
-import { useCallback, useEffect, useRef, useState } from "react";
+import { useCallback, useContext, useEffect, useRef, useState } from "react";
 import Link from "next/link";
 import { Check, ChevronLeft, Copy, History, Layers, Loader2, Palette, TriangleAlert, Type, Undo2 } from "lucide-react";
 import { ModelPicker } from "@/components/shell/ModelPicker";
@@ -73,7 +73,8 @@ export function Workspace(props: WorkspaceProps) {
 function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
   const kind = useWorkspace((s) => s.kind);
   const setKind = useWorkspace((s) => s.setKind);
-  const doc = useWorkspace((s) => s.docs[s.kind]);
+  const store = useContext(WorkspaceContext)!;
+  const hasDoc = useWorkspace((s) => !!s.docs[s.kind]); // not the document itself: that would re-render the whole Workspace on every key
   const left = useWorkspace((s) => s.leftOpen);
   const leftTab = useWorkspace((s) => s.leftTab);
   const setLeftTab = useWorkspace((s) => s.setLeftTab);
@@ -117,7 +118,7 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
           <div className="mr-0.5 flex items-center gap-0.5 border-r border-line pr-2">
             <UndoButton />
             <Tooltip>
-              <TooltipTrigger render={<Button size="icon" aria-label="Copy as plain text" disabled={!doc} onClick={() => doc && copyText(plainText(doc, kb, project.brief, prefs.spelling), KIND_LABEL[kind])} />}>
+              <TooltipTrigger render={<Button size="icon" aria-label="Copy as plain text" disabled={!hasDoc} onClick={() => copyText(plainText(store.getState().docs[kind]!, kb, project.brief, prefs.spelling), KIND_LABEL[kind])} />}>
                 <Copy />
               </TooltipTrigger>
               <TooltipContent>Copy as plain text, for job sites that ask you to paste</TooltipContent>
