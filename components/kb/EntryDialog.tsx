@@ -65,12 +65,22 @@ export function EntryDialog({ section, entry, trigger }: { section: KbSection; e
   }
 
   async function remove() {
+    const gone = entry!;
     setBusy(true);
-    const res = await send("DELETE", `/api/kb/${section}/${entry!.id}`);
+    const res = await send("DELETE", `/api/kb/${section}/${gone.id}`);
     setBusy(false);
     if (!res.ok) return toast("Couldn't delete. Try again.", { kind: "error" });
     deleted.current = true;
-    done("Entry deleted");
+    setOpen(false);
+    router.refresh();
+    // Undo puts it back in place with the same entry and highlight IDs, so documents that cite them stay sourced.
+    const undo = async () => {
+      const back = await send("POST", `/api/kb/${section}?at=${res.data?.index ?? ""}`, gone);
+      if (!back.ok) return toast("Couldn't restore the entry. Try again.", { kind: "error" });
+      router.refresh();
+      toast("Entry restored");
+    };
+    toast("Entry deleted", { action: { label: "Undo", onClick: () => void undo() } });
   }
 
   return (

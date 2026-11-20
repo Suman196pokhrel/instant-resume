@@ -473,8 +473,8 @@ Validate every JSON column with the Zod schema on read and on write. Reject inva
 | `POST /api/lock` | Clears `ir_session` ("Lock now") |
 | `GET /api/kb` | Whole knowledge base |
 | `PUT /api/kb/contact`, `PUT /api/kb/work-rights` | Replace single entries |
-| `POST /api/kb/:type` | Add entry (type: roles, volunteering, portfolio, education, skills, credentials, referees, additional) |
-| `PATCH /api/kb/:type/:id`, `DELETE /api/kb/:type/:id` | Edit or delete entry |
+| `POST /api/kb/:type` | Add entry (type: roles, volunteering, portfolio, education, skills, credentials, referees, additional). `?at=N` inserts it at position N instead of appending (Undo); an entry whose id is already in the list isn't added again (`200` with it, else `201`) |
+| `PATCH /api/kb/:type/:id`, `DELETE /api/kb/:type/:id` | Edit or delete entry. DELETE answers `{ index }`, the position the entry had |
 | `GET/PUT /api/onboarding` | Wizard progress and draft (settings key `onboarding`: step, maxStep, draft, completed, saveMode). PUT gives new entries and highlights their IDs |
 | `POST /api/onboarding/complete` | `{ mode }`: validate and save the stored draft. Replace: the draft becomes the KB. Merge: keep existing contact/work rights, add entries whose IDs aren't there yet. Returns `{ added }`; marks complete and clears the draft |
 | `GET /api/projects` | List: id, company, role, location, updatedAt, keyword match counts |
@@ -911,7 +911,7 @@ Every shell screen: sidebar to /dashboard, /kb, /settings; model picker; breadcr
 - Head: "Knowledge base", "Every fact here is entered once. Resumes and cover letters can only use what's stored here." Top bar actions: "Import resume", "Import backup" and "Export backup" (below 900px only "Import resume"; the backup buttons stay in Settings → Your data). Resume import starts a review draft; backup import is a separate restore operation.
 - Left sub-nav lists the sections with counts. Right: the section title and "Add {noun}".
 - Entry card: title, sub, meta, the KB ID (small monospace) and an Edit button. Roles and portfolio items list their highlights in rows, each with a metric pill on the right. Skill groups show chips.
-- Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base".
+- Edit/Add dialog: fields from the field schema (section 14.1), plus the highlights editor for roles and portfolio items. Footer: Delete (existing entries), Cancel, Save. Toast "Saved to knowledge base". Delete removes the entry at once and shows "Entry deleted" with Undo (6 s); Undo puts it back in the same place with the same entry and highlight IDs (so documents citing them stay sourced) and toasts "Entry restored".
 - Empty section: "No {section} yet" and "Add one and it becomes available to every application."
 - Field rules follow §6.1: contact location is required; volunteer start and end are optional; additional section details and at least one skill per group are required. Errors use "Enter your {field}" and "Enter an email like name@example.com", and focus moves to the first one. The fields live in `lib/schemas/kb-fields.ts`, shared with onboarding.
 - With no knowledge base yet (before onboarding), `/kb/*` redirects to `/onboarding`.

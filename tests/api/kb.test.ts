@@ -84,8 +84,21 @@ describe("knowledge base routes (AC3)", () => {
     expect(role.title).toBe("Staff Software Engineer");
     expect(role.highlights).toHaveLength(6);
 
-    expect((await entry.DELETE(req("DELETE"), ctx({ type: "referees", id: "ref-sam" }))).status).toBe(204);
+    const del = await entry.DELETE(req("DELETE"), ctx({ type: "referees", id: "ref-sam" }));
+    expect(del.status).toBe(200);
+    expect(await del.json()).toEqual({ index: 1 }); // where it was, for Undo
     expect((await getKb()).referees.map((r: any) => r.id)).toEqual(["ref-dana"]);
+  });
+
+  it("Undo: POST ?at=N puts an entry back in place with its own IDs, never twice (TASK-36)", async () => {
+    const before = (await getKb()).roles;
+    const mosaic = before[1];
+    await entry.DELETE(req("DELETE"), ctx({ type: "roles", id: mosaic.id }));
+    const at = (n: string) => new NextRequest(`http://app.test/api/kb/roles?at=${n}`, { method: "POST", headers: { "content-type": "application/json" }, body: JSON.stringify(mosaic) });
+    expect((await entries.POST(at("1"), ctx({ type: "roles" }))).status).toBe(201);
+    expect((await getKb()).roles).toEqual(before);
+    expect((await entries.POST(at("1"), ctx({ type: "roles" }))).status).toBe(200); // a second Undo adds nothing
+    expect((await getKb()).roles).toEqual(before);
   });
 
   it("PATCH fills the id of a newly added highlight", async () => {

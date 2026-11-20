@@ -113,6 +113,18 @@ test("adds, edits and deletes entries and highlights, and keeps highlight IDs (A
   await expect(page.getByText("Answered 40 tickets a day")).toHaveCount(0);
   await expect(page.getByText("Wrote the on-call runbook")).toBeVisible();
 
+  // Undo puts it back where it was, with the same IDs (TASK-36).
+  const ids = (await getKb(page)).roles.map((r) => r.id);
+  const kept = (await getKb(page)).roles.find((r) => r.title === "Support Engineer")!;
+  await page.getByRole("button", { name: "Edit Support Engineer" }).click();
+  await d.getByRole("button", { name: "Delete" }).click();
+  await expect(page.getByRole("heading", { name: "Support Engineer" })).toHaveCount(0);
+  await page.getByRole("button", { name: "Undo" }).click();
+  await expect(page.getByText("Entry restored")).toBeVisible();
+  await expect(page.getByRole("heading", { name: "Support Engineer" })).toBeVisible();
+  expect((await getKb(page)).roles.map((r) => r.id)).toEqual(ids);
+  expect((await getKb(page)).roles.find((r) => r.id === kept.id)).toEqual(kept);
+
   await page.getByRole("button", { name: "Edit Support Engineer" }).click();
   await d.getByRole("button", { name: "Delete" }).click();
   await expect(page.getByText("Entry deleted")).toBeVisible();

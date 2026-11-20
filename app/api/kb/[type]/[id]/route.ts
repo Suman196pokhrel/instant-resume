@@ -1,5 +1,5 @@
 import { NextResponse, type NextRequest } from "next/server";
-import { ApiError, handle, noContent, readJson } from "@/lib/api";
+import { ApiError, handle, readJson } from "@/lib/api";
 import { getDb } from "@/lib/db/client";
 import { fillIds, isKbList, KB_LIST_PREFIX, updateKb } from "@/lib/db/kb";
 
@@ -30,12 +30,14 @@ export const PATCH = handle(async (request: NextRequest, ctx: Ctx) => {
   return NextResponse.json(kb[type].find((e) => e.id === id));
 });
 
-// DELETE /api/kb/:type/:id
+// DELETE /api/kb/:type/:id: answers with the position the entry had, so Undo can put it back there.
 export const DELETE = handle(async (_request: NextRequest, ctx: Ctx) => {
   const { type, id } = await target(ctx);
+  let index = 0;
   await updateKb(await getDb(), (kb) => {
     const list = kb[type] as { id: string }[];
-    list.splice(indexOf(list, id), 1);
+    index = indexOf(list, id);
+    list.splice(index, 1);
   });
-  return noContent();
+  return NextResponse.json({ index });
 });

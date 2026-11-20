@@ -342,7 +342,9 @@ Views.kb = function (root, params) {
       onMount: (r) => bindHighlightsEditor(r),
       actions: [
         ...(!isNew && !sch.single ? [{ label: 'Delete', kind: 'btn-danger-ghost', fn: () => {
-          st.kb[active] = st.kb[active].filter((x) => x.id !== entry.id); Store.save(); Router.refresh(); toast('Entry deleted');
+          const i = st.kb[active].findIndex((x) => x.id === entry.id);
+          st.kb[active].splice(i, 1); Store.save(); Router.refresh();
+          toast('Entry deleted', { action: { label: 'Undo', fn: () => { st.kb[active].splice(i, 0, entry); Store.save(); Router.refresh(); toast('Entry restored'); } } });
         } }] : []),
         { label: 'Cancel' },
         { label: 'Save', kind: 'btn-primary', fn: (r) => {
