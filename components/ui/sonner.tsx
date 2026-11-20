@@ -21,7 +21,8 @@ const Toaster = ({ ...props }: ToasterProps) => {
       }
       toastOptions={{
         classNames: {
-          toast: "cn-toast gap-3.5! px-3.5! py-2.5! font-sans! text-[13.5px]! shadow-pop!",
+          // sized to its text and centred, like the mock (Tailwind's translate is its own property, so sonner's transform still stacks)
+          toast: "cn-toast w-fit! max-w-(--width) left-1/2! right-auto! -translate-x-1/2 gap-3.5! px-3.5! py-2.5! font-sans! text-[13.5px]! shadow-pop!",
           error: "[--normal-bg:var(--danger)]",
           actionButton: "bg-transparent! p-0! text-[13.5px]! font-semibold! text-toast-action!",
         },
