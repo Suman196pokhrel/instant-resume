@@ -103,12 +103,13 @@ describe("theme (AC3)", () => {
 });
 
 describe("settings", () => {
-  it("prefs default to A4, AU spelling and the classic two-page quick setup", () => {
+  it("prefs default to A4, AU spelling and the classic one-page quick setup, with no writing instructions", () => {
     expect(prefsSchema.parse({})).toEqual({
       paper: "A4",
       spelling: "en-AU",
       quick: { theme: "classic", pages: 1, coverLetter: true, tone: "Professional" },
       dismissedOnboardingBanner: false,
+      instructions: [],
     });
   });
 });

@@ -13,6 +13,17 @@ import {
 } from "./kb";
 
 // Settings (SPEC §6.5): stored in the DB settings table, except connections and the active model (browser only).
+
+/** What a custom writing instruction applies to: only the parts the writing calls can change (SPEC §8.3). */
+export const INSTRUCTION_TARGETS = { resume: "Whole resume", summary: "Summary", experience: "Experience", portfolio: "Projects", skills: "Skills", coverLetter: "Cover letter" } as const;
+export type InstructionTarget = keyof typeof INSTRUCTION_TARGETS;
+export const INSTRUCTION_MAX = 600;
+export const writingInstructionSchema = z.object({
+  id: z.string().min(1),
+  target: z.enum(Object.keys(INSTRUCTION_TARGETS) as [InstructionTarget, ...InstructionTarget[]]),
+  text: z.string().trim().min(1).max(INSTRUCTION_MAX),
+});
+export type WritingInstruction = z.infer<typeof writingInstructionSchema>;
 export const prefsSchema = z.object({
   paper: z.enum(["A4", "Letter"]).default("A4"),
   spelling: z.enum(["en-AU", "en-US"]).default("en-AU"),
@@ -25,6 +36,7 @@ export const prefsSchema = z.object({
     })
     .prefault({}),
   dismissedOnboardingBanner: z.boolean().default(false),
+  instructions: z.array(writingInstructionSchema).max(12).default([]), // layered on the writing prompts, never replacing them
 });
 
 /** The wizard's last step index (11 steps, SPEC §14.1). */

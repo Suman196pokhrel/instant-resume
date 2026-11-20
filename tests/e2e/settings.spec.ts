@@ -180,3 +180,36 @@ test("Settings → Access in local mode says so, with no Lock now (TASK-28)", as
   await expect(access).toContainText("This computer only");
   await expect(access.getByRole("button", { name: "Lock now" })).toHaveCount(0);
 });
+
+// TASK-53: the user's own writing instructions, saved with prefs (stubbed as above), and the built-in prompts, read-only.
+test("Writing instructions: start from an example, edit, save, remove; built-in prompts are read-only", async ({ page }) => {
+  const sent: { instructions: { target: string; text: string }[] }[] = [];
+  await page.route("/api/settings", (route) => (sent.push(route.request().postDataJSON()), route.fulfill({ json: sent.at(-1) })));
+  await page.goto("/settings");
+  const section = page.locator("section").filter({ has: page.getByRole("heading", { name: "Writing instructions" }) });
+  const save = section.getByRole("button", { name: "Save instructions" });
+  await expect(save).toBeDisabled();
+  await section.getByRole("button", { name: /Experience: Keep every bullet/ }).click();
+  await expect(section.getByLabel("Instruction 1 applies to")).toHaveValue("experience");
+  await section.getByRole("button", { name: "Add instruction" }).click();
+  await section.getByLabel("Instruction 2 applies to").selectOption("Cover letter");
+  await section.getByLabel("Instruction 2", { exact: true }).fill("  Mention that I can start in two weeks.  ");
+  await section.getByRole("button", { name: "Add instruction" }).click(); // left blank: dropped on save
+  await save.click();
+  await expect(page.getByText("Instructions saved")).toBeVisible();
+  expect(sent.at(-1)!.instructions.map(({ target, text }) => [target, text])).toEqual([
+    ["experience", "Keep every bullet under 20 words and start it with a strong verb."],
+    ["coverLetter", "Mention that I can start in two weeks."],
+  ]);
+  await expect(section.getByRole("listitem")).toHaveCount(2);
+  await expect(save).toBeDisabled();
+  await section.getByRole("button", { name: "Remove instruction 1" }).click();
+  await section.getByRole("button", { name: "Discard" }).click();
+  await expect(section.getByRole("listitem")).toHaveCount(2);
+
+  const prompts = page.locator("section").filter({ has: page.getByRole("heading", { name: "Built-in prompts" }) });
+  await prompts.getByRole("button", { name: /Writing/ }).click();
+  const writing = prompts.getByLabel("Writing prompt");
+  await expect(writing).toContainText("never override the rules above");
+  await expect(prompts.getByRole("textbox")).toHaveCount(0);
+});

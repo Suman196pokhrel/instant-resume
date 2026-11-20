@@ -22,6 +22,17 @@ describe("prefs", () => {
     expect(await get()).toEqual(prefs);
   });
 
+  it("keeps writing instructions, and rejects a blank, over-long or unknown-target one (TASK-53)", async () => {
+    const before = await get();
+    expect(before.instructions).toEqual([]);
+    const prefs = { ...before, instructions: [{ id: "ins-1", target: "summary", text: "Two sentences." }] };
+    expect((await put(prefs)).status).toBe(200);
+    expect(await get()).toEqual(prefs);
+    for (const bad of [{ target: "summary", text: "  " }, { target: "summary", text: "x".repeat(601) }, { target: "education", text: "Shorter." }])
+      expect((await put({ ...prefs, instructions: [{ id: "ins-2", ...bad }] })).status).toBe(422);
+    expect(await get()).toEqual(prefs);
+  });
+
   it("rejects an unknown paper size and keeps what was saved", async () => {
     const before = await get();
     expect((await put({ ...before, paper: "A3" })).status).toBe(422);

@@ -32,6 +32,18 @@ const returning = (...answers: Op[][]) => {
 };
 
 describe("rewrite", () => {
+  it("sends the whole-resume and this section's instructions, never another section's or the letter's (TASK-53)", async () => {
+    const instructions = (["resume", "experience", "summary", "coverLetter"] as const).map((target) => ({ id: target, target, text: `Rule for ${target}.` }));
+    const adapter = returning([], []);
+    await rewriteSection(input({ instructions }), adapter).catch(() => null);
+    const prompt: string = adapter.generateObject.mock.calls[0][0].prompt;
+    expect(prompt).toContain("- Whole resume: Rule for resume.\n- Experience: Rule for experience.");
+    expect(prompt).not.toMatch(/Rule for (summary|coverLetter)/);
+    const letter = coverLetter.sections[0];
+    await rewriteSection(input({ doc: coverLetter, sectionId: letter.id, instructions }), adapter).catch(() => null);
+    expect(adapter.generateObject.mock.calls[1][0].prompt).toMatch(/<user-instructions>\n- Cover letter: Rule for coverLetter.\n<\/user-instructions>/);
+  });
+
   it("sends only the selected section, with its index, and the entries it references", async () => {
     const adapter = returning([{ op: "replace", path: "/sections/1/items/0/bullets/0/text", value: "Rebuilt the dashboard" }]);
     await rewriteSection(input(), adapter);

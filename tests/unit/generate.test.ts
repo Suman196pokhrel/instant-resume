@@ -54,6 +54,34 @@ describe("generate", () => {
     expect(prompt).toMatch(/Australian/);
   });
 
+  it("layers the user's writing instructions, grouped by target, on top of the rules (TASK-53)", async () => {
+    const generateObject = vi.fn((args) => mock().generateObject(args)) as LlmAdapter["generateObject"];
+    await generateDocuments(await input(), { generateObject });
+    expect(vi.mocked(generateObject).mock.calls[0][0].prompt).not.toContain("<user-instructions>");
+    const instructions = [
+      { id: "i1", target: "coverLetter" as const, text: "Under 250 words." },
+      { id: "i2", target: "experience" as const, text: "Bullets under 20 words." },
+    ];
+    await generateDocuments(await input({ instructions }), { generateObject });
+    const { system, prompt } = vi.mocked(generateObject).mock.calls[1][0];
+    expect(prompt).toContain("<user-instructions>\n- Experience: Bullets under 20 words.\n- Cover letter: Under 250 words.\n</user-instructions>");
+    expect(system).toMatch(/never override the rules above/);
+  });
+
+  it("drops a skills reorder that changes a skill, and keeps the rest of the answer", async () => {
+    const real = mock();
+    const generateObject = vi.fn(async (args: { prompt: string }) => {
+      const r = (await real.generateObject(args as Parameters<LlmAdapter["generateObject"]>[0])) as { object: { resumeOps: { op: string; path: string; value: unknown }[] } };
+      const [, path, line] = args.prompt.match(/(\/sections\/\d+\/items\/\d+\/line)  ("[^"]*")/)!;
+      r.object.resumeOps.push({ op: "replace", path, value: JSON.parse(line).toLowerCase() }); // "TypeScript" -> "typescript": not the same skills
+      return r;
+    }) as unknown as LlmAdapter["generateObject"];
+    const { resume } = await generateDocuments(await input(), { generateObject });
+    expect(generateObject).toHaveBeenCalledTimes(1);
+    const skills = resume.sections.find((s) => s.kind === "skills")!;
+    expect("items" in skills && skills.items[0].line).not.toBe(("items" in skills && skills.items[0].line?.toLowerCase()) || ""); // the KB's own line stays
+  });
+
   it("retries once when the patch is rejected, then gives up with an output error", async () => {
     const bad = { resumeOps: [{ op: "add", path: "/sections/1/items/0/bullets/-", value: { text: "Invented", source: "hl-nope" } }], coverLetterOps: [] };
     const generateObject = vi.fn().mockResolvedValue({ object: bad, usage: { inputTokens: 0, outputTokens: 0 } });

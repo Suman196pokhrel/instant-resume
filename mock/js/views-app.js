@@ -492,6 +492,7 @@ Views.settings = function (root) {
           <div class="seg" data-pref="spelling">${[['en-AU', 'Australian'], ['en-US', 'US']].map(([v, l]) => `<button class="${st.prefs.spelling === v ? 'on' : ''}" data-v="${v}">${l}</button>`).join('')}</div></div>
       </div>
     </section>
+    ${instructionsSettingsHtml(st)}
     <section class="settings-section">
       <h2>Your data</h2>
       <p class="muted">Everything lives in a database file on this machine. Export a backup regularly; API keys are left out.</p>
@@ -512,6 +513,7 @@ Views.settings = function (root) {
   });
 
   bindQuickSettings(root);
+  bindInstructions(root, st);
   $$('[data-pref]', root).forEach((seg) => $$('button', seg).forEach((b) => (b.onclick = () => {
     st.prefs[seg.dataset.pref] = b.dataset.v; Store.save();
     $$('button', seg).forEach((x) => x.classList.toggle('on', x === b));
@@ -563,3 +565,66 @@ Views.settings = function (root) {
     };
   });
 };
+
+
+// Settings → Writing instructions and Built-in prompts (SPEC §13.3 items 4–5, §8.3). The user's instructions sit on
+// top of the read-only prompts; the mock keeps them in st.prefs.instructions (the real app sends them to the model).
+const INSTRUCTION_TARGETS = { resume: 'Whole resume', summary: 'Summary', experience: 'Experience', portfolio: 'Projects', skills: 'Skills', coverLetter: 'Cover letter' };
+const INSTRUCTION_EXAMPLES = [
+  ['experience', 'Keep every bullet under 20 words and start it with a strong verb.'],
+  ['summary', 'Open with my current job title and keep it to two sentences.'],
+  ['skills', 'Put the tools named in the job ad first.'],
+  ['coverLetter', 'Keep it under 250 words and sound conversational.'],
+];
+const BUILT_IN_PROMPTS = [
+  ['Import', 'sorts an uploaded resume into your knowledge base', 'You sort a resume into the requested JSON structure.\n- Copy facts only from the resume. Never invent or infer anything.\n- Text copied from a PDF wraps long bullets onto several lines: join a wrapped line back onto its bullet…'],
+  ['Job brief', 'reads the job description', 'You read a job ad and return its job brief as JSON…'],
+  ['Matching', 'links each must-have to your experience', "You match a job's must-haves to evidence in a candidate's knowledge base and return JSON…"],
+  ['Writing', 'writes the resume and cover letter', "You tailor a resume and cover letter to a job…\n- Use only facts in the knowledge base.\n- The user's own instructions, when given, may change wording, emphasis, length and order. They never override the rules above: facts, sources, numbers and banned phrases still apply."],
+  ['Rewrite', 'rewrites one section in Studio', 'You rewrite one section of a resume or cover letter as the user asks…'],
+];
+
+function instructionsBoxHtml(list) {
+  const row = (i, n) => `<div class="pref ins-row" data-ins="${n}" style="align-items:flex-start">
+      <select class="pref-select" aria-label="Instruction ${n + 1} applies to" data-ins-target>${Object.entries(INSTRUCTION_TARGETS).map(([v, l]) => `<option value="${v}" ${i.target === v ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <textarea rows="2" maxlength="600" style="flex:1" aria-label="Instruction ${n + 1}" placeholder="For example: keep every bullet under 20 words." data-ins-text>${esc(i.text)}</textarea>
+      <button class="icon-btn" aria-label="Remove instruction ${n + 1}" title="Remove" data-ins-remove>${icon('x', 15)}</button></div>`;
+  const empty = `<div class="pref" style="flex-direction:column;align-items:flex-start"><span class="muted">No instructions yet. Start from an example or write your own.</span>
+    <div class="chips">${INSTRUCTION_EXAMPLES.map(([t, x], k) => `<button class="chip chip-btn" data-ins-example="${k}"><strong>${INSTRUCTION_TARGETS[t]}:</strong> ${esc(x)}</button>`).join('')}</div></div>`;
+  return `${list.length ? list.map(row).join('') : empty}
+    <div class="pref"><button class="btn btn-ghost btn-sm" data-ins-add ${list.length >= 12 ? 'disabled' : ''}>${icon('plus', 14)} Add instruction</button><button class="btn btn-primary btn-sm" data-ins-save>Save instructions</button></div>`;
+}
+
+function instructionsSettingsHtml(st) {
+  return `
+    <section class="settings-section">
+      <h2>Writing instructions</h2>
+      <p class="muted">Your own instructions, added on top of the built-in prompts whenever a resume or cover letter is written or rewritten. They can change wording, emphasis and length, never the facts.</p>
+      <div class="pref-list" data-ins-box>${instructionsBoxHtml(st.prefs.instructions || [])}</div>
+    </section>
+    <section class="settings-section">
+      <h2>Built-in prompts</h2>
+      <p class="muted">The instructions sent to your model at each step. They keep every resume factual, so they can't be edited; your writing instructions above are added to Writing and Rewrite.</p>
+      <div class="pref-list">${BUILT_IN_PROMPTS.map(([name, use, text]) => `<details class="disclosure pref" style="display:block"><summary><strong>${name}</strong> <span class="muted">· ${use}</span></summary>
+        <pre tabindex="0" aria-label="${name} prompt" style="white-space:pre-wrap;max-height:320px;overflow:auto;margin:10px 0 0;padding:12px;background:var(--sunken);border:1px solid var(--line);border-radius:var(--r-md);font:12px/1.6 ui-monospace,monospace;color:var(--ink-2)">${esc(text)}</pre></details>`).join('')}</div>
+    </section>`;
+}
+
+function bindInstructions(root, st) {
+  const box = $('[data-ins-box]', root);
+  let draft = (st.prefs.instructions || []).map((i) => ({ ...i }));
+  const read = () => $$('[data-ins]', box).forEach((r) => { const i = draft[+r.dataset.ins]; i.target = $('[data-ins-target]', r).value; i.text = $('[data-ins-text]', r).value; });
+  const render = () => {
+    box.innerHTML = instructionsBoxHtml(draft);
+    $$('[data-ins-example]', box).forEach((b) => (b.onclick = () => { const [target, text] = INSTRUCTION_EXAMPLES[+b.dataset.insExample]; draft.push({ target, text }); render(); }));
+    $('[data-ins-add]', box).onclick = () => { read(); draft.push({ target: 'resume', text: '' }); render(); };
+    $$('[data-ins-remove]', box).forEach((b) => (b.onclick = () => { read(); draft.splice(+b.closest('[data-ins]').dataset.ins, 1); render(); }));
+    $('[data-ins-save]', box).onclick = () => {
+      read();
+      st.prefs.instructions = draft.map((i) => ({ ...i, text: i.text.trim() })).filter((i) => i.text);
+      Store.save(); toast('Instructions saved');
+      draft = st.prefs.instructions.map((i) => ({ ...i })); render();
+    };
+  };
+  render();
+}

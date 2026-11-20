@@ -4,7 +4,7 @@ import { briefSchema, type JobBrief } from "@/lib/schemas/brief";
 
 // Extract brief (SPEC §8.3 call 1, §6.2): the one LLM call in Studio setup. Keywords must come from the ad.
 
-const SYSTEM = `You read a job ad and return its job brief as JSON.
+export const SYSTEM = `You read a job ad and return its job brief as JSON.
 - title, company, location and team come from the ad; team only if the ad names one. company is the employer the ad names, or "Not stated" if it names none (never a recruiter's guess).
 - seniority is one of Junior, Mid-level, Senior, Lead, judged from the title and the years asked for.
 - requirements: the must-haves, 3 to 8 short phrases in the ad's own words.

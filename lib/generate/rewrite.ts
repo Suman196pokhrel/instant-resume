@@ -7,6 +7,8 @@ import { BANNED_PHRASES } from "@/lib/rules/banned-phrases";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { ResumeDocument, Section } from "@/lib/schemas/document";
 import { LIST_KEYS, type KnowledgeBase } from "@/lib/schemas/kb";
+import { INSTRUCTION_TARGETS, type InstructionTarget, type WritingInstruction } from "@/lib/schemas/settings";
+import { INSTRUCTION_RULE, instructionBlock } from "./generate";
 
 // Rewrite (SPEC §8.3 call 4): one section and an instruction in, JSON Patch ops for that section out. Nothing the
 // model returns is shown until the patch validator accepts it.
@@ -29,9 +31,13 @@ export type RewriteInput = {
   notes?: string;
   tone: "Professional" | "Warm" | "Concise";
   spelling: "en-AU" | "en-US";
+  instructions?: WritingInstruction[];
 };
 
-const SYSTEM = `You rewrite one section of a resume or cover letter as the user asks, with JSON Patch operations on that section only.
+/** The instructions that apply to one section: the cover letter's for a letter, else the whole resume's plus that section's. */
+const targetsFor = (doc: ResumeDocument, s: Section): InstructionTarget[] => (doc.kind === "coverLetter" ? ["coverLetter"] : ["resume", ...(s.kind in INSTRUCTION_TARGETS ? [s.kind as InstructionTarget] : [])]);
+
+export const SYSTEM = `You rewrite one section of a resume or cover letter as the user asks, with JSON Patch operations on that section only.
 Allowed operations, and nothing else:
 - {"op":"replace","path":"<a listed path ending /text or /line>","value":"..."} to reword text, a bullet, or reorder a skills line (same skills, nothing else).
 - {"op":"move","from":"<bullet path>","path":"<bullet path in the same list>"} to reorder bullets.
@@ -42,6 +48,7 @@ Rules:
 - A new bullet comes from exactly one highlight of the entry it sits under, and its source is that highlight's id.
 - Change only what the instruction asks for. If it can't be done without inventing facts, return no operations and say why in note.
 - Plain, specific, active voice, with no generic filler. Never use these words or phrases: ${BANNED_PHRASES.join(", ")}.
+${INSTRUCTION_RULE}
 - Return only the JSON.`;
 
 const TONES = { Professional: "Professional.", Warm: "Warm: contractions and friendlier phrasing.", Concise: "Concise: shorter sentences." };
@@ -65,7 +72,7 @@ function outline(s: Section, i: number) {
 }
 
 function request(input: RewriteInput) {
-  const { doc, resume, sectionId, instruction, kb, brief, notes, tone, spelling } = input;
+  const { doc, resume, sectionId, instruction, kb, brief, notes, tone, spelling, instructions } = input;
   const index = doc.sections.findIndex((s) => s.id === sectionId);
   const section = doc.sections[index];
   if (!section) throw new Error(`no section ${sectionId}`);
@@ -79,6 +86,7 @@ function request(input: RewriteInput) {
     `<section>\n${outline(section, index)}\n</section>`,
     `<instruction>\n${instruction}\n</instruction>`,
     `Tone: ${TONES[tone]} Spelling: ${SPELLING[spelling]}.`,
+    instructionBlock(instructions, targetsFor(doc, section)),
   ]
     .filter(Boolean)
     .join("\n\n");

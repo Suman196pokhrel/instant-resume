@@ -6,6 +6,7 @@ import { Segmented } from "@/components/ui/segmented";
 import { Switch } from "@/components/ui/switch";
 import type { Prefs } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
+import { WritingInstructions } from "./Instructions";
 
 const THEMES = [
   { value: "classic", label: "Classic" },
@@ -38,13 +39,17 @@ function Pref({ title, help, children }: { title: string; help: string; children
 export function PrefsSettings({ initial }: { initial: Prefs }) {
   const [prefs, setPrefs] = useState(initial);
 
-  async function save(next: Prefs) {
+  async function save(next: Prefs, done = "Preference saved") {
     const before = prefs;
     setPrefs(next);
     const res = await fetch("/api/settings", { method: "PUT", headers: { "content-type": "application/json" }, body: JSON.stringify(next) }).catch(() => null);
-    if (res?.ok) return toast("Preference saved");
+    if (res?.ok) {
+      toast(done);
+      return true;
+    }
     setPrefs(before);
     toast("Couldn't save that preference. Try again.", { kind: "error" });
+    return false;
   }
   const q = prefs.quick;
   const setQuick = (patch: Partial<Prefs["quick"]>) => save({ ...prefs, quick: { ...q, ...patch } });
@@ -98,6 +103,7 @@ export function PrefsSettings({ initial }: { initial: Prefs }) {
         </Pref>
       </div>
     </section>
+    <WritingInstructions saved={prefs.instructions} onSave={(instructions) => save({ ...prefs, instructions }, "Instructions saved")} />
     </>
   );
 }

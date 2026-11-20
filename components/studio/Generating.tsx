@@ -65,7 +65,7 @@ export function Generating({ kb, draft, prefs, model, onRetry, onBack, onDone }:
     (async () => {
       try {
         next(DRAFT); // matching is the skeleton build, done on the device inside generateDocuments
-        const out = await generateDocuments({ kb, ...draft, tone: prefs.quick.tone, spelling: prefs.spelling }, await getAdapter(), controller.signal);
+        const out = await generateDocuments({ kb, ...draft, tone: prefs.quick.tone, spelling: prefs.spelling, instructions: prefs.instructions }, await getAdapter(), controller.signal);
         clearInterval(grow);
         setGhost(GHOST_GROUPS);
         setCount(out.count);

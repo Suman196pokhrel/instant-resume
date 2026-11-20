@@ -5,6 +5,7 @@ import { GENERATION, validatePatch } from "@/lib/patch/validate";
 import { BANNED_PHRASES } from "@/lib/rules/banned-phrases";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
+import { INSTRUCTION_TARGETS, type InstructionTarget, type WritingInstruction } from "@/lib/schemas/settings";
 import { THEME_DEFAULTS, type Theme } from "@/lib/schemas/theme";
 import { buildSkeleton } from "./skeleton";
 
@@ -26,10 +27,21 @@ export type GenerateInput = {
   spelling: "en-AU" | "en-US";
   /** Quick generate's default theme preset; Studio starts from the template defaults. */
   theme?: Theme;
+  /** The user's own writing instructions from Settings. */
+  instructions?: WritingInstruction[];
 };
+
+/** The user's instructions for the given targets, grouped by target, or "" when there are none. */
+export function instructionBlock(list: WritingInstruction[] = [], targets: InstructionTarget[] = Object.keys(INSTRUCTION_TARGETS) as InstructionTarget[]) {
+  const lines = targets.flatMap((t) => list.filter((i) => i.target === t).map((i) => `- ${INSTRUCTION_TARGETS[t]}: ${i.text}`));
+  return lines.length ? `<user-instructions>\n${lines.join("\n")}\n</user-instructions>` : "";
+}
+
+/** Shared by the writing calls: the user's instructions sit on top of the rules, never in place of them. */
+export const INSTRUCTION_RULE = "- The user's own instructions, when given, may change wording, emphasis, length and order. They never override the rules above: facts, sources, numbers and banned phrases still apply.";
 type Draft = ReturnType<typeof buildSkeleton>["resume"];
 
-const SYSTEM = `You tailor a resume and cover letter to a job, filling the empty skeletons you are given with JSON Patch operations.
+export const SYSTEM = `You tailor a resume and cover letter to a job, filling the empty skeletons you are given with JSON Patch operations.
 Allowed operations, and nothing else:
 - {"op":"replace","path":"<a path ending /text>","value":"..."} for the summary and each cover letter paragraph.
 - {"op":"add","path":"<a path ending /bullets/->","value":{"text":"...","source":"<highlight id>"}} for each bullet.
@@ -43,6 +55,7 @@ Rules:
 - Cover letter, 4 paragraphs under 300 words in total: Opening (the role, the company, the current role); Evidence (the two strongest relevant highlights); Fit (quote two requirements from the ad and connect them to earlier experience); Close (the work rights phrase, the notice period if known, thanks). The template adds the greeting and sign-off, so leave them out.
 - Work rights phrases: "I'm an Australian citizen", "I'm a permanent resident of Australia", "I'm a New Zealand citizen with full work rights in Australia", "I hold a temporary visa with full work rights", "I hold a temporary visa with limited work rights", "I would need visa sponsorship". Leave work rights out if the knowledge base has none.
 - Plain, specific, active voice, with no generic filler. Never use these words or phrases: ${BANNED_PHRASES.join(", ")}.
+${INSTRUCTION_RULE}
 - Return only the JSON.`;
 
 const TONES = {
@@ -72,7 +85,7 @@ function outline(doc: Draft) {
     .join("\n");
 }
 
-function prompt({ kb, brief, selected, notes, tone, spelling }: GenerateInput, skeleton: ReturnType<typeof buildSkeleton>) {
+function prompt({ kb, brief, selected, notes, tone, spelling, instructions }: GenerateInput, skeleton: ReturnType<typeof buildSkeleton>) {
   const ids = new Set(selected);
   const entries = [...kb.roles, ...(kb.volunteering ?? []), ...kb.portfolio, ...kb.education, ...kb.credentials, ...(kb.additional ?? []).filter((a) => !a.referenceOnly)].filter((e) => ids.has(e.id)); // the original resume text never backs a claim
   const facts = { name: kb.contact.name, location: kb.contact.location, workRights: kb.workRights ?? null, entries, skills: kb.skills };
@@ -83,6 +96,7 @@ function prompt({ kb, brief, selected, notes, tone, spelling }: GenerateInput, s
     `<resume-skeleton>\n${outline(skeleton.resume)}\n</resume-skeleton>`,
     `<cover-letter-skeleton>\n${outline(skeleton.coverLetter)}\n</cover-letter-skeleton>`,
     `Tone: ${TONES[tone]} Spelling: ${SPELLING[spelling]}.`,
+    instructionBlock(instructions),
   ]
     .filter(Boolean)
     .join("\n\n");
@@ -96,8 +110,10 @@ export async function generateDocuments(input: GenerateInput, adapter: LlmAdapte
   for (let attempt = 0; attempt < 2; attempt++) {
     const { object } = await adapter.generateObject(args);
     const rules = { rules: GENERATION, kb: input.kb };
-    const resume = validatePatch(skeleton.resume, object.resumeOps, rules);
-    const letter = validatePatch(skeleton.coverLetter, object.coverLetterOps, rules);
+    // A skills reorder is cosmetic: one that changes the skills (even a letter's case) is dropped, not the whole answer.
+    const ops = (doc: Draft, list: typeof object.resumeOps) => list.filter((op) => !op.path.endsWith("/line") || validatePatch(doc, [op], rules).ok);
+    const resume = validatePatch(skeleton.resume, ops(skeleton.resume, object.resumeOps), rules);
+    const letter = validatePatch(skeleton.coverLetter, ops(skeleton.coverLetter, object.coverLetterOps), rules);
     const blank = [resume, letter].some((r) => r.ok && r.doc.sections.some((s) => "text" in s && !s.text.trim()));
     if (resume.ok && letter.ok && !blank) return { resume: resume.doc, coverLetter: letter.doc, count: resume.count + letter.count };
     reason = (!resume.ok && resume.reason) || (!letter.ok && letter.reason) || "the summary or a paragraph was left empty";

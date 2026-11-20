@@ -28,7 +28,7 @@ export const extractionSchema = z.object({
 });
 export type Extraction = z.infer<typeof extractionSchema>;
 
-const SYSTEM = `You sort a resume into the requested JSON structure.
+export const SYSTEM = `You sort a resume into the requested JSON structure.
 - Copy facts only from the resume. Never invent or infer anything: no dates, employers, numbers, skills or contact details that aren't written there. Use "" for anything not stated.
 - Never fill in work rights. Work rights, visa or citizenship text goes in "additional" with its heading.
 - Every section that doesn't fit a field goes in "additional" (its heading as title, its text as notes). Never drop content.

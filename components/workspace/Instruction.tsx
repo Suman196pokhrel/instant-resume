@@ -66,7 +66,7 @@ export function Instruction({ section: s, kb, brief, prefs }: Props) {
   }
   useEffect(() => void (prefill && box.current?.focus()), [prefill]);
   const noun = s.kind === "paragraph" ? "paragraph" : "section";
-  const input = (instruction: string): RewriteInput => ({ doc, resume, sectionId: s.id, instruction, kb, brief, notes, tone: prefs.quick.tone, spelling: prefs.spelling });
+  const input = (instruction: string): RewriteInput => ({ doc, resume, sectionId: s.id, instruction, kb, brief, notes, tone: prefs.quick.tone, spelling: prefs.spelling, instructions: prefs.instructions });
 
   async function run(text = draft) {
     const instruction = text.trim();

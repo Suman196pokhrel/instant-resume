@@ -76,7 +76,7 @@ export function JobPanel({ project, kb, prefs }: { project: Project; kb: Knowled
     setRegenerating(true);
     toast(`Regenerating with ${model}…`);
     try {
-      const out = await generateDocuments({ kb, brief, selected: project.selected, notes, tone: prefs.quick.tone, spelling: prefs.spelling }, await getAdapter(), controller.signal);
+      const out = await generateDocuments({ kb, brief, selected: project.selected, notes, tone: prefs.quick.tone, spelling: prefs.spelling, instructions: prefs.instructions }, await getAdapter(), controller.signal);
       const { pagesOf } = await import("@/lib/render/client");
       const compile = pagesOf({ kb: { contact: kb.contact, workRights: kb.workRights }, brief: { title: brief.title }, paper: prefs.paper, spelling: prefs.spelling });
       const themed = { resume: { ...out.resume, theme: docs.resume?.theme ?? out.resume.theme }, coverLetter: { ...out.coverLetter, theme: docs.coverLetter?.theme ?? out.coverLetter.theme } }; // keep the user's design

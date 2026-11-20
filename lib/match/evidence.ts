@@ -14,7 +14,7 @@ export const matchSchema = z.object({
 });
 export type Match = { requirements: { requirement: string; evidence: string[] }[]; selected: string[]; gaps: string[] };
 
-const SYSTEM = `You match a job's must-haves to evidence in a candidate's knowledge base and return JSON.
+export const SYSTEM = `You match a job's must-haves to evidence in a candidate's knowledge base and return JSON.
 - requirements: one item per must-have, with its exact text, and evidence: the IDs of the highlights (or entries) that show it. Use an empty list when nothing in the knowledge base shows it.
 - Skills, tools, qualifications and domains need a highlight or entry that names them; never stretch. Years of experience need roles whose dates add up to at least the minimum asked; cite those roles, or none.
 - Behaviours and attitudes (learning quickly, teamwork, communication, working across locations, problem solving) are shown by what the candidate did: cite the highlights where that behaviour happens, such as adopting a new stack, leading or working in a team, or working remotely with other roles.
