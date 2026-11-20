@@ -64,6 +64,7 @@ export function AddMissingDialog({ kb, brief, keywords, spelling, open, onOpenCh
 
   async function add() {
     const keep = (rows ?? []).filter((r) => r.on && r.text.trim());
+    const saved = new Set<string>(); // entries already added to, so Try again never adds them twice
     setBusy(true);
     try {
       const fresh: KnowledgeBase = await (await fetch("/api/kb")).json(); // the latest highlights, so none are lost
@@ -74,6 +75,7 @@ export function AddMissingDialog({ kb, brief, keywords, spelling, open, onOpenCh
         const highlights = [...entry.highlights, ...mine.map((r) => toHighlight({ ...r, text: r.text.trim() }, brief))];
         const res = await fetch(`/api/kb/${mine[0].type}/${id}`, { method: "PATCH", headers: { "content-type": "application/json" }, body: JSON.stringify({ highlights }) });
         if (!res.ok) throw new Error(String(res.status));
+        saved.add(id);
       }
       toast(`Added ${keep.length} to your knowledge base`);
       setRows(null);
@@ -81,6 +83,7 @@ export function AddMissingDialog({ kb, brief, keywords, spelling, open, onOpenCh
       onOpenChange(false);
       onSaved?.();
     } catch {
+      setRows((rs) => rs && rs.filter((r) => !saved.has(r.entryId)));
       toast("Couldn't save them to your knowledge base. Try again.", { kind: "error" });
     } finally {
       setBusy(false);

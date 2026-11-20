@@ -165,3 +165,28 @@ test("Add what's missing shows the model's error with Try again, and keeps what 
   await expect(dialog.getByRole("textbox", { name: "Bullet" })).toHaveValue(`I used ${kw} at work.`);
   await expect(dialog.getByRole("alert")).toHaveCount(0);
 });
+
+test("Add what's missing never adds a bullet twice when one entry saves and the next fails (TASK-64)", async ({ page }) => {
+  test.setTimeout(60_000);
+  const kw = unique("Elixir");
+  const [nameA, nameB] = [unique("Missing Gamma"), unique("Missing Delta")];
+  const made = await Promise.all([nameA, nameB].map(async (name) => (await page.request.post("/api/kb/portfolio", { headers: origin(), data: { name, summary: "A test project", highlights: [] } })).json()));
+  try {
+    await openChecks(page, ["engineer", kw]);
+    let fail = true;
+    await page.route(`**/api/kb/portfolio/${made[1].id}`, (route) => (route.request().method() === "PATCH" && fail ? ((fail = false), route.fulfill({ status: 500 })) : route.fallback()));
+    await panel(page).getByRole("button", { name: "Add what's missing" }).click();
+    const dialog = page.getByRole("dialog", { name: "Add what's missing" });
+    await dialog.getByLabel("Where did you use them?").fill(`I used ${kw} on ${nameA}. I used ${kw} on ${nameB} too.`);
+    await dialog.getByRole("button", { name: "Write it" }).click();
+    await dialog.getByRole("button", { name: "Add 2 to knowledge base" }).click();
+    await expect(page.getByText("Couldn't save them to your knowledge base. Try again.")).toBeVisible();
+    await expect(dialog.getByRole("region", { name: nameA })).toHaveCount(0); // saved, so it leaves the list
+    await dialog.getByRole("button", { name: "Add 1 to knowledge base" }).click();
+    await expect(page.getByText("Added 1 to your knowledge base")).toBeVisible();
+    const kb = await (await page.request.get("/api/kb")).json();
+    expect(made.map((m) => kb.portfolio.find((e: { id: string }) => e.id === m.id).highlights.length)).toEqual([1, 1]);
+  } finally {
+    await Promise.all(made.map((e) => page.request.delete(`/api/kb/portfolio/${e.id}`, { headers: origin() })));
+  }
+});
