@@ -107,6 +107,26 @@ test("missing details block saving; merge keeps the contact and keeps unknown se
   ]);
 });
 
+test("importing the same resume again flags the role already saved; Leave them out keeps one copy (TASK-54)", async ({ page }) => {
+  await page.goto("/import");
+  await page.getByLabel("Or paste your resume text").fill(RESUME.replace("Support Engineer | Harbour Health", "Support Engineer II | Harbour Health Pty Ltd"));
+  await page.getByRole("button", { name: "Extract and review" }).click();
+  await expect(heading(page)).toHaveText("Review");
+  const flag = page.getByRole("status").filter({ hasText: "already in your knowledge base" });
+  await expect(flag).toContainText("1 entry looks like one already in your knowledge base");
+  await expect(flag).toContainText("Support Engineer II, Harbour Health Pty Ltd");
+  await flag.getByRole("button", { name: "Replace instead" }).click();
+  await expect(page.getByLabel("Save behaviour")).toHaveValue("replace");
+  await expect(flag).toHaveCount(0);
+  await page.getByLabel("Save behaviour").selectOption("merge");
+  await flag.getByRole("button", { name: "Leave them out" }).click();
+  await expect(page.getByText("1 entry left out")).toBeVisible();
+  await expect(flag).toHaveCount(0);
+  await page.getByRole("button", { name: "Save to knowledge base" }).click();
+  await expect(page.getByRole("heading", { name: "Your knowledge base is ready" })).toBeVisible();
+  expect((await getKb(page)).roles.map((r) => r.title)).toEqual(["Support Engineer"]);
+});
+
 test("a TXT upload over an unfinished draft asks first; replace swaps the knowledge base (AC1, AC3)", async ({ page }) => {
   // Leave an unfinished draft behind.
   await page.goto("/import");

@@ -75,6 +75,18 @@ Views.onboarding = function (root, params = []) {
 
   function maxReached() { return Math.max(ob.step, ob.maxStep || 0); }
 
+  // Re-import check (SPEC §14.1, app lib/import/duplicates.ts): draft entries that look like saved ones.
+  const FILLER = new Set(['with', 'and', 'the', 'pty', 'ltd', 'inc', 'for', 'corp', 'llc']);
+  const words = (v) => new Set(((v || '').toLowerCase().match(/[a-z0-9]{3,}/g) || []).filter((w) => !FILLER.has(w)));
+  const overlap = (a, b) => { const x = words(a), y = words(b); return x.size && y.size ? [...x].filter((w) => y.has(w)).length / Math.min(x.size, y.size) : 0; };
+  const SAME = {
+    roles: (a, b) => overlap(a.company, b.company) >= 0.6 && overlap(a.title, b.title) >= 0.6,
+    volunteering: (a, b) => overlap(a.company, b.company) >= 0.6 && overlap(a.title, b.title) >= 0.6,
+    portfolio: (a, b) => overlap(a.name, b.name) >= 0.8,
+    education: (a, b) => overlap(a.institution, b.institution) >= 0.6 && overlap(a.degree, b.degree) >= 0.5,
+  };
+  const repeats = () => ob.replace || !st.kb.contact.name ? [] : Object.keys(SAME).flatMap((key) => (ob.draft[key] || []).flatMap((e, index) => ((st.kb[key] || []).some((s) => SAME[key](e, s)) ? [{ key, index }] : [])));
+
   function stepBody(step) {
     const d = ob.draft;
     if (step.key === 'contact' || step.key === 'workRights') return fieldsHtml(KB_SCHEMA[step.key], d[step.key], 'onb');
@@ -87,7 +99,12 @@ Views.onboarding = function (root, params = []) {
           <span class="pill ${n ? 'pill-ok' : ''}">${Array.isArray(v) ? n + ' added' : n ? 'Done' : 'Empty'}</span>
           <button class="btn btn-ghost btn-sm" data-goto="${i}">Edit</button></div>`;
       }).join('');
-      return `${ob.imported ? `<div class="callout">${icon('upload',16)}<div><strong>${esc(ob.imported)}</strong><p>Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p></div></div>` : ''}<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p><label class="field"><span>Save behaviour</span><select data-save-mode><option value="merge" ${ob.replace ? '' : 'selected'}>Add entries; keep existing contact and work rights</option><option value="replace" ${ob.replace ? 'selected' : ''}>Replace the knowledge base with this reviewed background</option></select></label><p class="muted small">Replacement affects the knowledge base, not saved application documents.</p>`;
+      const reps = repeats();
+      const repHtml = reps.length ? `<div class="callout callout-warn" role="status">${icon('copy', 16)}<div><strong>${reps.length} ${reps.length === 1 ? 'entry looks like one' : 'entries look like ones'} already in your knowledge base</strong>
+        <ul class="small">${reps.map(({ key, index }) => { const s = kbEntrySummary(key, d[key][index]); return `<li>${esc([s.title, s.sub].filter(Boolean).join(', '))}</li>`; }).join('')}</ul>
+        <p class="small">Saving adds them again. Leave them out, or replace your knowledge base with this background instead.</p>
+        <div class="row-gap"><button class="btn btn-ghost btn-sm" data-leave-out>Leave them out</button><button class="btn btn-quiet btn-sm" data-replace-instead>Replace instead</button></div></div></div>` : '';
+      return `${repHtml}${ob.imported ? `<div class="callout">${icon('upload',16)}<div><strong>${esc(ob.imported)}</strong><p>Review each section. Missing information is left blank; unfamiliar sections are preserved under Additional sections.</p></div></div>` : ''}<div class="review">${rows}</div><p class="muted small">You can change any of this later from the Knowledge base screen.</p><label class="field"><span>Save behaviour</span><select data-save-mode><option value="merge" ${ob.replace ? '' : 'selected'}>Add entries; keep existing contact and work rights</option><option value="replace" ${ob.replace ? 'selected' : ''}>Replace the knowledge base with this reviewed background</option></select></label><p class="muted small">Replacement affects the knowledge base, not saved application documents.</p>`;
     }
     // Repeatable steps: saved entries, then a form for a new (or edited) one
     const list = d[step.key];
@@ -139,7 +156,15 @@ Views.onboarding = function (root, params = []) {
 
   function bind(step) {
     const mode = $('[data-save-mode]', root);
-    if (mode) mode.onchange = () => { ob.replace = mode.value === 'replace'; Store.save(); };
+    if (mode) mode.onchange = () => { ob.replace = mode.value === 'replace'; Store.save(); render(); };
+    const leave = $('[data-leave-out]', root);
+    if (leave) leave.onclick = () => {
+      const reps = repeats();
+      reps.slice().reverse().forEach(({ key, index }) => ob.draft[key].splice(index, 1));
+      Store.save(); render(); toast(`${reps.length} ${reps.length === 1 ? 'entry' : 'entries'} left out`);
+    };
+    const instead = $('[data-replace-instead]', root);
+    if (instead) instead.onclick = () => { ob.replace = true; Store.save(); render(); };
     $$('[data-goto]', root).forEach((b) => (b.onclick = () => go(+b.dataset.goto, +b.dataset.goto > ob.step ? 1 : -1)));
     $('[data-back]', root).onclick = () => go(ob.step - 1, -1);
     const skip = $('[data-skip]', root);

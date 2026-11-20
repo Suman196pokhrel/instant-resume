@@ -11,5 +11,6 @@ export default async function Page() {
   const [state, kb] = await Promise.all([readOnboarding(db), readKb(db)]);
   // Dev only: "Fill with sample" (SPEC §17). Loaded here so the sample never ships in the production bundle.
   const sample = devUiEnabled() ? (await import("@/tests/fixtures/kb.json")).default : null;
-  return <Wizard initial={state} kbExists={!!kb} sample={sample && Object.fromEntries(KB_ORDER.map((k) => [k, (sample as Record<string, unknown>)[k] ?? []]))} />;
+  const existing = kb && { roles: kb.roles, volunteering: kb.volunteering, portfolio: kb.portfolio, education: kb.education }; // for the re-import check (TASK-54)
+  return <Wizard initial={state} kbExists={!!kb} existing={existing} sample={sample && Object.fromEntries(KB_ORDER.map((k) => [k, (sample as Record<string, unknown>)[k] ?? []]))} />;
 }

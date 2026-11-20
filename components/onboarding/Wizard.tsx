@@ -2,7 +2,7 @@
 
 import { addTransitionType, startTransition, useEffect, useId, useRef, useState, ViewTransition } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Plus, Trash2, Upload, Zap } from "lucide-react";
+import { Check, ChevronLeft, Copy, Plus, Trash2, Upload, Zap } from "lucide-react";
 import { cn } from "cn";
 import { EntryFields, formHasContent, readEntry, type Entry } from "@/components/kb/EntryForm";
 import { BrandMark } from "@/components/shell/Brand";
@@ -11,6 +11,7 @@ import { Callout } from "@/components/ui/callout";
 import { Field } from "@/components/ui/field";
 import { NativeSelect } from "@/components/ui/input";
 import { Pill } from "@/components/ui/pill";
+import { duplicates, type Duplicate } from "@/lib/import/duplicates";
 import { entrySummary, KB_SECTIONS, toValues, validateFields, type KbSection } from "@/lib/schemas/kb-fields";
 import type { OnboardingState } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
@@ -56,7 +57,7 @@ async function putState(state: OnboardingState): Promise<OnboardingState | null>
   }
 }
 
-export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState; kbExists: boolean; sample: Partial<Record<KbSection, unknown>> | null }) {
+export function Wizard({ initial, kbExists, existing = null, sample }: { initial: OnboardingState; kbExists: boolean; existing?: Parameters<typeof duplicates>[1]; sample: Partial<Record<KbSection, unknown>> | null }) {
   const [st, setSt] = useState(initial);
   const [editing, setEditing] = useState<number | null>(null);
   const [formKey, setFormKey] = useState(0); // remounts the entry form to clear it
@@ -257,7 +258,20 @@ export function Wizard({ initial, kbExists, sample }: { initial: OnboardingState
             </div>
 
             {step.key === "review" ? (
-              <Review draft={draft} imported={st.imported} kbExists={kbExists} mode={mode} setMode={setMode} onEdit={(i) => go(i)} />
+              <Review
+                draft={draft}
+                imported={st.imported}
+                kbExists={kbExists}
+                mode={mode}
+                setMode={setMode}
+                onEdit={(i) => go(i)}
+                repeats={kbExists && mode === "merge" ? duplicates(draft as Parameters<typeof duplicates>[0], existing) : []}
+                onLeaveOut={(found) => {
+                  const out = new Set(found.map((d) => `${d.key}:${d.index}`));
+                  const kept = Object.fromEntries(found.map(({ key }) => [key, listOf(draft, key).filter((_, i) => !out.has(`${key}:${i}`))]));
+                  void save({ ...st, draft: { ...draft, ...kept } }, { flash: false }).then((ok) => ok && toast(`${found.length} ${found.length === 1 ? "entry" : "entries"} left out`));
+                }}
+              />
             ) : KB_SECTIONS[step.key].single ? (
               <form key={formKey} ref={form} noValidate onSubmit={(e) => (e.preventDefault(), next())}>
                 <EntryFields section={step.key} entry={draft[step.key] as Entry | undefined} errors={errors} idPrefix={idPrefix} />
@@ -383,6 +397,8 @@ function Review({
   mode,
   setMode,
   onEdit,
+  repeats,
+  onLeaveOut,
 }: {
   draft: Draft;
   imported?: string;
@@ -390,9 +406,34 @@ function Review({
   mode: string;
   setMode: (m: "merge" | "replace") => void;
   onEdit: (i: number) => void;
+  repeats: Duplicate[];
+  onLeaveOut: (found: Duplicate[]) => void;
 }) {
   return (
     <>
+      {repeats.length > 0 && (
+        <Callout variant="warn" className="mb-3" role="status">
+          <Copy />
+          <div className="flex flex-col gap-1.5">
+            <strong>{`${repeats.length} ${repeats.length === 1 ? "entry looks" : "entries look"} like ${repeats.length === 1 ? "one" : "ones"} already in your knowledge base`}</strong>
+            <ul className="text-[13px] text-ink-2">
+              {repeats.map(({ key, index }) => {
+                const s = entrySummary(key, listOf(draft, key)[index] ?? {});
+                return <li key={`${key}-${index}`}>{[s.title, s.sub].filter(Boolean).join(", ")}</li>;
+              })}
+            </ul>
+            <p className="text-[13px]">Saving adds them again. Leave them out, or replace your knowledge base with this background instead.</p>
+            <div className="flex flex-wrap gap-2">
+              <Button size="sm" variant="ghost" onClick={() => onLeaveOut(repeats)}>
+                Leave them out
+              </Button>
+              <Button size="sm" variant="quiet" onClick={() => setMode("replace")}>
+                Replace instead
+              </Button>
+            </div>
+          </div>
+        </Callout>
+      )}
       {imported && (
         <Callout className="mb-3">
           <Upload />
