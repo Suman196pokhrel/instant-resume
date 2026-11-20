@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useRef, useState } from "react";
+import { useEffect, useMemo, useRef, useState, useSyncExternalStore } from "react";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
 import type { Prefs } from "@/lib/schemas/settings";
@@ -22,6 +22,13 @@ const DEBOUNCE = 120;
 const BURST_GAP = 150;
 const SHEET_PX = 794; // 210 mm at 96 dpi
 const clampZoom = (z: number) => Math.min(1.6, Math.max(0.4, +z.toFixed(2)));
+// The job panel's CSS default (open from 1180px), read on the client so the toggle states it before the first click.
+const WIDE = "(min-width: 1180px)";
+const onWidth = (fn: () => void) => {
+  const m = matchMedia(WIDE);
+  m.addEventListener("change", fn);
+  return () => m.removeEventListener("change", fn);
+};
 
 export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBrief; prefs: Prefs }) {
   const kind = useWorkspace((s) => s.kind);
@@ -38,6 +45,8 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const regenerating = useWorkspace((s) => s.regenerating);
   const leftOpen = useWorkspace((s) => s.leftOpen);
   const toggleLeft = useWorkspace((s) => s.toggleLeft);
+  const wide = useSyncExternalStore(onWidth, () => matchMedia(WIDE).matches, () => null);
+  const panelShown = leftOpen ?? wide;
   const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean; doc: ResumeDocument; layout?: Layout } | null>(null);
   const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
@@ -109,7 +118,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
       <div className="flex items-center gap-2.5 border-b border-line bg-background px-3 py-2">
         <Tooltip>
           <TooltipTrigger
-            render={<Button size="icon" aria-label="Show or hide the job panel" aria-controls="job-panel" aria-expanded={leftOpen ?? undefined} onClick={() => toggleLeft(leftOpen ?? matchMedia("(min-width: 1180px)").matches)} />}
+            render={<Button size="icon" aria-label="Show or hide the job panel" aria-controls="job-panel" aria-expanded={panelShown ?? undefined} onClick={() => toggleLeft(panelShown ?? matchMedia(WIDE).matches)} />}
           >
             <PanelLeft />
           </TooltipTrigger>

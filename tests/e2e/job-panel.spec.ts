@@ -90,8 +90,10 @@ test("the preview bar toggles the job panel (AC4)", async ({ page }) => {
   await page.goto(`/projects/${id}`);
   const heading = panel(page).getByRole("heading", { name: role });
   await expect(heading).toBeVisible();
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "true"); // stated before the first click (TASK-49)
   await toggle(page).click();
   await expect(heading).toBeHidden();
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "false");
   await toggle(page).hover();
   await expect(page.getByRole("tooltip")).toHaveText("Show or hide the job panel");
   await toggle(page).click();
@@ -105,8 +107,10 @@ test("below 1180px wide the job panel starts closed and the toggle opens it (AC4
   await expect(page.getByRole("tab", { name: "Resume" })).toBeVisible();
   const heading = page.getByRole("heading", { name: role });
   await expect(heading).toBeHidden();
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "false");
   await toggle(page).click();
   await expect(heading).toBeVisible();
+  await expect(toggle(page)).toHaveAttribute("aria-expanded", "true");
 });
 
 test("a failed regeneration shows the error callout, unlocks editing, and Try again recovers (AC3)", async ({ page }) => {
