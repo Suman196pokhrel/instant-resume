@@ -31,7 +31,7 @@ function compiler() {
   return ready;
 }
 
-// The SVG renderer is small (about 350 KB) and only loads with the first preview.
+// The SVG renderer is small (about 350 KB); it loads after the compiler, during warm-up.
 let svgReady: Promise<TypstRenderer> | undefined;
 function svgRenderer() {
   svgReady ??= (async () => {
@@ -71,5 +71,6 @@ self.onmessage = async ({ data: msg }: MessageEvent<RenderRequest>) => {
   }
 };
 
-// Start downloading the WASM and fonts as soon as the worker exists (warm-up), not on the first compile.
-void compiler();
+// Start downloading the WASM and fonts as soon as the worker exists (warm-up), not on the first compile; the SVG
+// renderer follows, so the first preview doesn't wait for it either.
+void compiler().then(svgRenderer);

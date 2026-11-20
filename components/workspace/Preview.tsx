@@ -49,6 +49,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean; doc: ResumeDocument; layout?: Layout } | null>(null);
   const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
+  const [loaded, setLoaded] = useState(false); // the loader has faded out
   const [settled, setSettled] = useState(0); // the status flashes once renders stop, never on every key while typing
   const [fit, setFit] = useState(1);
   const latest = useRef(0);
@@ -171,15 +172,22 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
             ))}
             {placed && !viewing && <SheetOverlay {...placed} doc={out.doc} kb={kb} brief={brief} />}
           </div>
-        ) : (
-          !error && (
-            <div className="absolute inset-0 grid place-items-center">
-              <div role="status" className="flex w-[280px] flex-col gap-1.5 rounded-lg border border-line bg-surface p-4">
-                <strong>Loading the Typst renderer</strong>
-                <span className="text-[13px] text-muted-foreground">11 MB, loaded once per session</span>
+        ) : null}
+        {!loaded && !error && (
+          // SPEC §12 Typst loader: shows only if loading takes a moment (a warm renderer answers first), its bar fills, and it fades out over the first page
+          <div
+            aria-hidden={!!out}
+            onTransitionEnd={(e) => out && e.target === e.currentTarget && setLoaded(true)}
+            className={cn("absolute inset-0 z-[4] grid place-items-center bg-sunken transition-opacity duration-(--t-slow) ease-(--ease)", out && "pointer-events-none opacity-0")}
+          >
+            <div role="status" className="flex w-[280px] animate-loader-in flex-col gap-1.5 rounded-lg border border-line bg-surface p-4">
+              <strong>Loading the Typst renderer</strong>
+              <span className="text-[13px] text-muted-foreground">11 MB, loaded once per session</span>
+              <div className="mt-1 h-1.5 overflow-hidden rounded-full bg-sunken">
+                <div className={cn("h-full rounded-full bg-primary", out ? "w-full" : "animate-loader-fill")} />
               </div>
             </div>
-          )
+          </div>
         )}
         {error && <p className="text-danger">{error}</p>}
       </div>

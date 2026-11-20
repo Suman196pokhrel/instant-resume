@@ -142,3 +142,12 @@ test("each render is patched into the page on screen and ends up identical to a 
   await expect(section(page, "s-exp")).toBeAttached({ timeout: 30_000 });
   await expect.poll(svg).toBe(patched);
 });
+
+test("the Typst loader shows while the renderer loads, then fades out over the first page (SPEC §12)", async ({ page }) => {
+  const { id } = await makeProject(page, { resumeSections });
+  await page.goto(`/projects/${id}`); // a fresh page: the renderer starts cold
+  const loader = page.getByRole("status").filter({ hasText: "Loading the Typst renderer" });
+  await expect(loader).toBeAttached();
+  await expect(section(page, "s-exp")).toBeAttached({ timeout: 30_000 });
+  await expect(loader).toHaveCount(0); // removed once its fade ends
+});

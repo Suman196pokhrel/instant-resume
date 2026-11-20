@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Plus } from "lucide-react";
 import { Dashboard } from "@/components/dashboard/Dashboard";
 import { SetupChecklist } from "@/components/dashboard/SetupChecklist";
+import { RenderWarmup } from "@/components/render/RenderWarmup";
 import { Content, TopBar } from "@/components/shell/TopBar";
 import { buttonVariants } from "@/components/ui/button";
 import { getDb } from "@/lib/db/client";
@@ -25,6 +26,7 @@ export default async function Page() {
       <Content>
         <SetupChecklist hasKb={!!kb} hasProject={projects.length > 0} prefs={prefs} />
         <Dashboard projects={projects} />
+        {projects.length > 0 && <RenderWarmup idle />}
       </Content>
     </>
   );
