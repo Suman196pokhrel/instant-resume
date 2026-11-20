@@ -6,7 +6,7 @@ import type { GenerateArgs, LlmAdapter } from "./adapter";
 import { LlmError, outputError } from "./errors";
 
 // SPEC §8.1 MockLlmAdapter and §17 scenarios. Deterministic and offline: every automated test runs on it
-// (NEXT_PUBLIC_LLM_MOCK=1). Each call's fixture arrives with that call (brief, match, generate, rewrite).
+// (NEXT_PUBLIC_LLM_MOCK=1). Each call's fixture arrives with that call (brief, match, generate, rewrite, missing).
 
 export const SCENARIOS = ["happy", "gaps", "findings", "error-stage-1", "error-stage-2", "error-stage-3", "error-stage-4", "error-stage-5", "extract-error", "brief-error", "generate-error"] as const;
 export type Scenario = (typeof SCENARIOS)[number];
@@ -138,6 +138,22 @@ function rewriteFor(prompt: string) {
   return { ops: [], note: "" };
 }
 
+/** Add what's missing: each sentence becomes a highlight on the entry it names (else the first), tagged with the listed keywords it mentions. */
+function missingFor(prompt: string) {
+  const entries = JSON.parse(block(prompt, "entries") || "[]") as { id: string; name: string }[];
+  const keywords = JSON.parse(block(prompt, "keywords") || "[]") as string[];
+  const highlights = block(prompt, "said")
+    .split(/(?<=[.!?])\s+/)
+    .map((t) => t.trim())
+    .filter(Boolean)
+    .flatMap((text) => {
+      const kws = keywords.filter((k) => kwMatch(text, k));
+      const entry = entries.find((e) => e.name.split(", ").some((part) => kwMatch(text, part))) ?? entries[0];
+      return kws.length && entry ? [{ entryId: entry.id, text, metric: "", keywords: kws }] : [];
+    });
+  return { highlights, note: highlights.length ? "" : "Say which job or project you used them in." };
+}
+
 export const MOCK_FIXTURES: Record<string, Fixture> = {
   ping: (_args, scenario) => ({ ok: true, scenario }),
   // The on-device parser's reading of the resume, so tests see the uploaded file's own details reach Review.
@@ -167,6 +183,7 @@ export const MOCK_FIXTURES: Record<string, Fixture> = {
     return generationFor(prompt);
   },
   rewrite: ({ prompt }) => rewriteFor(prompt),
+  missing: ({ prompt }) => missingFor(prompt),
 };
 
 /** The scenario from `?mock=` (SPEC §17), or "happy". */
