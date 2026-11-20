@@ -33,7 +33,10 @@
   let has-rights = work-rights and d.spelling == "en-AU" and rights != none
   set par(leading: under(C) + over(C))
   block(below: gap(N, C, 0.25 * N, l: 1.1), text(size: N, weight: "bold", c.name)) // .doc-name: line height 1.1, margin .25em
-  let parts = ("location", "phone", "email", "linkedin", "github").map(k => c.at(k, default: "")).filter(p => p != "")
+  // Links read short ("linkedin.com/in/x", as lib/doc/plain-text.ts shortUrl) and click through to the full address.
+  let short(u) = u.trim().replace(regex("^(?i)https?://(www\.)?"), "").trim("/", at: end)
+  let web(u) = link(if u.starts-with(regex("(?i)https?://")) { u } else { "https://" + short(u) }, short(u))
+  let parts = ("location", "phone", "email").map(k => c.at(k, default: "")).filter(p => p != "") + ("linkedin", "github").map(k => c.at(k, default: "").trim()).filter(p => p != "").map(web)
   block(below: if has-rights { gap(C, C, 0.15 * C) } else { 0pt }, text(size: C, fill: rgb("#444444"), parts.join(h(0.5em) + text(fill: rgb("#aaaaaa"), "|") + h(0.5em))))
   if has-rights { block(below: 0pt, text(size: C, fill: rgb("#444444"), rights.status)) }
 }

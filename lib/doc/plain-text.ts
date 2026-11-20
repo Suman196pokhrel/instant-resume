@@ -16,10 +16,13 @@ export function sectionText(s: Section): string {
   return blocks.join(s.items.some((i) => i.bullets?.length) ? "\n\n" : "\n");
 }
 
+/** "https://www.linkedin.com/in/x/" → "linkedin.com/in/x": how a link reads on a resume (common.typ does the same). */
+export const shortUrl = (u = "") => u.trim().replace(/^https?:\/\/(www\.)?/i, "").replace(/\/+$/, "");
+
 export function plainText(doc: Pick<ResumeDocument, "kind" | "sections" | "recipient">, kb: KnowledgeBase, brief: Pick<JobBrief, "title">, spelling: "en-AU" | "en-US"): string {
   const c = kb.contact;
   const visible = doc.sections.filter((s) => !s.hidden);
-  const head = [c.name, [c.location, c.phone, c.email, c.linkedin, c.github].filter(Boolean).join(" | ")];
+  const head = [c.name, [c.location, c.phone, c.email, shortUrl(c.linkedin), shortUrl(c.github)].filter(Boolean).join(" | ")];
   if (doc.kind === "coverLetter") {
     return [...head, "", `Re: ${brief.title}`, "", `Dear ${doc.recipient?.name ?? "Hiring team"},`, "", ...visible.map((s) => `${sectionText(s)}\n`), "Kind regards,", c.name].join("\n");
   }

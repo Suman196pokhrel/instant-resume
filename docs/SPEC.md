@@ -659,6 +659,8 @@ Starting point (calibrate in the Typst spike; syntax is a sketch):
 // header: name, contact line, work rights; then for each visible section render by kind
 ```
 
+The contact line is location, phone, email, LinkedIn and GitHub joined by "|". LinkedIn and GitHub print short (no `https://`, `www.` or trailing slash: `linkedin.com/in/jordan-whitlock-example`) and are clickable links to the full address; Copy as plain text prints them the same way (`shortUrl`, `lib/doc/plain-text.ts`).
+
 Cover letter template: same header (name, contact line), then date (`22 October 2026`, en-AU format), recipient block (name, company, location), bold "Re: {role}", "Dear {recipient name},", the four paragraphs with 0.9em between them, then "Kind regards," and the bold name.
 
 PDF requirements: selectable text in reading order, no images, no tables, no columns, contact details in the body (not a page header), embedded fonts.

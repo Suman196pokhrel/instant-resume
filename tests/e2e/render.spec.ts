@@ -63,7 +63,12 @@ test("compiles the sample resume and cover letter to PDFs with embedded fonts, a
   const resumeText = execFileSync("pdftotext", ["-layout", cold.file, "-"], { encoding: "utf8" });
   const lines = resumeText.split("\n").map((l) => l.trim()).filter(Boolean);
   expect(lines[0]).toBe("Jordan Whitlock");
-  expect(lines[1]).toContain("Sydney NSW | 0412 345 678 | jordan.whitlock@example.com");
+  expect(lines[1]).toContain("Sydney NSW | 0412 345 678 | jordan.whitlock@example.com | linkedin.com/in/jordan-whitlock-example");
+  // LinkedIn and GitHub click through to the full address (TASK-57).
+  const pdfjs = await import("pdfjs-dist/legacy/build/pdf.mjs");
+  const pdf = await pdfjs.getDocument({ data: new Uint8Array(readFileSync(cold.file)) }).promise;
+  const urls = (await (await pdf.getPage(1)).getAnnotations()).filter((a) => a.subtype === "Link").map((a) => a.url);
+  expect(urls).toEqual(expect.arrayContaining(["https://linkedin.com/in/jordan-whitlock-example", "https://github.com/jwhitlock-example"]));
   const at = (s: string) => resumeText.indexOf(s);
   expect(at("Summary")).toBeGreaterThan(0);
   expect(at("Experience")).toBeGreaterThan(at("Summary"));

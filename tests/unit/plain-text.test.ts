@@ -16,6 +16,11 @@ const exp = resume.sections[1];
 if (exp.kind === "experience") exp.items[0].bullets = [{ id: "b-1", text: "Cut page load from 4.2s to 1.1s", source: "hl-bw-1" }];
 coverLetter.sections.forEach((s, i) => s.kind === "paragraph" && (s.text = `Paragraph ${i + 1}.`));
 
+it("prints contact links short: no https://, www. or trailing slash (TASK-57)", () => {
+  const long = { ...kb, contact: { ...kb.contact, linkedin: "https://www.linkedin.com/in/jordan-whitlock-example/", github: "http://github.com/jwhitlock-example" } };
+  expect(plainText(resume, long, brief, "en-AU").split("\n")[1]).toBe("Sydney NSW | 0412 345 678 | jordan.whitlock@example.com | linkedin.com/in/jordan-whitlock-example | github.com/jwhitlock-example");
+});
+
 it("a resume: name, contact line, work rights, then each visible section with an upper-case heading", () => {
   const text = plainText(resume, kb, brief, "en-AU");
   const lines = text.split("\n");
