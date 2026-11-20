@@ -4,7 +4,7 @@ import { errorCode, provider, type ErrorBody, type ProviderId } from "./provider
 // SPEC §8.3 Errors. Providers retire models and keys expire often, so every failure becomes one of these,
 // with a plain title, one sentence on what to do, the provider's status and code as detail, and a next step.
 
-export type LlmErrorKind = "key" | "model" | "quota" | "rate" | "busy" | "network" | "output" | "setup" | "other";
+export type LlmErrorKind = "key" | "access" | "model" | "quota" | "rate" | "busy" | "network" | "request" | "output" | "setup" | "other";
 export type LlmAction = { label: string; href: string; external?: boolean };
 
 export class LlmError extends Error {
@@ -51,6 +51,14 @@ export function toLlmError(e: unknown, { provider: id, model }: { provider: Prov
   const text = body.error?.message ?? "";
   const detail = [status, code].filter(Boolean).join(" ");
 
+  const pickModel: LlmAction = { label: "Choose a model", href: "/settings" };
+  if (status === 403 && (code === "unsupported_country_region_territory" || /\b(region|country|territory|location)\b/i.test(text))) {
+    return new LlmError("access", `${name} isn't available in your region`, `${name} doesn't accept requests from where you are. Switch to another provider in Settings.`, detail, SETTINGS);
+  }
+  // A 403 also means a working key whose account can't use this model, organisation feature or region.
+  if (status === 403 && !(/api[ _-]?key/i.test(text) && /invalid|not valid|incorrect|revoked|expired|disabled|deleted/i.test(text))) {
+    return new LlmError("access", `${name} won't let this key do that`, `Your key works, but its account can't use ${model} for this, because of a permission, organisation or region limit. Choose another model, or check the key's access with ${name}.`, detail, pickModel);
+  }
   if (status === 401 || status === 403 || code === "API_KEY_INVALID") {
     return new LlmError("key", `${name} didn't accept your API key`, "The key may have been revoked, expired or deleted. Add a new key in Settings to keep going.", detail, SETTINGS);
   }
@@ -60,7 +68,7 @@ export function toLlmError(e: unknown, { provider: id, model }: { provider: Prov
       `${model} isn't available any more`,
       `${name} may have retired or renamed this model, or your key can't use it. Choose another model and try again.`,
       detail,
-      { label: "Choose a model", href: "/settings" }
+      pickModel
     );
   }
   if (code === "insufficient_quota" || /credit balance/i.test(text)) {
@@ -76,5 +84,10 @@ export function toLlmError(e: unknown, { provider: id, model }: { provider: Prov
   if (status >= 500) {
     return new LlmError("busy", `${name} is having trouble right now`, `This is on ${name}'s side. Try again in a few minutes, or switch to another model.`, detail);
   }
+  if (status === 400 && (code === "context_length_exceeded" || /too long|context length|maximum context|exceeds the maximum number of tokens/i.test(text))) {
+    return new LlmError("request", `This is too long for ${model}`, "Your knowledge base and the job description together are more than this model accepts. Choose a model with more room, or shorten the job description.", detail, pickModel);
+  }
+  // Any other 400 is the request itself (such as a schema the provider won't compile): trying again won't change it.
+  if (status === 400) return new LlmError("request", `${name} couldn't accept this request`, "Nothing was changed. Try another model; if it keeps happening, it's a problem in Instant Resume.", detail, pickModel);
   return new LlmError("other", `Something went wrong with ${name}`, "Try again in a moment.", detail);
 }

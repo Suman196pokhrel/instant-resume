@@ -577,11 +577,13 @@ Only bullets the patch adds are source-checked, so an older bullet whose highlig
 
 | Kind | When | Title / message | Action |
 |---|---|---|---|
-| key | 401, 403, `API_KEY_INVALID` | "{Provider} didn't accept your API key" / "The key may have been revoked, expired or deleted. Add a new key in Settings to keep going." | Open Settings |
+| key | 401, `API_KEY_INVALID`, a 403 whose message calls the key invalid, revoked or expired | "{Provider} didn't accept your API key" / "The key may have been revoked, expired or deleted. Add a new key in Settings to keep going." | Open Settings |
+| access | other 403 | "{Provider} won't let this key do that" / "Your key works, but its account can't use {model} for this, because of a permission, organisation or region limit. Choose another model, or check the key's access with {Provider}." A region block (`unsupported_country_region_territory`, or region/country in the message): "{Provider} isn't available in your region" / "{Provider} doesn't accept requests from where you are. Switch to another provider in Settings." (Open Settings) | Choose a model |
 | model | 404, `model_not_found`, a 400 naming the model as deprecated or unknown | "{model} isn't available any more" / "{Provider} may have retired or renamed this model, or your key can't use it. Choose another model and try again." | Choose a model |
 | quota | `insufficient_quota`, "credit balance" | "Your {Provider} account is out of credit" / "Check your plan and billing with {Provider}, or switch to another provider." | Open {Provider} console |
 | rate | other 429 | "{Provider} is getting too many requests" / "Wait a minute, then try again. If this keeps happening, check your usage limits with {Provider}." | Try again |
 | busy | 5xx, 529 | "{Provider} is having trouble right now" / "This is on {Provider}'s side. Try again in a few minutes, or switch to another model." | Try again |
+| request | 400 not covered above | Too long (`context_length_exceeded`, "too long", "maximum context", "exceeds the maximum number of tokens"): "This is too long for {model}" / "Your knowledge base and the job description together are more than this model accepts. Choose a model with more room, or shorten the job description." Otherwise: "{Provider} couldn't accept this request" / "Nothing was changed. Try another model; if it keeps happening, it's a problem in Instant Resume." | Choose a model |
 | network | no response | "Couldn't reach {Provider}" / "Check your internet connection and try again." | Try again |
 | output | invalid after one retry | "The model's answer couldn't be used" / "Nothing was changed. Try again, or switch to another model if it keeps happening." | Try again |
 | setup | no active model or key | "No model connected" / "Add an API key in Settings to start generating." | Open Settings |

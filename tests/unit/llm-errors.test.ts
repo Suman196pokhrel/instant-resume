@@ -14,7 +14,7 @@ describe("toLlmError", () => {
       ["anthropic", api(401, { type: "error", error: { type: "authentication_error", message: "invalid x-api-key" } })],
       ["openai", api(401, { error: { message: "Incorrect API key provided", type: "invalid_request_error", code: "invalid_api_key" } })],
       ["gemini", api(400, { error: { code: 400, status: "INVALID_ARGUMENT", details: [{ reason: "API_KEY_INVALID" }] } })],
-      ["gemini", api(403, { error: { code: 403, status: "PERMISSION_DENIED", message: "Permission denied" } })],
+      ["gemini", api(403, { error: { code: 403, status: "PERMISSION_DENIED", message: "API key not valid. Please pass a valid API key." } })],
     ] as const) {
       expect(as(p, e)).toMatchObject({ kind: "key", action: { label: "Open Settings", href: "/settings" } });
     }
@@ -22,6 +22,40 @@ describe("toLlmError", () => {
       title: "Anthropic didn't accept your API key",
       message: "The key may have been revoked, expired or deleted. Add a new key in Settings to keep going.",
       detail: "401 authentication_error",
+    });
+  });
+
+  it("a 403 that isn't a bad key says the key works but can't do this; a region block says so (TASK-40)", () => {
+    for (const [p, e] of [
+      ["anthropic", api(403, { type: "error", error: { type: "permission_error", message: "Your API key does not have permission to use the specified resource." } })],
+      ["gemini", api(403, { error: { code: 403, status: "PERMISSION_DENIED", message: "Permission denied" } })],
+      ["openai", api(403, { error: { message: "You are not allowed to sample from this model", type: "invalid_request_error", code: null } })],
+    ] as const)
+      expect(as(p, e)).toMatchObject({ kind: "access", title: expect.stringMatching(/won't let this key do that$/), action: { label: "Choose a model", href: "/settings" } });
+    expect(as("anthropic", api(403, { type: "error", error: { type: "permission_error", message: "x" } })).message).toBe(
+      "Your key works, but its account can't use some-model for this, because of a permission, organisation or region limit. Choose another model, or check the key's access with Anthropic."
+    );
+    expect(as("openai", api(403, { error: { code: "unsupported_country_region_territory", message: "Country, region, or territory not supported" } }))).toMatchObject({
+      kind: "access",
+      title: "OpenAI isn't available in your region",
+      message: "OpenAI doesn't accept requests from where you are. Switch to another provider in Settings.",
+      action: { label: "Open Settings", href: "/settings" },
+    });
+  });
+
+  it("a plain 400 never says 'try again in a moment': too long, or a request the provider couldn't accept (TASK-40)", () => {
+    for (const [p, e] of [
+      ["anthropic", api(400, { type: "error", error: { type: "invalid_request_error", message: "prompt is too long: 210000 tokens > 200000 maximum" } })],
+      ["openai", api(400, { error: { message: "This model's maximum context length is 128000 tokens.", type: "invalid_request_error", code: "context_length_exceeded" } })],
+      ["gemini", api(400, { error: { code: 400, status: "INVALID_ARGUMENT", message: "The input token count (1200000) exceeds the maximum number of tokens allowed (1048576)." } })],
+    ] as const)
+      expect(as(p, e)).toMatchObject({ kind: "request", title: "This is too long for some-model", message: "Your knowledge base and the job description together are more than this model accepts. Choose a model with more room, or shorten the job description." });
+    expect(as("anthropic", api(400, { type: "error", error: { type: "invalid_request_error", message: "The compiled grammar is too large" } }))).toMatchObject({
+      kind: "request",
+      title: "Anthropic couldn't accept this request",
+      message: "Nothing was changed. Try another model; if it keeps happening, it's a problem in Instant Resume.",
+      detail: "400 invalid_request_error",
+      action: { label: "Choose a model", href: "/settings" },
     });
   });
 
