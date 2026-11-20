@@ -671,7 +671,7 @@ The Export dialog has checkboxes for Resume and Cover letter (the active one pre
 - `{First}-{Last}-Resume-{Company}.pdf`
 - `{First}-{Last}-Cover-Letter-{Company}.pdf`
 
-Name parts are hyphen-joined; the company is sanitised to `[A-Za-z0-9-]`. If checks found issues, show a warning callout "Checks found {n} issues across both documents. You can still export." The button compiles to PDF in the worker ("Compiling with Typst" spinner), then triggers a browser download per file. Toast: "Exported {file names}".
+Name parts are hyphen-joined; the company is sanitised to `[A-Za-z0-9-]`. A company over 40 characters uses its bracketed short form when it ends with one of up to 20 characters ("Tessellate Allied Health Services … (TAHS SA/NT)" → `TAHS-SA-NT`), else is cut at a word to 40 characters, dropping a trailing "and", "for", "of", "the", "in" or "at". If checks found issues, show a warning callout "Checks found {n} issues across both documents. You can still export." The button compiles to PDF in the worker ("Compiling with Typst" spinner), then triggers a browser download per file. Toast: "Exported {file names}".
 
 ### 9.4 Page fitting (Quick generate "Fitting to N pages", and an optional Studio action)
 

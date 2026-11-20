@@ -496,7 +496,13 @@ const Docs = (function () {
 
   function fileName(kb, kind, company) {
     const name = kb.contact.name.trim().split(/\s+/).join('-');
-    const co = String(company).replace(/[^\w]+/g, '-').replace(/^-|-$/g, '');
+    // Long names (over 40): the bracketed short form when there is one, else cut at a word (app lib/doc/filename.ts).
+    const clean = (s) => String(s).replace(/[^A-Za-z0-9]+/g, '-').replace(/^-+|-+$/g, '');
+    let co = clean(company);
+    if (co.length > 40) {
+      const short = clean((String(company).match(/\(([^)]+)\)\s*$/) || [])[1] || '');
+      co = short && short.length <= 20 ? short : co.slice(0, 41).replace(/-[^-]*$/, '').replace(/(-(and|for|of|the|in|at))+$/i, '');
+    }
     return `${name}-${kind === 'resume' ? 'Resume' : 'Cover-Letter'}-${co}.pdf`;
   }
 

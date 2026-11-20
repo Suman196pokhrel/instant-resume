@@ -13,3 +13,9 @@ it("an ad that names no employer leaves the company out instead of saying \"Not 
   expect(roleAt("Retail Sales Assistant", "Not stated")).toBe("Retail Sales Assistant");
   expect(roleAt("Retail Sales Assistant", "Harbour Health")).toBe("Retail Sales Assistant at Harbour Health");
 });
+
+it("a long company name uses its bracketed short form, or is cut at a word to 40 characters (TASK-58)", () => {
+  expect(fileName("Jordan Whitlock", "resume", "Tessellate Allied Health Services South Australia and Northern Territory (TAHS SA/NT)")).toBe("Jordan-Whitlock-Resume-TAHS-SA-NT.pdf");
+  expect(fileName("Jordan Whitlock", "coverLetter", "Department for Infrastructure and Transport South Australia")).toBe("Jordan-Whitlock-Cover-Letter-Department-for-Infrastructure.pdf");
+  expect(fileName("Jordan Whitlock", "resume", "Southerly Energy (AU) Pty.")).toBe("Jordan-Whitlock-Resume-Southerly-Energy-AU-Pty.pdf"); // short: unchanged
+});
