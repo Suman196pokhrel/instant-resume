@@ -41,7 +41,8 @@ function dropBullet(keywords: string[], keep = 2) {
 }
 
 /** Drops the last sentence of a text section, keeping at least `keep`; null when it has no more to give. */
-const sentences = (t: string) => t.match(/[^.!?]+[.!?]+(\s|$)/g)?.map((x) => x.trim()) ?? [];
+// A sentence ends at . ! or ? followed by a space, so "1.5" and "4.2s" stay whole and nothing is lost between them.
+const sentences = (t: string) => t.trim().split(/(?<=[.!?])\s+/).filter(Boolean);
 function shorten(pick: (d: Doc) => number, keep = 1) {
   return (d: Doc) => {
     const i = pick(d);

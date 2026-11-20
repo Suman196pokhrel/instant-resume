@@ -94,8 +94,8 @@ function generationFor(prompt: string) {
 
 /** Shorter: drop the last sentence, else the last clause, else keep the first 8 words. */
 function shorten(text: string) {
-  const sentences = text.match(/[^.!?]+[.!?]+/g) ?? [text];
-  if (sentences.length > 1) return sentences.slice(0, -1).join("").trim();
+  const sentences = text.trim().split(/(?<=[.!?])\s+/); // "1.5" stays whole
+  if (sentences.length > 1) return sentences.slice(0, -1).join(" ");
   const end = /[.!?]$/.test(text) ? text.slice(-1) : "";
   const cut = text.lastIndexOf(", ");
   if (cut > 0) return text.slice(0, cut) + end;

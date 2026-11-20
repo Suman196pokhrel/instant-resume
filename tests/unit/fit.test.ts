@@ -65,6 +65,13 @@ describe("fitPages", () => {
     expect(summary.text).toBe("First sentence. Second sentence.");
   });
 
+  it("keeps the sentences it keeps exactly as written: a decimal is never cut (TASK-59)", async () => {
+    const d = doc();
+    (d.sections[0] as { text: string }).text = "Has 1.5 years at Harbour Health, cutting load from 4.2s to 1.1s. Earlier handled 15 enquiries a day. Third sentence";
+    const r = await fitPages(d, { budget: 2, keywords: ["React"], compile: fake(40) });
+    expect((r.doc.sections[0] as { text: string }).text).toBe("Has 1.5 years at Harbour Health, cutting load from 4.2s to 1.1s. Earlier handled 15 enquiries a day.");
+  });
+
   it("on a 1-page budget, a one-sentence summary is the very last resort, after one bullet per role (TASK-56)", async () => {
     const steps: string[] = [];
     const r = await fitPages(doc(), { budget: 1, keywords: ["React"], compile: fake(18), onStep: (s) => steps.push(s.action) });

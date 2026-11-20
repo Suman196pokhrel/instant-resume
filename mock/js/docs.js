@@ -369,7 +369,7 @@ const Docs = (function () {
   function conciseText(t, isParagraph) {
     FILLERS.forEach(([re, rep]) => (t = t.replace(re, rep)));
     if (isParagraph) {
-      const sents = t.match(/[^.!?]+[.!?]+/g) || [t];
+      const sents = t.trim().split(/(?<=[.!?])\s+/);
       if (sents.length > 2) sents.splice(sents.length - 2, 1);
       return sents.join(' ').replace(/\s+/g, ' ').trim()
         .replace(/, and the work your .*? lines up closely with mine\./, '.')
@@ -410,7 +410,7 @@ const Docs = (function () {
           next.text = next.text.replace(/(\.)(\s|$)/, `, with a particular focus on ${term}$1$2`);
         } else {
           next.text = next.text.replace(new RegExp(`(${term.replace(/[.*+?^${}()|[\]\\]/g, '\\$&')})`, 'i'), '$1');
-          const sents = next.text.match(/[^.!?]+[.!?]+/g) || [next.text];
+          const sents = next.text.trim().split(/(?<=[.!?])\s+/);
           const idx = sents.findIndex((x) => kwMatch(x, term));
           if (idx > 0) { const [s] = sents.splice(idx, 1); sents.unshift(s.trim()); }
           next.text = sents.map((x) => x.trim()).join(' ');
