@@ -53,6 +53,14 @@ describe("banned phrases (AC2)", () => {
     ]);
   });
 
+  it("skips headings, employers and item names the user can't reword; the same word in a bullet counts (TASK-48)", () => {
+    const named = role([{ text: "Rebuilt the dispatch board", source: "hl-bw-1" }]);
+    if ("items" in named) Object.assign(named.items[0], { heading: "Passionate Paws app", sub: "Dynamic Logistics", meta: "Synergy Park" });
+    expect(banned(resume(named))).toEqual([]);
+    if ("items" in named) named.items[0].bullets![0].text = "Built a dynamic dispatch board";
+    expect(banned(resume(named)).map((f) => f.title)).toEqual(['"dynamic" is on the banned-phrase list']);
+  });
+
   it("matches whole words only: dynamically and leveraged pass", () => {
     expect(banned(resume(summary("Dynamically scaled services and leveraged caching.")))).toEqual([]);
     expect(banned(resume(summary("A dynamic, passionate team player.")))).toHaveLength(3);

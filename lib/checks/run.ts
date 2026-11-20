@@ -35,7 +35,8 @@ export function runChecks(doc: CheckDoc, brief: Pick<JobBrief, "keywords"> & Par
   const findings: Finding[] = [];
 
   for (const s of visible) {
-    const text = sectionText(s);
+    // Only words the user can reword: an employer or project named "Dynamic …" is a fact, not filler.
+    const text = "text" in s ? s.text : s.items.flatMap((i) => [i.line ?? "", ...(i.bullets ?? []).map((b) => b.text)]).join("\n");
     for (const [ph, re] of BANNED)
       if (re.test(text)) findings.push({ type: "banned", sectionId: s.id, title: `"${ph}" is on the banned-phrase list`, detail: `Found in ${s.title}. Phrases like this read as generic or AI-written.` });
   }

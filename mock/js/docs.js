@@ -282,7 +282,8 @@ const Docs = (function () {
 
     // Banned phrases
     visible.forEach((s) => {
-      const t = norm(sectionPlainText(s));
+      // Only words the user can reword: an employer or project named "Dynamic …" is a fact, not filler.
+      const t = norm(s.text != null ? s.text : (s.items || []).flatMap((i) => [i.line || '', ...(i.bullets || []).map((b) => b.text)]).join('\n'));
       MOCK.bannedPhrases.forEach((ph) => {
         if (new RegExp('\\b' + ph.replace(/[-]/g, '[- ]') + '\\b', 'i').test(t)) {
           findings.push({ type: 'banned', sectionId: s.id, title: `"${ph}" is on the banned-phrase list`, detail: `Found in ${s.title}. Phrases like this read as generic or AI-written.` });

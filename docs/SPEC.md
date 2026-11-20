@@ -695,7 +695,7 @@ Case-insensitive match of each brief keyword against the visible text of the doc
 
 ### 10.2 Banned phrases
 
-Word-boundary, case-insensitive match; hyphens equal spaces. Whole words only, so "dynamically" and "leveraged" don't match. One finding per phrase per section: `"{phrase}" is on the banned-phrase list` / `Found in {section}. Phrases like this read as generic or AI-written.`
+Word-boundary, case-insensitive match; hyphens equal spaces. Whole words only, so "dynamically" and "leveraged" don't match. Only text the user can reword is scanned: summary and paragraph text, bullets and skills lines. Headings, employers, item names and dates are facts, so an employer named "Dynamic Logistics" raises nothing. One finding per phrase per section: `"{phrase}" is on the banned-phrase list` / `Found in {section}. Phrases like this read as generic or AI-written.`
 
 List: passionate, results-driven, synergy, leverage, spearheaded, dynamic, team player, proven track record, fast-paced, go-getter, delve, tapestry, thrilled, cutting-edge, utilise. Keep it in one config file (`lib/rules/banned-phrases.ts`); the generate prompt tells the model to avoid it.
 
