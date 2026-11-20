@@ -41,6 +41,9 @@ test("Extract waits for a connection and real text (AC1)", async ({ page }) => {
   await page.getByLabel("Job description").fill("Engineer wanted");
   await page.getByRole("button", { name: "Extract requirements" }).click();
   await expect(page.getByText("That looks too short to be a full job description. Paste the whole ad, including requirements.")).toBeVisible();
+  // Dev only (TASK-52): a sample ad chip fills the text.
+  await page.getByRole("button", { name: "Tessellate Health, Full Stack Engineer" }).click();
+  await expect(page.getByLabel("Job description")).toHaveValue(/^Full Stack Engineer\nTessellate Health/);
 });
 
 test("the brief shows what was extracted, marks backed keywords, and keeps edits and notes (AC2, AC4)", async ({ page }) => {

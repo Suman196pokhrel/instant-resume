@@ -22,6 +22,7 @@ import { useLlmChoice } from "@/lib/llm/use-choice";
 import { coverage, entryText, kbText, kwMatch, matchedKeywords, suggestSelection } from "@/lib/match/keywords";
 import { briefSchema, type JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
+import type { SampleJd } from "@/lib/dev-samples";
 import type { Prefs } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
 import { Generating } from "./Generating";
@@ -59,7 +60,7 @@ function saveDraft(d: Draft) {
 const STEPS = ["Job description", "Job brief", "Choose entries", "Generate"];
 const noop = () => () => {};
 
-export function StudioSetup({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) {
+export function StudioSetup({ kb, prefs, samples = null }: { kb: KnowledgeBase; prefs: Prefs; samples?: SampleJd[] | null }) {
   const router = useRouter();
   const [attempt, setAttempt] = useState(0); // step 4: 0 = not generating; each Try again is a new run
   const { connections, active } = useLlmChoice();
@@ -141,7 +142,7 @@ export function StudioSetup({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) 
         ) : extracting ? (
           <Extracting model={active?.model ?? ""} />
         ) : d.stage === "jd" ? (
-          <JdStep d={d} update={update} connected={!!active} loading={connections === null} model={active?.model} error={error} llmError={llmError} onExtract={extract} />
+          <JdStep d={d} update={update} samples={samples} connected={!!active} loading={connections === null} model={active?.model} error={error} llmError={llmError} onExtract={extract} />
         ) : d.stage === "brief" && d.brief ? (
           <BriefStep kb={kb} brief={d.brief} model={active?.model} onChange={(brief) => update({ brief })} onBack={() => update({ stage: "jd" })} onNext={() => update({ stage: "select" })} />
         ) : d.brief ? (
@@ -186,8 +187,9 @@ function JdStep(props: {
   error: string;
   llmError: LlmError | null;
   onExtract: () => void;
+  samples: SampleJd[] | null;
 }) {
-  const { d, update, connected, loading, error, llmError, onExtract } = props;
+  const { d, update, connected, loading, error, llmError, onExtract, samples } = props;
   return (
     <>
       <h1>Paste the job description</h1>
@@ -200,6 +202,16 @@ function JdStep(props: {
           </div>
         </Callout>
       )}
+      {samples?.length ? (
+        <div className="mb-2.5 flex flex-wrap items-center gap-1.5">
+          <span className="text-[13px] text-muted-foreground">Try a sample ad:</span>
+          {samples.map((s) => (
+            <button key={s.label} type="button" onClick={() => update({ jdText: s.text })} className="group cursor-pointer rounded-full outline-none focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-primary">
+              <Chip className="transition-colors duration-(--t) ease-(--ease) group-hover:border-primary group-hover:text-accent-ink">{s.label}</Chip>
+            </button>
+          ))}
+        </div>
+      ) : null}
       <Field id="jd-text" label={<span className="sr-only">Job description</span>} error={error}>
         <Textarea
           rows={14}

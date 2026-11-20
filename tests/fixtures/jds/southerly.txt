@@ -1,0 +1,19 @@
+Software Engineer, Platform
+Southerly Energy, Sydney NSW
+
+Help us build the platform behind Australia's fastest-growing community battery network.
+
+Responsibilities
+- Build event-driven services on AWS (Lambda, SQS, EventBridge)
+- Manage infrastructure as code with Terraform
+- Improve CI/CD pipelines in GitHub Actions
+- Keep our cloud costs under control
+
+Requirements
+- 3+ years in backend or platform engineering
+- AWS, Terraform and Docker
+- Python or Go
+- Experience with Kubernetes
+
+Nice to have
+- Energy sector experience

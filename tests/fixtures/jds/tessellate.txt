@@ -1,0 +1,21 @@
+Full Stack Engineer
+Tessellate Health, Melbourne VIC
+
+Tessellate Health makes scheduling software for allied health clinics across Australia and New Zealand.
+
+The role
+- Ship features across our Node.js API and React web app
+- Design PostgreSQL schemas and keep queries fast
+- Improve reliability with monitoring and automated tests
+- Talk to clinicians to understand their workflow
+
+You'll bring
+- 4+ years as a full stack engineer
+- Node.js, TypeScript and React
+- Strong SQL and PostgreSQL skills
+- Experience with Redis or other caching
+- Clear written communication
+
+Bonus
+- Docker and Terraform
+- Healthcare or education products

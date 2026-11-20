@@ -38,6 +38,11 @@ test("Generate waits for a key and text; a short ad asks for the whole thing (in
   await page.getByRole("button", { name: "Generate" }).click();
   await expect(page.getByText("That looks too short to be a full job description. Paste the whole ad, including the requirements.")).toBeVisible();
   await expect(page.getByText(/Defaults: Classic theme, 1 page, cover letter on \(professional tone\)\./)).toBeVisible();
+  // Dev only (TASK-52): each click fills the next synthetic sample ad.
+  await page.getByRole("button", { name: "Use sample job description" }).click();
+  await expect(page.getByLabel("Job description")).toHaveValue(/^Senior Frontend Engineer\nHarbourline/);
+  await page.getByRole("button", { name: "Use sample job description" }).click();
+  await expect(page.getByLabel("Job description")).toHaveValue(/^Senior Full Stack Engineer\nLumen Rail/);
 });
 
 test("the five stages run with live results, a monotonic bar and announcements, then open the project (AC1, AC2)", async ({ page }) => {

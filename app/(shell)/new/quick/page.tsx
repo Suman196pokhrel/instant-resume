@@ -5,6 +5,7 @@ import { Content, Crumbs, TopBar } from "@/components/shell/TopBar";
 import { getDb } from "@/lib/db/client";
 import { readKb } from "@/lib/db/kb";
 import { readPrefs } from "@/lib/db/settings";
+import { sampleJds } from "@/lib/dev-samples";
 
 // Quick generate (SPEC §14.3): paste a job description, then five stages to finished documents.
 export default async function Page() {
@@ -16,7 +17,7 @@ export default async function Page() {
       <RenderWarmup />
       <TopBar title={<Crumbs trail={[{ label: "Applications", href: "/dashboard" }, { label: "New application", href: "/new" }, { label: "Quick generate" }]} />} />
       <Content>
-        <QuickGenerate kb={kb} prefs={await readPrefs(db)} />
+        <QuickGenerate kb={kb} prefs={await readPrefs(db)} samples={await sampleJds()} />
       </Content>
     </>
   );

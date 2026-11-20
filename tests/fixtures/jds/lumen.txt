@@ -1,0 +1,21 @@
+Senior Full Stack Engineer
+Lumen Rail, Sydney NSW (remote within Australia)
+
+Lumen Rail builds passenger information systems for rail operators in NSW and Victoria.
+
+What you'll work on
+- Real-time departure boards in React and TypeScript
+- Node.js services that process live train positions
+- Accessibility for passengers using screen readers
+- Leading technical design for new features
+
+What we're looking for
+- 6+ years of software engineering experience
+- React, TypeScript, Node.js
+- Event-driven or real-time systems
+- WCAG accessibility experience
+- Mentoring and technical leadership
+
+Nice to have
+- AWS
+- Public transport or government experience

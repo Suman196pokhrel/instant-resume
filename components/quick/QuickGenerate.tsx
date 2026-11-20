@@ -16,6 +16,7 @@ import { useLlmChoice } from "@/lib/llm/use-choice";
 import { prefersReducedMotion } from "@/lib/motion";
 import type { JobBrief } from "@/lib/schemas/brief";
 import type { KnowledgeBase } from "@/lib/schemas/kb";
+import type { SampleJd } from "@/lib/dev-samples";
 import type { Prefs } from "@/lib/schemas/settings";
 import { toast } from "@/lib/toast";
 import { QuickResult, type QuickDone } from "./QuickResult";
@@ -59,7 +60,7 @@ const fresh = (): Run => ({ stages: STAGE_IDS.map(() => ({ status: "pending" }))
 const SR: Record<Stage["status"], string> = { pending: "Not started", active: "In progress", done: "Done", warning: "Needs review", error: "Failed" };
 const plural = (n: number, one: string, many = `${one}s`) => `${n} ${n === 1 ? one : many}`;
 
-export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }) {
+export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase; prefs: Prefs; samples?: SampleJd[] | null }) {
   const { connections, active } = useLlmChoice();
   const hydrated = useSyncExternalStore(noop, () => true, () => false);
   const [edited, setDraft] = useState<Draft | null>(null);
@@ -199,9 +200,16 @@ export function QuickGenerate({ kb, prefs }: { kb: KnowledgeBase; prefs: Prefs }
         <p className="mt-1 text-[13px] text-muted-foreground">Used as a fact you supplied, mostly in the cover letter. Nothing else is added.</p>
         <div className="mt-3 flex flex-wrap items-center justify-between gap-3">
           <span className="text-[13px] text-muted-foreground tabular-nums">{`${d.jdText.length.toLocaleString("en-AU")} characters`}</span>
-          <Button onClick={() => start()} disabled={!active || !d.jdText.trim()}>
-            <Sparkles /> Generate
-          </Button>
+          <div className="flex flex-wrap gap-2">
+            {samples?.length ? (
+              <Button variant="ghost" onClick={() => update({ jdText: samples[(samples.findIndex((s) => s.text === d.jdText) + 1) % samples.length].text })}>
+                Use sample job description
+              </Button>
+            ) : null}
+            <Button onClick={() => start()} disabled={!active || !d.jdText.trim()}>
+              <Sparkles /> Generate
+            </Button>
+          </div>
         </div>
         <div className="mt-4 flex flex-col gap-1 border-t border-line pt-3.5 text-[13px] text-muted-foreground">
           <span className="inline-flex items-center gap-1.5">

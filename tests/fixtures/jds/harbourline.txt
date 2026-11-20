@@ -1,0 +1,25 @@
+Senior Frontend Engineer
+Harbourline, Sydney NSW (hybrid, 3 days in office)
+
+Harbourline builds payments software for Australian small businesses. We're looking for a Senior Frontend Engineer to join our Merchant Experience team.
+
+What you'll do
+- Build and maintain our merchant dashboard in React and TypeScript
+- Own frontend performance and accessibility across the product
+- Contribute to and grow our design system
+- Mentor mid-level and junior engineers
+- Work closely with product and design on discovery
+
+About you
+- 5+ years building production web applications
+- Deep experience with React, TypeScript and modern CSS
+- A track record of improving web performance
+- Experience with automated testing (Playwright, Jest or similar)
+- Comfortable with GraphQL and REST APIs
+
+Nice to have
+- Next.js experience
+- Exposure to AWS
+- Payments or fintech background
+
+You must have full working rights in Australia.
