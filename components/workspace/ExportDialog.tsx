@@ -130,7 +130,7 @@ export function ExportDialog({ project, kb, prefs }: { project: Project; kb: Kno
               <FileText aria-hidden className="size-4 text-ink-2" />
               <span className="flex min-w-0 flex-col">
                 <strong>{KIND_LABEL[k]}</strong>
-                <code className="truncate font-mono text-[11.5px] text-ink-2">{names[k]}</code>
+                <code className="truncate self-start rounded-xs border border-line bg-surface-2 px-[5px] py-px font-mono text-[11.5px] text-ink-2">{names[k]}</code>
               </span>
             </label>
           ))}

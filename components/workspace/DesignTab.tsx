@@ -113,7 +113,7 @@ export function DesignTab() {
         <Button variant="ghost" size="sm" disabled={atDefaults(theme)} onClick={resetTheme}>
           <RotateCcw /> Reset to template defaults
         </Button>
-        {ms !== null && <span className="text-[13px] text-muted-foreground">Last render {ms} ms</span>}
+        {ms !== null && <span className="text-[13px] whitespace-nowrap text-muted-foreground">Last render {ms} ms</span>}
       </div>
     </div>
   );

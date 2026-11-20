@@ -2,7 +2,7 @@
 
 import { useRef, useState } from "react";
 import { flushSync } from "react-dom";
-import { ArrowDown, ArrowUp, Eye, EyeOff, GripVertical } from "lucide-react";
+import { ChevronDown, ChevronUp, Eye, EyeOff, GripVertical } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Pill } from "@/components/ui/pill";
@@ -99,10 +99,10 @@ export function StructureTab() {
               {s.hidden && <Pill>Hidden</Pill>}
             </span>
             <Button size="icon" aria-label="Move up" disabled={i === 0} onClick={() => move(s.id, i - 1)}>
-              <ArrowUp />
+              <ChevronUp />
             </Button>
             <Button size="icon" aria-label="Move down" disabled={i === sections.length - 1} onClick={() => move(s.id, i + 1)}>
-              <ArrowDown />
+              <ChevronDown />
             </Button>
             <Button size="icon" aria-label={`${s.hidden ? "Show" : "Hide"} ${s.title}`} onClick={() => glide(() => toggleHidden(s.id))}>
               {s.hidden ? <EyeOff /> : <Eye />}

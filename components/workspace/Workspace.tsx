@@ -2,7 +2,7 @@
 
 import { useCallback, useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, ChevronLeft, Copy, History, Loader2, TriangleAlert, Undo2 } from "lucide-react";
+import { Check, ChevronLeft, Copy, History, Layers, Loader2, Palette, TriangleAlert, Type, Undo2 } from "lucide-react";
 import { ModelPicker } from "@/components/shell/ModelPicker";
 import { Button } from "@/components/ui/button";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
@@ -170,9 +170,16 @@ function Frame({ bundle: { project }, kb, prefs }: WorkspaceProps) {
           <div inert={viewing} className="flex min-h-0 flex-1 flex-col">
             <Tabs value={tab} onValueChange={(v) => setTab(v as InspectorTab)} className="flex min-h-0 flex-1 flex-col">
               <TabsList variant="underline" aria-label="Inspector">
-                <TabsTrigger value="content">Content</TabsTrigger>
-                <TabsTrigger value="structure">Structure</TabsTrigger>
-                <TabsTrigger value="design">Design</TabsTrigger>
+                {/* mock .insp-tabs: an icon before each name */}
+                <TabsTrigger value="content">
+                  <Type aria-hidden className="size-3.5" /> Content
+                </TabsTrigger>
+                <TabsTrigger value="structure">
+                  <Layers aria-hidden className="size-3.5" /> Structure
+                </TabsTrigger>
+                <TabsTrigger value="design">
+                  <Palette aria-hidden className="size-3.5" /> Design
+                </TabsTrigger>
               </TabsList>
               <TabsContent value="content" className="min-h-0 flex-1 overflow-auto p-4">
                 <ContentInspector kb={kb} brief={project.brief} prefs={prefs} />
