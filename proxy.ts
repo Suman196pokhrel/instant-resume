@@ -1,5 +1,6 @@
 import { NextResponse, type NextRequest } from "next/server";
 import { SESSION_COOKIE, verifySession } from "./lib/access/session";
+import { isLoopback } from "./lib/access/startup";
 
 // Browser-direct LLM calls (SPEC §4): the only hosts a page may talk to besides this server.
 const PROVIDER_HOSTS = ["https://api.openai.com", "https://api.anthropic.com", "https://generativelanguage.googleapis.com"];
@@ -40,10 +41,16 @@ function sameOrigin(request: NextRequest): boolean {
   }
 }
 
+/** The Host header's name without its port ("[::1]:3000" → "[::1]"). Not x-forwarded-host: local mode has no proxy. */
+const hostName = (request: NextRequest) => (request.headers.get("host") ?? "").replace(/:\d+$/, "");
+
 /** Access gate (SPEC §4.1): returns the response that stops this request, or null to let it through. */
 async function gate(request: NextRequest): Promise<NextResponse | null> {
   const { pathname, search } = request.nextUrl;
   const api = pathname === "/api" || pathname.startsWith("/api/");
+  // DNS rebinding: another site's name pointed at 127.0.0.1 still arrives with that name as Host, so local mode answers loopback names only.
+  if (!process.env.APP_PASSWORD && !isLoopback(hostName(request)))
+    return new NextResponse("This address isn't allowed. Instant Resume only answers on this computer (127.0.0.1 or localhost).", { status: 403, headers: { "content-type": "text/plain; charset=utf-8" } });
   // In both modes: also stops other websites posting to a local 127.0.0.1 install.
   if (api && STATE_CHANGING.has(request.method) && !sameOrigin(request)) return NextResponse.json({ error: "forbidden" }, { status: 403 });
 

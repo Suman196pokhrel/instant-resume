@@ -29,18 +29,32 @@ describe("local only: APP_PASSWORD unset (AC1)", () => {
   beforeEach(() => {
     delete process.env.APP_PASSWORD;
   });
+  // The browser's Host for a local install: 127.0.0.1 or localhost (TASK-34).
+  const local = (path: string, init: Parameters<typeof req>[1] = {}) => req(path, { origin: init.method && init.method !== "GET" ? "http://127.0.0.1:3000" : null, ...init, headers: { host: "127.0.0.1:3000", ...init.headers } });
 
   it("no page or /api route asks for a session", async () => {
-    expect(passes(await proxy(req("/kb/roles")))).toBe(true);
-    expect(passes(await proxy(req("/api/kb")))).toBe(true);
-    expect(passes(await proxy(req("/api/kb", { method: "POST" })))).toBe(true);
+    expect(passes(await proxy(local("/kb/roles")))).toBe(true);
+    expect(passes(await proxy(local("/api/kb")))).toBe(true);
+    expect(passes(await proxy(local("/api/kb", { method: "POST" })))).toBe(true);
   });
 
   it("/unlock goes home and /api/unlock does not exist", async () => {
-    const res = await proxy(req("/unlock"));
+    const res = await proxy(local("/unlock"));
     expect(res.status).toBe(307);
     expect(new URL(res.headers.get("location")!).pathname).toBe("/");
     expect((await unlock(req("/api/unlock", { method: "POST", body: { password: PASSWORD } }))).status).toBe(404);
+  });
+
+  // DNS rebinding: a website that points its own name at 127.0.0.1 still sends its own name as Host (TASK-34).
+  it("answers only on loopback hosts: another name gets 403 for pages and the API", async () => {
+    for (const host of ["localhost:3000", "127.0.0.1", "127.0.0.2:3000", "[::1]:3000", "LOCALHOST:3000"]) expect(passes(await proxy(local("/api/kb", { headers: { host } })))).toBe(true);
+    for (const host of ["attacker.example", "attacker.example:3000", "192.168.1.20:3000", "127.0.0.1.attacker.example"]) {
+      for (const path of ["/api/kb", "/kb/roles"]) {
+        const res = await proxy(local(path, { headers: { host } }));
+        expect(res.status).toBe(403);
+        expect(await res.text()).toMatch(/only answers on this computer/);
+      }
+    }
   });
 });
 
@@ -78,6 +92,10 @@ describe("password lock (AC2–AC5)", () => {
   });
 
   // Next.js rejects a relative Location from the proxy (500 under next start), so it's absolute, on the public origin.
+  it("serves any host: a server install has its own name (TASK-34)", async () => {
+    expect(passes(await proxy(req("/unlock", { headers: { host: "resume.example.net" } })))).toBe(true);
+  });
+
   it("redirects to an absolute URL on the reverse proxy's public host and scheme", async () => {
     expect((await proxy(req("/kb/roles"))).headers.get("location")).toBe("http://app.test/unlock?next=%2Fkb%2Froles");
     const behind = await proxy(req("/kb/roles", { headers: { "x-forwarded-host": "resume.example.net", "x-forwarded-proto": "https" } }));
