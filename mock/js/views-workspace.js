@@ -258,7 +258,8 @@ Views.project = function (root, params) {
     const pages = Math.max(1, Math.ceil((sheet.scrollHeight - 2) / (st.prefs.paper === 'A4' ? 1123 : 1056)));
     const status = $('[data-render-status]', root);
     status.innerHTML = `${opts.design ? icon('zap', 12) + ' ' : ''}Rendered in ${ms} ms<span class="dotsep"></span>${pages} ${pages === 1 ? 'page' : 'pages'}<span class="dotsep"></span>${st.prefs.paper}`;
-    status.classList.remove('pulse'); void status.offsetWidth; status.classList.add('pulse');
+    clearTimeout(ui.pulseTimer); // pulse once renders stop, never on every key while typing
+    ui.pulseTimer = setTimeout(() => { status.classList.remove('pulse'); void status.offsetWidth; status.classList.add('pulse'); }, 250);
     const banner = $('[data-rev-banner]', root);
     if (ui.viewing) {
       banner.hidden = false;

@@ -206,6 +206,8 @@ function setupChecklistHtml(st) {
 Views.dashboard = function (root) {
   const st = Store.state;
   let query = '';
+  // With an application to open, warm the (simulated) renderer once the page is idle, so the Workspace skips its loader
+  if (!st.demo.emptyDashboard && st.projects.length) (window.requestIdleCallback || ((f) => setTimeout(f, 1000)))(() => sessionStorage.setItem('rt-typst', '1'));
   function render() {
     const projects = (st.demo.emptyDashboard ? [] : st.projects).filter(p => (p.company + ' ' + p.role).toLowerCase().includes(query.toLowerCase())).sort((a,b) => b.updatedAt-a.updatedAt);
     root.innerHTML = shell(`

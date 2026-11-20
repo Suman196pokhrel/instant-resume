@@ -622,7 +622,8 @@ input[readonly] { background: var(--surface-2); color: var(--ink-2); }
 .letter-sign { margin-top: 1.4em; }
 .typst-loader { position: absolute; inset: 0; display: grid; place-items: center; background: var(--sunken); z-index: 4; transition: opacity .3s; }
 .typst-loader.out { opacity: 0; }
-.tl-card { display: flex; flex-direction: column; gap: 6px; width: 280px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; }
+.tl-card { display: flex; flex-direction: column; gap: 6px; width: 280px; background: var(--surface); border: 1px solid var(--line); border-radius: var(--r-lg); padding: 16px; animation: tlIn .3s var(--ease) .2s both; } /* only shows if loading takes a moment */
+@keyframes tlIn { from { opacity: 0; } }
 .tl-card .bar { margin-top: 6px; }
 .tl-card .bar-fill { width: 0; transition: width .1s linear; }
 
