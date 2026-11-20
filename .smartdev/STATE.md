@@ -6,7 +6,7 @@ blockers: TASK-30 needs approval; TASK-39 needs keys
 updated: 2026-11-20 14:35 · session 14
 
 ## Numbers
-stories: 57 done · 0 review · 0 in progress · 0 to do · 2 parked | tests: 359 unit + 147 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 3
+stories: 58 done · 0 review · 0 in progress · 0 to do · 2 parked | tests: 364 unit + 152 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 3
 
 ## Last session
 - done: Quick error callout and matched chips get icons; toasts size to their text (sonner w-fit + Tailwind translate, which doesn't fight sonner's transform); empty states checked against the mock (already matched)

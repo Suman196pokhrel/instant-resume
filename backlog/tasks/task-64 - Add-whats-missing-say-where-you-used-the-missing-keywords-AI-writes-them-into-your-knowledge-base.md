@@ -3,10 +3,10 @@ id: TASK-64
 title: >-
   Add what's missing: say where you used the missing keywords, AI writes them
   into your knowledge base
-status: In Progress
+status: Done
 assignee: []
 created_date: '2026-11-20T15:11:00Z'
-updated_date: '2026-11-20T15:11:00Z'
+updated_date: '2026-11-20T15:31:00Z'
 labels: []
 dependencies: []
 ordinal: 61000
@@ -20,11 +20,11 @@ As a job seeker whose resume misses several job keywords I have actually used, I
 
 ## Acceptance Criteria
 <!-- AC:BEGIN -->
-- [ ] #1 The Checks tab shows 'Add what's missing' when at least one missing keyword isn't in the knowledge base; it opens one dialog listing those keywords (all ticked, each can be unticked) and a box to say where you used them
-- [ ] #2 Write it makes one LLM call and shows the suggested bullets grouped under the job, volunteer role or project they belong to; each can be unticked or edited, and nothing is saved before Add
-- [ ] #3 Suggestions are validated: bullets for unknown entries or with empty text are dropped, keywords are only ones from the list, and a note explains anything the model couldn't place
-- [ ] #4 Add saves each ticked bullet as a highlight on its entry (keywords as skills, the matching requirement as evidenceFor), shows a toast, and the saved keywords switch to Emphasise
-- [ ] #5 Failures show the shared LLM error callout with Try again; the prompt is listed under Settings built-in prompts; SPEC and mock updated
+- [x] #1 The Checks tab shows 'Add what's missing' when at least one missing keyword isn't in the knowledge base; it opens one dialog listing those keywords (all ticked, each can be unticked) and a box to say where you used them
+- [x] #2 Write it makes one LLM call and shows the suggested bullets grouped under the job, volunteer role or project they belong to; each can be unticked or edited, and nothing is saved before Add
+- [x] #3 Suggestions are validated: bullets for unknown entries or with empty text are dropped, keywords are only ones from the list, and a note explains anything the model couldn't place
+- [x] #4 Add saves each ticked bullet as a highlight on its entry (keywords as skills, the matching requirement as evidenceFor), shows a toast, and the saved keywords switch to Emphasise
+- [x] #5 Failures show the shared LLM error callout with Try again; the prompt is listed under Settings built-in prompts; SPEC and mock updated
 <!-- AC:END -->
 
 ## Implementation Plan
@@ -37,3 +37,10 @@ No data or API changes (existing PATCH /api/kb/[type]/[id]).
 Tests: unit tests/unit/missing.test.ts (prompt carries text, keywords and entries; validation drops unknown ids, blank text, unlisted keywords and canonicalises case; evidenceFor/skills picking; mock fixture places a sentence on the entry it names). e2e tests/e2e/missing.spec.ts (button appears with gaps scenario; untick a keyword; Write it; edit and untick a suggestion; Add saves only ticked, KB has it, keyword switches to Emphasise; Back keeps the text; error scenario shows callout).
 Out of scope: creating new roles from the text, writing straight into the resume, editable prompts.
 <!-- SECTION:PLAN:END -->
+
+## Implementation Notes
+
+<!-- SECTION:NOTES:BEGIN -->
+Checks tab 'Add what's missing': one box for every missing keyword not in the KB, one LLM call (lib/generate/missing.ts) writes bullets on the entries the user names, validated on the device, ticked and edited before Add. Live run on the owner's base resume and a real AI-engineer ad (Sonnet 5.5): Write it 4.4 s, 4 bullets placed correctly, an unplaceable claim left out with a note; Regenerate took the match from 6 to 9 of 16 with no findings.
+Found live and fixed: a highlight's evidenceFor (the job's words) counted as KB text, so unrelated keywords showed Emphasise; entryText now skips it. Also fixed in review: a partial save failure could add an entry's bullets twice on retry.
+<!-- SECTION:NOTES:END -->
