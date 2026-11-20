@@ -36,3 +36,10 @@ it("counts the job keywords backed by the ticked entries plus the skills list", 
   const civicOnly = coverage({ ...kb, skills: [] }, MINTLEAF, ["role-civic"]);
   expect(civicOnly).toEqual({ covered: 2, total: 12 }); // SQL and Accessibility
 });
+
+it("the requirement a highlight was added for is the job's words, so it never counts as knowledge base text (TASK-64)", () => {
+  const kb = kbSchema.parse(structuredClone(seed));
+  kb.portfolio[0].highlights.push({ id: "hl-x", text: "Wrote Terraform for the server", skills: ["Terraform"], evidenceFor: "Experience deploying applications to Azure or GCP" });
+  expect(kwMatch(kbText(kb), "Terraform")).toBe(true);
+  expect(kwMatch(kbText(kb), "Azure")).toBe(false);
+});

@@ -21,10 +21,10 @@ export const matchedKeywords = (text: string, keywords: string[]) => keywords.fi
 
 type Entry = Record<string, unknown>;
 
-/** Every string in an entry, highlights and their skills included. */
+/** Every string in an entry, highlights and their skills included. Not evidenceFor: that's the job's words, not the user's. */
 export function entryText(e: Entry): string {
   return Object.entries(e)
-    .filter(([k]) => k !== "id" && k !== "referenceOnly")
+    .filter(([k]) => k !== "id" && k !== "referenceOnly" && k !== "evidenceFor")
     .flatMap(([, v]) => (typeof v === "string" ? [v] : Array.isArray(v) ? v.map((x) => (typeof x === "string" ? x : entryText(x as Entry))) : []))
     .join(" ");
 }
