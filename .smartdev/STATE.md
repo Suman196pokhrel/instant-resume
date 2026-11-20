@@ -1,15 +1,14 @@
 # Smart Dev state: Instant Resume
 stage: spec
 task: -
-next: board empty except 2 parked cards that need the owner: TASK-30 (public release: approval) and TASK-39 (OpenAI and Gemini keys in .env.keys). Remaining polish: compare motion, toasts, empty and error states with the mock
+next: board empty except 2 parked cards needing the owner: TASK-30 (public release: approval) and TASK-39 (OpenAI and Gemini keys in .env.keys). Ask the owner what's next; optional polish: compare motion and tooltips with the mock
 blockers: TASK-30 needs approval; TASK-39 needs keys
-updated: 2026-11-20 13:54 · session 13
+updated: 2026-11-20 14:35 · session 14
 
 ## Numbers
-stories: 57 done · 0 review · 0 in progress · 0 to do · 2 parked | tests: 359 unit + 147 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 20
+stories: 57 done · 0 review · 0 in progress · 0 to do · 2 parked | tests: 359 unit + 147 e2e pass (3 e2e opt-in skips; 3 live checks opt-in) | commits last session: 3
 
 ## Last session
-- done: settings Writing instructions + read-only Built-in prompts (TASK-53); parked cards 34, 49, 48, 44, 40, 36, 41, 52, 31; real-run bugs 54-59 (re-import duplicates flagged, PDF hyperlinks imported, two-sentence summary, decimals kept when shortening, short clickable header links, short file names); Quick, Workspace, Export, History and onboarding matched to the mock
-- decisions: instructions layer on Generate and Rewrite only (never brief/match/import); prompt caching via GenerateArgs.cachePrefix (match caches the KB, generate its whole prompt); local mode answers only loopback Host names; Dockerfile runs as node with data in a volume
-- gotchas: Next allows one `next dev` per folder (startup.spec fails while another runs); links styled with buttonVariants need merged classes (fixed in button.tsx); the owner's LinkedIn handle really ends with "-"
-- correction: live-run findings went into a card and a test with the owner's name and employer; rewrote unpushed commits. Write them with synthetic names (memory: live-run-data-scrub)
+- done: Quick error callout and matched chips get icons; toasts size to their text (sonner w-fit + Tailwind translate, which doesn't fight sonner's transform); empty states checked against the mock (already matched)
+- done (owner's data, not the repo): cleaned the owner's real KB in data/instant-resume.db: 3 bad roles, app sample entries (UNSW, Tidewatch, Ledgerline), duplicate Master's, split VOD project merged, 2 garbled skill groups folded into the sorted ones, 7 leftover additional sections. Backups: data/instant-resume.before-cleanup{,2}-2026-11-20.db (gitignored)
+- gotchas: the owner's existing 3 applications cite removed roles, so their Checks flag unsourced bullets until regenerated; owner's KB still has two conflicting availability dates and no LinkedIn/GitHub in Contact (told the owner)

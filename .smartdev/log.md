@@ -9,3 +9,4 @@
 2026-11-19 15:03 | Instant Resume | spec/build/review × 7 cards → spec | - | Quick defaults, preferences, backup, unlock/Access, preview overlays, template spacing, setup checklist + a11y; board empty, bug list next; 331 unit + 139 e2e
 2026-11-19 17:20 | Instant Resume | bug pass (fast lane) → spec | - | Owner's 9 bugs fixed and verified live with real resumes and ads (1-page resume + letter); perf measured; 340 unit + 144 e2e
 2026-11-20 13:54 | Instant Resume | build/review → spec | TASK-53..59, parked 31-52 | writing instructions + prompts view, 9 parked cards, 6 real-run bugs, mock parity for Quick/Workspace/onboarding
+2026-11-20 14:35 | Instant Resume | build/review → spec | - | mock parity for error state and toasts; cleaned the owner's real KB (backed up, not in repo)
