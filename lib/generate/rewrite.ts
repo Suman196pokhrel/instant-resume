@@ -79,9 +79,9 @@ function request(input: RewriteInput) {
   const refs = new Set(("items" in section ? [section] : (resume ?? doc).sections).flatMap((s) => ("items" in s ? s.items.map((i) => i.ref) : [])));
   const entries = LIST_KEYS.flatMap((k) => kb[k] as { id: string; referenceOnly?: boolean }[]).filter((e) => refs.has(e.id) && !e.referenceOnly); // the original resume text never backs a claim
   const facts = { name: kb.contact.name, workRights: kb.workRights ?? null, entries };
-  const prompt = [
-    `<brief>\n${JSON.stringify(brief)}\n</brief>`,
-    `<knowledge-base>\n${JSON.stringify(facts)}\n</knowledge-base>`,
+  // The brief and the knowledge base repeat for every rewrite of this section: the cache prefix.
+  const cachePrefix = `<brief>\n${JSON.stringify(brief)}\n</brief>\n\n<knowledge-base>\n${JSON.stringify(facts)}\n</knowledge-base>\n\n`;
+  const prompt = cachePrefix + [
     notes?.trim() ? `<notes>\n${notes.trim()}\n</notes>` : "",
     `<section>\n${outline(section, index)}\n</section>`,
     `<instruction>\n${instruction}\n</instruction>`,
@@ -90,7 +90,7 @@ function request(input: RewriteInput) {
   ]
     .filter(Boolean)
     .join("\n\n");
-  return { index, section, args: { name: "rewrite", schema: rewriteSchema, system: SYSTEM, prompt, maxOutputTokens: 3000 } };
+  return { index, section, args: { name: "rewrite", schema: rewriteSchema, system: SYSTEM, prompt, cachePrefix, maxOutputTokens: 3000 } };
 }
 
 /** The "about N tokens" note for the request this rewrite would send. Measured on Sonnet 5.5 (2026-11-18): about 380

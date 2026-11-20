@@ -27,8 +27,10 @@ export async function matchEvidence(brief: JobBrief, kb: KnowledgeBase, adapter:
   const entries = ENTRY_LISTS.flatMap((k) => (kb[k] ?? []) as { id: string; highlights?: { id: string }[] }[]).filter((e) => !(e as { referenceOnly?: boolean }).referenceOnly);
   const owner = new Map(entries.flatMap((e) => [[e.id, e.id] as const, ...(e.highlights ?? []).map((h) => [h.id, e.id] as const)]));
   const facts = { entries, skills: kb.skills };
-  const prompt = [`<brief>\n${JSON.stringify({ title: brief.title, company: brief.company, mustHaves: brief.requirements, keywords: brief.keywords })}\n</brief>`, `<knowledge-base>\n${JSON.stringify(facts)}\n</knowledge-base>`].join("\n\n");
-  const { object } = await adapter.generateObject({ name: "match", schema: matchSchema, system: SYSTEM, prompt, signal });
+  // The knowledge base first: it's the same for every job, so the next match reads it from the prompt cache.
+  const cachePrefix = `<knowledge-base>\n${JSON.stringify(facts)}\n</knowledge-base>\n\n`;
+  const prompt = cachePrefix + `<brief>\n${JSON.stringify({ title: brief.title, company: brief.company, mustHaves: brief.requirements, keywords: brief.keywords })}\n</brief>`;
+  const { object } = await adapter.generateObject({ name: "match", schema: matchSchema, system: SYSTEM, prompt, cachePrefix, signal });
 
   const given = new Map(object.requirements.map((r) => [r.requirement.trim().toLowerCase(), r.evidence]));
   const requirements = brief.requirements.map((requirement) => ({ requirement, evidence: [...new Set(given.get(requirement.toLowerCase()) ?? [])].filter((id) => owner.has(id)) }));

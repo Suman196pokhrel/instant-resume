@@ -4,6 +4,7 @@ title: Live-check OpenAI and Gemini from the browser
 status: Parked
 assignee: []
 created_date: '2026-11-18T07:26:00Z'
+updated_date: '2026-11-20T02:37:00Z'
 labels: []
 dependencies: []
 ordinal: 36000
@@ -21,3 +22,15 @@ As the owner, once Anthropic is proven end to end, I run the opt-in real-provide
 - [ ] #2 cors.spec.ts passes for Gemini with a real key
 - [ ] #3 Any model ID a provider no longer lists is updated in lib/llm/providers.ts and mock/js/data.js
 <!-- AC:END -->
+
+## Comments
+
+<!-- COMMENTS:BEGIN -->
+created: 2026-11-20T02:37:00Z
+
+---
+
+2026-11-20: tried; OPENAI_API_KEY and GEMINI_API_KEY are empty in .env.keys (Anthropic passed). Needs the owner's keys.
+
+---
+<!-- COMMENTS:END -->

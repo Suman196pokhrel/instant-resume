@@ -19,7 +19,19 @@ const reply = (text: string) => ({
 describe("createAdapter", () => {
   it("returns the validated object and token usage", async () => {
     const model = new MockLanguageModelV4({ doGenerate: reply('{"ok":true}') });
-    expect(await createAdapter(model, ctx).generateObject(args)).toEqual({ object: { ok: true }, usage: { inputTokens: 12, outputTokens: 3 } });
+    expect(await createAdapter(model, ctx).generateObject(args)).toEqual({ object: { ok: true }, usage: { inputTokens: 12, outputTokens: 3, cacheReadTokens: 0, cacheWriteTokens: 0 } });
+  });
+
+  it("sends a cache prefix as its own block with Anthropic's cache mark; the prompt reads the same (TASK-41)", async () => {
+    const model = new MockLanguageModelV4({ doGenerate: reply('{"ok":true}') });
+    await createAdapter(model, ctx).generateObject({ ...args, prompt: "<kb>facts</kb>\n\n<brief>job</brief>", cachePrefix: "<kb>facts</kb>\n\n" });
+    const user = model.doGenerateCalls[0].prompt.find((m) => m.role === "user")!;
+    expect(user.content).toEqual([
+      { type: "text", text: "<kb>facts</kb>\n\n", providerOptions: { anthropic: { cacheControl: { type: "ephemeral" } } } },
+      { type: "text", text: "<brief>job</brief>" },
+    ]);
+    await createAdapter(model, ctx).generateObject({ ...args, prompt: "plain", cachePrefix: "not a prefix" }); // never drops text
+    expect(model.doGenerateCalls[1].prompt.find((m) => m.role === "user")!.content).toEqual([{ type: "text", text: "plain" }]);
   });
 
   it("passes a call's output budget to the provider", async () => {

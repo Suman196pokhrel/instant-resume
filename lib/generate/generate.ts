@@ -105,7 +105,9 @@ function prompt({ kb, brief, selected, notes, tone, spelling, instructions }: Ge
 /** Both documents, filled and validated, plus the number of operations applied. Retries once if the patch is rejected. */
 export async function generateDocuments(input: GenerateInput, adapter: LlmAdapter, signal?: AbortSignal): Promise<{ resume: Draft; coverLetter: Draft; count: number }> {
   const skeleton = buildSkeleton(input.kb, input.brief, input.selected, input.theme ?? THEME_DEFAULTS);
-  const args = { name: "generate", schema: generationSchema, system: SYSTEM, prompt: prompt(input, skeleton), maxOutputTokens: 8000, signal };
+  const text = prompt(input, skeleton);
+  // The whole prompt is the cache prefix: a retry below, or Regenerate with the same choices, reads it from the cache.
+  const args = { name: "generate", schema: generationSchema, system: SYSTEM, prompt: text, cachePrefix: text, maxOutputTokens: 8000, signal };
   let reason = "";
   for (let attempt = 0; attempt < 2; attempt++) {
     const { object } = await adapter.generateObject(args);
