@@ -36,6 +36,7 @@ export const SYSTEM = `You sort a resume into the requested JSON structure.
 - Each bullet is one highlight. "text" is the bullet as written, without the bullet symbol. "metric" is the measurable result copied exactly from that bullet (such as "25%" or "4.2s to 1.1s"), or "". "skills" are the tools, technologies or skills named in that bullet.
 - Skills: when the resume lists skills in one block, sort them into 2 to 5 groups with short names (such as "Customer service", "Technical", "Tools and systems", "Languages"). Keep each skill as written; never add one.
 - Volunteer roles go in "volunteering", projects in "portfolio", and certifications, awards, publications and patents in "credentials" with that kind.
+- A "Links in this file:" list at the end holds the addresses behind the resume's hyperlinks. Use them for the contact's linkedin and github and for a project's link when the resume shows that link (as "LinkedIn", "GitHub", "Live demo" or the like); never as a fact of their own.
 - Keep the resume's own spelling and wording.`;
 
 type Entry = Record<string, unknown>;

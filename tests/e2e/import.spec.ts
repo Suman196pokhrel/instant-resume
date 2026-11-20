@@ -192,6 +192,16 @@ test("PDF and Word files are read on this device; with no model, the on-device p
   expect(calls).toEqual([]); // nothing left the device
 });
 
+// linked.pdf (synthetic, made with reportlab) prints only "Email | LinkedIn | GitHub" and "Live demo"; the addresses are links.
+test("a PDF's hyperlinks come along as 'Links in this file' (TASK-55)", async ({ page }) => {
+  await page.goto("/import");
+  await page.getByLabel(/Choose an existing resume/).setInputFiles(join(FIXTURES, "linked.pdf"));
+  await expect(page.getByText("linked.pdf — ready to extract")).toBeVisible();
+  await expect(page.getByLabel("Or paste your resume text")).toHaveValue(
+    /Links in this file:\njordan\.whitlock@example\.com\nhttps:\/\/www\.linkedin\.com\/in\/jordan-whitlock-example\/\nhttps:\/\/github\.com\/jordan-whitlock-example\nhttps:\/\/tidewatch\.example\.com\/$/
+  );
+});
+
 test("with Anthropic connected, the transfer is explained before anything is sent; Send opens Review with the file's details (AC1-AC3)", async ({ page }) => {
   await connectAnthropic(page);
   await page.goto("/import");

@@ -14,11 +14,15 @@ async function pdfText(data: ArrayBuffer): Promise<string> {
   try {
     const doc = await task.promise;
     const pages: string[] = [];
+    const links = new Set<string>();
     for (let i = 1; i <= doc.numPages; i++) {
-      const { items } = await (await doc.getPage(i)).getTextContent();
+      const page = await doc.getPage(i);
+      const { items } = await page.getTextContent();
       pages.push(items.map((it) => ("str" in it ? it.str + (it.hasEOL ? "\n" : "") : "")).join(""));
+      // A resume often prints "LinkedIn" or "Live demo" and keeps the address only in the link.
+      for (const a of await page.getAnnotations()) if (a.subtype === "Link" && typeof a.url === "string") links.add(a.url.replace(/^mailto:/i, ""));
     }
-    return pages.join("\n\n");
+    return pages.join("\n\n") + (links.size ? `\n\nLinks in this file:\n${[...links].join("\n")}` : "");
   } finally {
     await task.destroy();
   }
