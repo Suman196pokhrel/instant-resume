@@ -283,10 +283,11 @@ export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase
             })}
           </ol>
           {run.error && (
-            <div role="alert" className="mt-5 rounded-lg border border-danger-line bg-danger-soft p-3.5 text-[13px]">
+            <div role="alert" className="mt-5 grid grid-cols-[16px_1fr] gap-x-2.5 rounded-lg border border-danger-line bg-danger-soft p-3.5 text-[13px]">
+              <TriangleAlert aria-hidden className="mt-0.5 size-4 text-danger" />
               <strong className="block text-sm">{`Stopped at "${run.error.label}"`}</strong>
-              <p className="mt-1 text-ink-2">{`${run.error.reason} The steps before this one are kept.`}</p>
-              <div className="mt-3 flex gap-2">
+              <p className="col-start-2 mt-1 text-ink-2">{`${run.error.reason} The steps before this one are kept.`}</p>
+              <div className="col-start-2 mt-3 flex gap-2">
                 <Button ref={retry} size="sm" onClick={() => retryFrom(run.error!.index)}>
                   Retry from this step
                 </Button>
@@ -355,7 +356,10 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
           <ul className="flex flex-wrap gap-1.5">
             {[...match.matched, ...match.skills].map((m) => (
               <li key={m}>
-                <Chip className="border-accent-line bg-accent-soft text-accent-ink">{m}</Chip>
+                <Chip className="border-accent-line bg-accent-soft text-accent-ink">
+                  <Check aria-hidden className="size-3" />
+                  {m}
+                </Chip>
               </li>
             ))}
           </ul>
