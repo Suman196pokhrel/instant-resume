@@ -42,7 +42,7 @@ const extraction: Extraction = {
 };
 
 it("maps the provider's answer into the review draft, keeping each highlight's metric and skills (AC2)", () => {
-  const d = toDraft(extraction, "ORIGINAL TEXT");
+  const d = toDraft(extraction, "Senior Software Engineer, Brightwater Logistics  Mar 2022 –  present");
   expect(d.contact).toEqual({ id: "kb-contact", name: "Jordan Whitlock", email: "jordan.whitlock@example.com", location: "Sydney NSW" });
   expect(d.roles).toEqual([
     {
@@ -58,6 +58,12 @@ it("maps the provider's answer into the review draft, keeping each highlight's m
   ]);
   expect(d.skills).toEqual([{ group: "Languages", items: ["TypeScript", "Go"] }]);
   expect(d.credentials).toEqual([{ kind: "Certification", title: "AWS Certified Developer", year: "2023" }]);
+});
+
+it("drops dates the resume doesn't show and bullet symbols the model kept", () => {
+  const role = { ...extraction.roles[0], start: "Mar 2019", end: "Present", highlights: [{ text: "● Led a rewrite to React 19", metric: "", skills: [] }, { text: " • ", metric: "", skills: [] }] };
+  const d = toDraft({ ...empty, roles: [role] }, "Senior Software Engineer | Brightwater Logistics  Mar 2022 – Present\n● Led a rewrite to React 19");
+  expect(d.roles).toEqual([{ title: "Senior Software Engineer", company: "Brightwater Logistics", end: "Present", highlights: [{ text: "Led a rewrite to React 19", skills: [] }] }]);
 });
 
 it("never fills work rights; unknown sections and the original text are kept as Additional sections (AC2, AC3)", () => {

@@ -32,6 +32,7 @@ const SYSTEM = `You sort a resume into the requested JSON structure.
 - Copy facts only from the resume. Never invent or infer anything: no dates, employers, numbers, skills or contact details that aren't written there. Use "" for anything not stated.
 - Never fill in work rights. Work rights, visa or citizenship text goes in "additional" with its heading.
 - Every section that doesn't fit a field goes in "additional" (its heading as title, its text as notes). Never drop content.
+- Text copied from a PDF wraps long bullets onto several lines: join a wrapped line back onto its bullet, so each bullet is one highlight. A line such as "Title | Company | Location  Dates" starts a new role; it is never a highlight.
 - Each bullet is one highlight. "text" is the bullet as written, without the bullet symbol. "metric" is the measurable result copied exactly from that bullet (such as "25%" or "4.2s to 1.1s"), or "". "skills" are the tools, technologies or skills named in that bullet.
 - Skills: when the resume lists skills in one block, sort them into 2 to 5 groups with short names (such as "Customer service", "Technical", "Tools and systems", "Languages"). Keep each skill as written; never add one.
 - Volunteer roles go in "volunteering", projects in "portfolio", and certifications, awards, publications and patents in "credentials" with that kind.
@@ -41,17 +42,27 @@ type Entry = Record<string, unknown>;
 const present = (e: Entry): Entry => Object.fromEntries(Object.entries(e).filter(([, v]) => v !== ""));
 const hasContent = (e: Entry) => Object.values(e).some((v) => (Array.isArray(v) ? v.length > 0 : v !== ""));
 
+const BULLET = /^[\s●•▪◦‣∙·*–-]+/;
+const squash = (t: string) => t.toLowerCase().replace(/\s+/g, " ");
+
 function highlights(list: Extraction["roles"][number]["highlights"]) {
   return list
-    .filter((h) => h.text.trim())
-    .map((h) => ({ text: h.text.trim(), ...(h.metric && h.text.includes(h.metric) && { metric: h.metric }), skills: [...new Set(h.skills.filter(Boolean))] })); // a metric not in its own bullet is dropped
+    .map((h) => ({ ...h, text: h.text.replace(BULLET, "").trim() }))
+    .filter((h) => h.text)
+    .map((h) => ({ text: h.text, ...(h.metric && h.text.includes(h.metric) && { metric: h.metric }), skills: [...new Set(h.skills.filter(Boolean))] })); // a metric not in its own bullet is dropped
 }
 
 const entries = <T extends Entry>(list: T[], map: (e: T) => Entry = (e) => e) => list.filter(hasContent).map((e) => present(map(e)));
 
 /** The review draft: the same shape the on-device parser returns, plus the original text as reference only. */
 export function toDraft(x: Extraction, original: string): ParsedDraft {
-  const withHighlights = <T extends { highlights: Extraction["roles"][number]["highlights"] }>(e: T) => ({ ...e, highlights: highlights(e.highlights) });
+  const text = squash(original);
+  const stated = (v: string) => (v && text.includes(squash(v.trim())) ? v.trim() : ""); // a date the resume doesn't show was made up
+  const withHighlights = <T extends { highlights: Extraction["roles"][number]["highlights"]; start?: string; end?: string }>(e: T) => ({
+    ...e,
+    ...("start" in e && { start: stated(e.start ?? ""), end: stated(e.end ?? "") }),
+    highlights: highlights(e.highlights),
+  });
   return {
     contact: present({ id: "kb-contact", ...x.contact }),
     roles: entries(x.roles, withHighlights),
