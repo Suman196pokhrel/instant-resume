@@ -118,3 +118,27 @@ test("Export warns when the resume runs past the page budget, and Fit to 1 page 
   await expect(dialog.getByText(/Resume: 2 pages/)).toHaveCount(0);
   await expect(page.getByText(/Rendered in \d+ ms · 1 page/)).toBeVisible();
 });
+
+test("each render is patched into the page on screen and ends up identical to a fresh render (owner's ask: instant, smooth edits)", async ({ page }) => {
+  test.setTimeout(90_000);
+  await open(page);
+  const svg = () => page.locator("[data-sheet]").evaluate((el) => el.shadowRoot!.querySelector("svg")!.outerHTML);
+  const shown = await page.locator("[data-sheet]").evaluate((el) => el.shadowRoot!.querySelector("svg"));
+  expect(shown).toBeTruthy();
+  const ins = inspector(page);
+  await ins.getByRole("button", { name: /Summary/ }).click();
+  await ins.getByRole("textbox", { name: "Summary text" }).pressSequentially(" Leads platform teams and writes the incident handbook used across four squads.", { delay: 5 }); // adds a line
+  await ins.getByRole("button", { name: "All sections" }).click();
+  await ins.getByRole("button", { name: /Experience/ }).click();
+  await ins.getByRole("textbox", { name: "Bullet 2" }).fill("Cut page load to 0.8s");
+  await ins.getByRole("tab", { name: "Design" }).click();
+  await ins.getByRole("button", { name: "Accent #1F4E8C" }).click();
+  await ins.getByRole("radio", { name: "Carlito" }).click(); // every glyph changes
+  await expect(page.getByText("Saved", { exact: true })).toBeVisible();
+  let patched = "";
+  await expect.poll(async () => patched === (patched = await svg()), { intervals: [300] }).toBe(true); // settled
+  expect(patched).toContain("#1F4E8C".toLowerCase().slice(1, 3)); // sanity: the new accent is in
+  await page.reload();
+  await expect(section(page, "s-exp")).toBeAttached({ timeout: 30_000 });
+  await expect.poll(svg).toBe(patched);
+});

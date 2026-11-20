@@ -10,16 +10,15 @@ import { useWorkspace } from "@/lib/stores/workspace";
 import { boxes } from "@/lib/render/layout";
 import type { Layout } from "@/lib/render/types";
 import type { ResumeDocument } from "@/lib/schemas/document";
+import { patchSvg } from "@/lib/render/patch";
 import { SheetOverlay } from "./SheetOverlay";
 import { clockTime } from "@/lib/time";
 import { Button } from "@/components/ui/button";
 import { Tooltip, TooltipContent, TooltipTrigger } from "@/components/ui/tooltip";
 
-// The live preview (SPEC §9.1, §14.5): Typst pages as SVG, re-rendered on every change (typing debounced 120 ms;
-// the newest render wins), zoomable from 40% to 160%, Fit to width by default.
+// The live preview (SPEC §9.1, §14.5): Typst pages as SVG, re-rendered on every change as it happens (one render at a
+// time, the newest change wins), zoomable from 40% to 160%, Fit to width by default.
 
-const DEBOUNCE = 120;
-const BURST_GAP = 150;
 const SHEET_PX = 794; // 210 mm at 96 dpi
 const clampZoom = (z: number) => Math.min(1.6, Math.max(0.4, +z.toFixed(2)));
 // The job panel's CSS default (open from 1180px), read on the client so the toggle states it before the first click.
@@ -50,6 +49,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
   const [out, setOut] = useState<{ svg: string; ms: number; pages: number; design: boolean; doc: ResumeDocument; layout?: Layout } | null>(null);
   const shown = useRef(doc); // the last document sent, to tell a design-only change from an edit
   const [error, setError] = useState("");
+  const [settled, setSettled] = useState(0); // the status flashes once renders stop, never on every key while typing
   const [fit, setFit] = useState(1);
   const latest = useRef(0);
   const scroll = useRef<HTMLDivElement>(null);
@@ -84,16 +84,22 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
       j.next = null;
       j.busy = true;
       await go();
-      if (j.next) await new Promise((r) => setTimeout(r, BURST_GAP)); // still changing (a colour drag): let the newest change replace the ones between
+      if (j.next) await new Promise((r) => requestAnimationFrame(() => setTimeout(r, 0))); // still changing (typing, a colour drag): paint and take input first, then render the newest change
       j.busy = false;
       void pump();
     };
     const t = setTimeout(() => {
       job.current.next = run;
       void pump();
-    }, design ? 0 : DEBOUNCE); // design changes render at once (SPEC §9.1); typing is debounced
+    }); // a task, so changes made together render once
     return () => clearTimeout(t);
   }, [doc, kind, kb, brief.title, prefs.paper, prefs.spelling, setRenderMs]);
+
+  useEffect(() => {
+    if (!out) return;
+    const t = setTimeout(() => setSettled((x) => x + 1), 250); // a pause between keys is longer than a render
+    return () => clearTimeout(t);
+  }, [out]);
 
   useEffect(() => {
     const el = scroll.current;
@@ -135,7 +141,7 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
           {icon("Zoom in", () => step(0.1), "+")}
         </div>
         {/* mock .render-status: smaller on phones, and never wider than the bar */}
-        <span className="ml-auto inline-flex min-w-0 items-center gap-1 overflow-hidden text-[13px] whitespace-nowrap text-muted-foreground max-[900px]:text-[11.5px]">
+        <span key={settled} className={cn("ml-auto inline-flex min-w-0 items-center gap-1 overflow-hidden text-[13px] whitespace-nowrap text-muted-foreground max-[900px]:text-[11.5px]", settled > 0 && !error && "animate-status-flash")}>
           {out?.design && !error && <Zap aria-hidden className="size-3 text-primary" />}
           {error ? "Couldn't render this document" : out ? `Rendered in ${out.ms} ms · ${out.pages} ${out.pages === 1 ? "page" : "pages"} · ${prefs.paper}` : ""}
         </span>
@@ -182,13 +188,25 @@ export function Preview({ kb, brief, prefs }: { kb: KnowledgeBase; brief: JobBri
 }
 
 /** The Typst SVG in a shadow root: its own <style> and 3,000-odd nodes stay out of the page's style and layout work,
- * so swapping in a new render (every edit and colour change) doesn't restyle the whole Workspace. */
+ * so a new render (every edit and colour change) doesn't restyle the whole Workspace. Each render is patched into the
+ * one on screen, so only the changed lines are laid out again; a full replace is the fallback. */
 function Sheet({ svg, className }: { svg: string; className: string }) {
   const host = useRef<HTMLDivElement>(null);
   useEffect(() => {
     const el = host.current;
     if (!el) return;
     const root = el.shadowRoot ?? el.attachShadow({ mode: "open" });
+    const shown = root.querySelector("svg");
+    if (shown) {
+      const t = document.createElement("template");
+      t.innerHTML = svg;
+      const next = t.content.querySelector("svg");
+      try {
+        if (next) return patchSvg(shown, next);
+      } catch {
+        // fall through: a full replace is always right
+      }
+    }
     root.innerHTML = `<style>svg{display:block;width:100%;height:auto}</style>${svg}`;
   }, [svg]);
   return <div ref={host} data-sheet className={className} />;

@@ -35,7 +35,7 @@ function Group({ label, children }: { label: string; children: React.ReactNode }
 }
 
 /** The colour picker fires on every pixel of a drag; one update per COLOUR_MS keeps the page and the renderer up. */
-const COLOUR_MS = 200; // each new preview costs ~100 ms of page work; 200 ms leaves the drag room and stays under the 300 ms target
+const COLOUR_MS = 100; // a preview update now costs a few ms (it is patched in place); 100 ms keeps a 4x-throttled drag at no long tasks
 function useLatestEvery(fn: (v: string) => void, ms: number) {
   const timer = useRef<ReturnType<typeof setTimeout>>(undefined);
   const value = useRef("");

@@ -625,7 +625,7 @@ RenderInput = { document, kb (contact, workRights), brief (for the letter), pape
 
 The template reads the data from a virtual file `/data.json`. Lazy-load the worker on first entry to the Workspace or Quick generate. Show the loader card "Loading the Typst renderer" and "11 MB, loaded once per session" (the compiler WASM is 10.8 MB gzipped; the SVG renderer, `@myriaddreamin/typst-ts-renderer`, about 350 KB, loads with the first preview), then cache it for the session. "svg" compiles to Typst's vector format and renders it to one SVG of all pages inside the worker, without the renderer's scripts.
 
-Preview: render pages to SVG/canvas inside the A4 "sheet" frame. Re-render on every content, structure or theme change. Debounce typing by 120 ms; design sliders render immediately. **Target under 300 ms** for design changes. Show "Rendered in {ms} ms · {n} pages · A4" in the preview bar, with a zap icon after design changes.
+Preview: render pages to SVG/canvas inside the A4 "sheet" frame. Re-render on every content, structure or theme change, at once (no debounce): one render runs at a time and the newest change replaces any waiting, with a frame for input and paint between renders; the colour picker sends at most one change per 100 ms of a drag. Each new SVG is patched into the one on screen (`lib/render/patch.ts`: nodes whose Typst content hash `data-tid` or glyph id is unchanged stay as they are; changed groups are patched in place), so an edit restyles only the lines it changed; a full replace is the fallback. **Target under 300 ms** for design changes; typing shows on the page within a frame or two. Show "Rendered in {ms} ms · {n} pages · A4" in the preview bar, with a zap icon after design changes.
 
 Section selection from the preview: required via the Content tab list. Clicking in the preview to select a section is a nice-to-have: implement it with Typst `query` of labelled section positions if time allows; otherwise skip it.
 
@@ -845,7 +845,7 @@ Rules: motion only answers a user action or shows progress. Tokens: `--t-fast` 1
 | Section being rewritten | 2px accent outline plus a moving shimmer overlay, 1.1 s loop |
 | Proposed change | dashed amber outline, `#FFFBF1` background, "Proposed" tag; the proposal card pops in with `--spring` |
 | Rewrite working strip | accent-soft strip "Rewriting with {model}" with a white sweep, 1.2 s loop |
-| Render status | text briefly flashes accent-ink (600 ms) after each render |
+| Render status | text briefly flashes accent-ink (600 ms) once renders stop for 250 ms (so never on every key while typing) |
 | History drawer | translateX 105% → 0, `--t-slow` `--ease`; hidden from focus when closed |
 | Structure drag | dragged row 40% opacity; 3px accent line above or below the drop target |
 | Onboarding complete | an SVG check: circle stroke draws in 600 ms, then the tick draws in 350 ms after a 500 ms delay |
