@@ -4,7 +4,7 @@ import { cn } from "cn"
 
 // SPEC §11.5 buttons, styled as mock/styles.css .btn and .icon-btn. Custom motion (owner rule: only where the
 // mock calls for it): the press scales .97 (icon .9) and springs back on release (SPEC §12).
-const buttonVariants = cva(
+const buttonStyles = cva(
   "group/button inline-flex shrink-0 cursor-pointer items-center justify-center gap-[7px] rounded-md border border-transparent font-medium whitespace-nowrap no-underline outline-none select-none [transition:background-color_var(--t)_var(--ease),border-color_var(--t)_var(--ease),color_var(--t)_var(--ease),box-shadow_var(--t)_var(--ease),scale_var(--t-spring)_var(--spring)] active:not-disabled:scale-[.97] active:not-disabled:duration-(--t-fast) disabled:cursor-not-allowed disabled:opacity-50 aria-invalid:border-destructive [&_svg]:pointer-events-none [&_svg]:shrink-0 [&_svg:not([class*='size-'])]:size-4",
   {
     variants: {
@@ -33,15 +33,19 @@ function Button({
   variant = "primary",
   size = "default",
   ...props
-}: ButtonPrimitive.Props & VariantProps<typeof buttonVariants>) {
+}: ButtonPrimitive.Props & VariantProps<typeof buttonStyles>) {
   return (
     <ButtonPrimitive
       data-slot="button"
       data-variant={size === "icon" ? undefined : variant}
-      className={cn(buttonVariants({ variant: size === "icon" ? null : variant, size, className }))}
+      className={buttonVariants({ variant: size === "icon" ? null : variant, size, className })}
       {...props}
     />
   )
 }
+
+/** The button's classes, merged: a link styled as a button (`<Link className={buttonVariants(…)}>`) gets the variant's
+ * border instead of the base `border-transparent`, which the stylesheet order would otherwise let win. */
+const buttonVariants = (props?: Parameters<typeof buttonStyles>[0]) => cn(buttonStyles(props))
 
 export { Button, buttonVariants }
