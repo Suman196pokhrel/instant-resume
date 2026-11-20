@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState } from "react";
 import Link from "next/link";
-import { Check, Copy, Download, KeyRound, Loader2, RotateCcw, Target, TriangleAlert } from "lucide-react";
+import { Check, Copy, Download, Loader2, Pencil, RotateCcw, TriangleAlert } from "lucide-react";
 import { cn } from "cn";
 import { AddEvidenceDialog } from "@/components/kb/AddEvidenceDialog";
 import { Button, buttonVariants } from "@/components/ui/button";
@@ -50,7 +50,7 @@ function useDownload(kb: KnowledgeBase, prefs: Prefs, brief: JobBrief) {
 
 function DownloadButton({ label, docs, dl, variant }: { label: string; docs: Doc[]; dl: ReturnType<typeof useDownload>; variant?: "primary" | "ghost" }) {
   return (
-    <Button size="sm" variant={variant} disabled={dl.state === "preparing"} onClick={() => dl.run(docs)}>
+    <Button size={variant === "ghost" ? "sm" : "default"} variant={variant} disabled={dl.state === "preparing"} onClick={() => dl.run(docs)}>
       {dl.state === "preparing" ? (
         <>
           <Loader2 aria-hidden className="animate-spin" /> Preparing
@@ -81,17 +81,18 @@ function Thumb({ doc, kb, prefs, brief }: { doc: Doc; kb: KnowledgeBase; prefs: 
   }, [doc, kb, prefs, brief.title]);
   const name = fileName(kb.contact.name, doc.kind, brief.company);
   return (
-    <figure className="flex min-w-0 flex-col gap-2">
-      <div className="relative h-[300px] overflow-hidden rounded-md border border-line bg-sunken p-4">
-        {svg && <div aria-hidden className="mx-auto w-[34%] min-w-[180px] bg-surface shadow-pop [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />}
-        {pages > 0 && <Pill className="absolute top-2.5 right-2.5">{plural(pages, "page")}</Pill>}
+    // mock .qg-doc: a card, the sheet at 34% (270px) cropped to 300px, and a footer with the file name
+    <figure className="min-w-0 overflow-hidden rounded-lg border border-line bg-surface">
+      <div className="relative flex h-[300px] justify-center overflow-hidden bg-sunken pt-[18px]">
+        {svg && <div aria-hidden className="h-fit w-[270px] shrink-0 bg-surface shadow-pop [&_svg]:block [&_svg]:h-auto [&_svg]:w-full" dangerouslySetInnerHTML={{ __html: svg }} />}
+        {pages > 0 && <Pill className="absolute top-2.5 right-2.5 border border-line bg-surface text-[11.5px] font-semibold">{plural(pages, "page")}</Pill>}
       </div>
-      <figcaption className="flex flex-wrap items-center justify-between gap-2">
-        <span className="flex min-w-0 flex-col">
+      <figcaption className="flex items-center justify-between gap-2.5 border-t border-line px-3.5 py-3">
+        <span className="flex min-w-0 flex-col gap-[3px]">
           <strong>{LABEL[doc.kind]}</strong>
-          <code className="truncate font-mono text-[11.5px] text-ink-2">{name}</code>
+          <code className="truncate rounded-xs border border-line bg-surface-2 px-[5px] py-px font-mono text-[11px] text-ink-2">{name}</code>
         </span>
-        <span className="flex gap-1.5">
+        <span className="flex flex-wrap justify-end gap-2">
           <Button
             size="sm"
             variant="ghost"
@@ -153,28 +154,33 @@ export function QuickResult({ done, kb, prefs, onRegenerate }: { done: QuickDone
   const both = useDownload(kb, prefs, brief);
   const n = summary.gaps.length + summary.findings.length;
   const letter = docs.some((d) => d.kind === "coverLetter");
-  const tile = (warn: boolean, icon: React.ReactNode, text: string) => (
-    <div className={cn("flex items-center gap-2 rounded-md border px-3 py-2.5 text-[13px] font-medium", warn ? "border-warn-line bg-warn-soft text-warn" : "border-line bg-surface text-ink")}>
-      {icon}
-      {text}
+  // mock .qg-stat: a check (or alert) in a circle, then the number large and its word
+  const tile = (warn: boolean, value: string, word: string) => (
+    <div className={cn("flex items-center gap-2.5 rounded-md border px-3.5 py-3", warn ? "border-warn-line bg-warn-soft" : "border-line bg-surface")}>
+      <span aria-hidden className={cn("grid size-7 shrink-0 place-items-center rounded-full", warn ? "bg-surface text-warn" : "bg-accent-soft text-accent-ink")}>
+        {warn ? <TriangleAlert className="size-[15px]" /> : <Check className="size-[15px]" />}
+      </span>
+      <span>
+        <strong className="mr-0.5 text-xl tracking-[-0.01em]">{value}</strong> {word}
+      </span>
     </div>
   );
 
   return (
     <div className="mx-auto max-w-[980px]">
-      <div className="flex flex-wrap items-start justify-between gap-4">
-        <div>
-          <h1 ref={head} tabIndex={-1} className="outline-none">
+      <div className="mb-[18px] flex flex-wrap items-end justify-between gap-4">
+        <div className="min-w-[280px] flex-1">
+          <h1 ref={head} tabIndex={-1} className="mb-1 outline-none">
             {letter ? "Your documents are ready" : "Your resume is ready"}
           </h1>
-          <p className="mt-1 text-muted-foreground">{`${roleAt(brief.title, brief.company)}. Generated in ${done.seconds.toFixed(1)}s with ${done.model}.`}</p>
+          <p className="text-sm text-muted-foreground">{`${roleAt(brief.title, brief.company)}. Generated in ${done.seconds.toFixed(1)}s with ${done.model}.`}</p>
         </div>
-        <div className="flex flex-wrap items-center gap-2">
-          <Button size="sm" variant="link" onClick={onRegenerate}>
+        <div className="flex flex-wrap items-center gap-2.5">
+          <Button variant="link" onClick={onRegenerate}>
             <RotateCcw aria-hidden /> Regenerate
           </Button>
-          <Link href={`/projects/${done.projectId}`} className={buttonVariants({ variant: "ghost", size: "sm" })}>
-            Open in Studio
+          <Link href={`/projects/${done.projectId}`} className={buttonVariants({ variant: "ghost" })}>
+            <Pencil aria-hidden /> Open in Studio
           </Link>
           <DownloadButton label={letter ? "Download both" : "Download resume"} docs={docs} dl={both} />
         </div>
@@ -182,12 +188,12 @@ export function QuickResult({ done, kb, prefs, onRegenerate }: { done: QuickDone
       <p role="status" className="sr-only">
         Your documents are ready
       </p>
-      <div className="mt-5 grid grid-cols-3 gap-2.5 max-[640px]:grid-cols-1">
-        {tile(summary.coverage < 60, <Target aria-hidden className="size-4" />, `${summary.coverage}% keyword coverage`)}
-        {tile(summary.gaps.length > 0, <KeyRound aria-hidden className="size-4" />, plural(summary.gaps.length, "gap"))}
-        {tile(summary.findings.length > 0, <TriangleAlert aria-hidden className="size-4" />, plural(summary.findings.length, "finding"))}
+      <div className="mb-[18px] grid grid-cols-3 gap-2.5 max-[640px]:grid-cols-1">
+        {tile(summary.coverage < 60, `${summary.coverage}%`, "keyword coverage")}
+        {tile(summary.gaps.length > 0, String(summary.gaps.length), summary.gaps.length === 1 ? "gap" : "gaps")}
+        {tile(summary.findings.length > 0, String(summary.findings.length), summary.findings.length === 1 ? "finding" : "findings")}
       </div>
-      <div className={cn("mt-5 grid gap-5", letter ? "grid-cols-2 max-[760px]:grid-cols-1" : "max-w-[520px] grid-cols-1")}>
+      <div className="grid grid-cols-[repeat(auto-fit,minmax(260px,1fr))] gap-3.5">
         {docs.map((d) => (
           <Thumb key={d.kind} doc={d} kb={kb} prefs={prefs} brief={brief} />
         ))}

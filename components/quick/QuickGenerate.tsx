@@ -2,7 +2,7 @@
 
 import { useEffect, useRef, useState, useSyncExternalStore } from "react";
 import Link from "next/link";
-import { Check, KeyRound, Sparkles, TriangleAlert, X, Zap } from "lucide-react";
+import { BookOpen, Briefcase, Check, FileText, KeyRound, Pencil, ShieldCheck, Sparkles, TriangleAlert, X, Zap } from "lucide-react";
 import { cn } from "cn";
 import { Button } from "@/components/ui/button";
 import { Callout } from "@/components/ui/callout";
@@ -225,17 +225,20 @@ export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase
 
   const title = run.brief ? `Generating for ${roleAt(run.brief.title, run.brief.company)}` : "Generating your documents";
   return (
-    <div className="mx-auto max-w-[980px]">
+    // mock .panel.qg-progress: the run sits on one card
+    <section aria-labelledby="qg-title" className="mx-auto max-w-[980px] rounded-lg border border-line bg-surface p-6 shadow-card max-[900px]:px-4 max-[900px]:py-[18px]">
       <div className="flex items-start justify-between gap-4">
         <div>
-          <h1>{title}</h1>
-          <p className="mt-1 text-muted-foreground">This usually takes about 15 seconds.</p>
+          <h1 id="qg-title" className="mb-0.5 text-[21px]">
+            {title}
+          </h1>
+          <p className="text-[13px] text-muted-foreground">This usually takes about 15 seconds.</p>
         </div>
-        <Button variant="ghost" onClick={() => stop(true)}>
+        <Button variant="ghost" size="sm" onClick={() => stop(true)}>
           Cancel
         </Button>
       </div>
-      <div className="mt-4 flex items-center gap-3">
+      <div className="mt-[18px] mb-[22px] flex items-center gap-3">
         <div role="progressbar" aria-label="Overall progress" aria-valuenow={run.pct} aria-valuemin={0} aria-valuemax={100} className="h-1.5 flex-1 overflow-hidden rounded-full bg-sunken">
           <div className="h-full rounded-full bg-primary transition-[width] duration-(--t-slow) ease-(--ease)" style={{ width: `${run.pct}%` }} />
         </div>
@@ -245,7 +248,7 @@ export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase
       <p role="status" className="sr-only">
         {said}
       </p>
-      <div className="mt-6 grid grid-cols-[minmax(0,320px)_minmax(0,1fr)] gap-8 max-[860px]:grid-cols-1">
+      <div className="grid grid-cols-[minmax(0,1fr)_minmax(0,1.15fr)] items-start gap-7 max-[860px]:grid-cols-1">
         <div>
           <ol aria-label="Stages" className="flex flex-col">
             {labels.map((label, i) => {
@@ -296,19 +299,22 @@ export function QuickGenerate({ kb, prefs, samples = null }: { kb: KnowledgeBase
         </div>
         <Results run={run} name={kb.contact.name} budget={q.pages} />
       </div>
-    </div>
+    </section>
   );
 }
 
 /** A live-results card that scrolls into view when it appears. */
-function Card({ title, children, done }: { title: string; children: React.ReactNode; done?: boolean }) {
+function Card({ title, icon: Icon, children, done }: { title: string; icon: typeof Check; children: React.ReactNode; done?: boolean }) {
   const el = useRef<HTMLElement>(null);
   useEffect(() => {
     el.current?.scrollIntoView({ block: "nearest", behavior: prefersReducedMotion() ? "auto" : "smooth" }); // a block body: Chrome returns a promise, which React would take for a cleanup
   }, []);
   return (
-    <section ref={el} aria-label={title} className={cn("animate-in rounded-lg border border-line bg-surface p-4 duration-(--t) ease-(--ease) fade-in-0 slide-in-from-bottom-1", done && "border-accent-line")}>
-      <h2 className="mb-2.5 text-[12.5px] font-semibold tracking-wide text-ink-2 uppercase">{title}</h2>
+    <section ref={el} aria-label={title} className={cn("animate-in rounded-md border border-line bg-surface-2 px-3.5 py-3 duration-(--t) ease-(--ease) fade-in-0 slide-in-from-bottom-1", done && "border-accent-line")}>
+      <h2 className="mb-2 flex items-center gap-1.5 text-[12.5px] font-semibold text-ink-2">
+        <Icon aria-hidden className="size-3.5 text-primary" />
+        {title}
+      </h2>
       {children}
     </section>
   );
@@ -325,12 +331,13 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
   const resumePages = pages.find((p) => p.kind === "resume");
   return (
     <div className="flex flex-col gap-3">
-      <Card title="Job brief">
-        <div className="font-semibold">{brief.title}</div>
-        <div className="flex flex-wrap items-center gap-2 text-[13px] text-muted-foreground">
-          {[employer(brief.company), brief.location].filter(Boolean).join(", ")} <Pill>{brief.seniority}</Pill>
+      <Card title="Job brief" icon={Briefcase}>
+        <div className="mb-2.5 flex flex-wrap items-baseline gap-x-2.5 gap-y-1">
+          <strong className="text-[15px]">{brief.title}</strong>
+          <span className="text-muted-foreground">{[employer(brief.company), brief.location].filter(Boolean).join(", ")}</span>
+          <Pill>{brief.seniority}</Pill>
         </div>
-        <div className="mt-2.5 text-xs font-semibold text-ink-2">Must-haves</div>
+        <div className="text-xs font-semibold text-ink-2">Must-haves</div>
         <ul className="mt-1.5 flex flex-wrap gap-1.5">
           {brief.requirements.slice(0, 6).map((r) => (
             <li key={r}>
@@ -344,7 +351,7 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
         </ul>
       </Card>
       {match && (
-        <Card title="Matched from your knowledge base">
+        <Card title="Matched from your knowledge base" icon={BookOpen}>
           <ul className="flex flex-wrap gap-1.5">
             {[...match.matched, ...match.skills].map((m) => (
               <li key={m}>
@@ -370,7 +377,7 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
         </Card>
       )}
       {summary && (
-        <Card title="Draft">
+        <Card title="Draft" icon={Pencil}>
           <div className="rounded-sm border border-line bg-surface px-4 py-3 font-sample-liberation text-[11.5px] leading-[1.45] shadow-card">
             <div className="text-[15px] font-bold">{name}</div>
             <div className="mt-2 font-bold text-primary">Summary</div>
@@ -393,7 +400,7 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
         </Card>
       )}
       {resumePages && (
-        <Card title="Page fit" done={resumePages.done && resumePages.value <= budget}>
+        <Card title="Page fit" icon={FileText} done={resumePages.done && resumePages.value <= budget}>
           <div className="flex items-baseline gap-2">
             <span className="text-3xl font-semibold tabular-nums">{resumePages.value}</span>
             <span className="text-muted-foreground">{resumePages.value === 1 ? "page" : "pages"}</span>
@@ -403,7 +410,7 @@ function Results({ run, name, budget }: { run: Run; name: string; budget: 1 | 2 
         </Card>
       )}
       {checks && (
-        <Card title="Checks">
+        <Card title="Checks" icon={ShieldCheck}>
           <ul className="flex flex-col gap-1 text-[13px]">
             <li className={cn(checks.coverage < 60 && "text-warn")}>{`${checks.coverage}% keyword coverage`}</li>
             <li className={cn(checks.gaps.length > 0 && "text-warn")}>{plural(checks.gaps.length, "gap")}</li>
