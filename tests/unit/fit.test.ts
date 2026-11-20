@@ -56,13 +56,21 @@ describe("fitPages", () => {
     expect(r.doc.theme.baseSize).toBeGreaterThanOrEqual(9.5);
   });
 
-  it("drops the least relevant bullets, oldest role first, down to 2 per role, then shortens the summary to one sentence", async () => {
+  it("drops the least relevant bullets, oldest role first, down to 2 per role, then shortens the summary to two sentences (TASK-56)", async () => {
     const steps: string[] = [];
     const r = await fitPages(doc(), { budget: 2, keywords: ["React"], compile: fake(40), onStep: (s) => steps.push(s.action) });
     const exp = r.doc.sections.find((s) => s.kind === "experience") as Extract<Section, { items: unknown }>;
     expect(exp.items.map((i) => i.bullets!.map((b) => b.id))).toEqual([["new-b0", "new-b1"], ["old-b0", "old-b1"]]); // the old role's "Did task 2" went first
     const summary = r.doc.sections[0] as { text: string };
-    expect(summary.text).toBe("First sentence.");
+    expect(summary.text).toBe("First sentence. Second sentence.");
+  });
+
+  it("on a 1-page budget, a one-sentence summary is the very last resort, after one bullet per role (TASK-56)", async () => {
+    const steps: string[] = [];
+    const r = await fitPages(doc(), { budget: 1, keywords: ["React"], compile: fake(18), onStep: (s) => steps.push(s.action) });
+    const order = [...new Set(steps)];
+    expect(order.indexOf("Keeping one bullet per role")).toBeLessThan(order.indexOf("Shortening the summary to one sentence"));
+    expect((r.doc.sections[0] as { text: string }).text).toBe("First sentence.");
   });
 
   it("a cover letter loses sentences from its longest paragraph, keeping one in each", async () => {

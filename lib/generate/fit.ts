@@ -40,17 +40,18 @@ function dropBullet(keywords: string[], keep = 2) {
   };
 }
 
-/** Drops the last sentence of a text section, keeping its first; null when none has two sentences. */
+/** Drops the last sentence of a text section, keeping at least `keep`; null when it has no more to give. */
 const sentences = (t: string) => t.match(/[^.!?]+[.!?]+(\s|$)/g)?.map((x) => x.trim()) ?? [];
-function shorten(pick: (d: Doc) => number) {
+function shorten(pick: (d: Doc) => number, keep = 1) {
   return (d: Doc) => {
     const i = pick(d);
     const s = d.sections[i];
-    if (i < 0 || !("text" in s) || sentences(s.text).length < 2) return null;
+    if (i < 0 || !("text" in s) || sentences(s.text).length <= keep) return null;
     return { ...d, sections: d.sections.map((x, k) => (k === i ? { ...s, text: sentences(s.text).slice(0, -1).join(" ") } : x)) };
   };
 }
-const shortenSummary = shorten((d) => d.sections.findIndex((s) => s.kind === "summary" && !s.hidden));
+const summaryAt = (d: Doc) => d.sections.findIndex((s) => s.kind === "summary" && !s.hidden);
+const shortenSummary = shorten(summaryAt, 2); // one sentence reads thin (owner's bug list): that's the last resort below
 /** The cover letter's longest paragraph that still has two sentences. */
 const shortenParagraph = shorten((d) => {
   const ok = d.sections.map((s, i) => [s, i] as const).filter(([s]) => s.kind === "paragraph" && !s.hidden && "text" in s && sentences(s.text).length > 1);
@@ -95,6 +96,7 @@ export async function fitPages(start: Doc, { budget, keywords, compile, onStep, 
     ["Shortening the longest paragraph", shortenParagraph, true],
     ...(one ? ([["Hiding additional sections", hide(new Set(["additional"]))]] as Step[]) : []),
     ...(one ? ([["Keeping one bullet per role", dropBullet(keywords, 1), true]] as Step[]) : []),
+    ...(one ? ([["Shortening the summary to one sentence", shorten(summaryAt, 1)]] as Step[]) : []),
   ];
   let doc = start;
   let action = "Laid out at the template defaults";

@@ -26,7 +26,7 @@
 -> Fixed: 2-page export. Page budget defaults to 1 page and is applied on every generation path; the cover letter is fitted to 1 page; the fit loop trims skills and bullets when needed; Export warns and offers "Fit to 1 page" for documents edited later.
 -> Fixed: Wipe the knowledge base. Settings > Your data > Delete knowledge base (asks first; applications stay).
 -> Also fixed: an imported summary or target-role tagline no longer prints as an extra section; "at Not stated" when an ad names no employer.
--> Open: generated summaries are sometimes one thin sentence after fitting (seen on the IT-support resume). Worth a prompt look.
+-> Fixed (TASK-56): page fitting keeps a two-sentence summary; one sentence is the last resort after one bullet per role. Was: generated summaries are sometimes one thin sentence after fitting (seen on the IT-support resume). Worth a prompt look.
 
 # Found in real job-ad runs (2026-11-20)
 -> Fixed: Experience showed the same job several times (one job 4x). Cause: the KB held three imports merged together, and one bad extraction had wrapped PDF lines and other jobs' header lines as bullets plus made-up dates. Import now joins wrapped lines, starts a role at each "Title | Company | Dates" line, strips bullet symbols and drops dates that aren't in the resume text. An existing KB keeps its bad entries: re-import with "Replace", or delete the duplicate roles in Knowledge base.
